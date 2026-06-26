@@ -20,9 +20,10 @@ class TechniciansController extends Controller
         GlpiTicketRepositoryInterface $tickets,
         GlpiPlanningRepositoryInterface $planning,
     ): View {
-        // Técnicos = usuários com o perfil "Técnico FL" (equipe de atendimento).
+        // Técnicos = usuários com o perfil da equipe técnica (config/portal.php).
+        $tecnicoProfile = (string) config('portal.tecnico_profile', 'Técnico FL');
         $tecnicos = $dir->users()
-            ->filter(fn (array $u) => $u['profile'] === 'Técnico FL')
+            ->filter(fn (array $u) => $u['profile'] === $tecnicoProfile)
             ->values();
 
         $events = $planning->events();
@@ -60,7 +61,7 @@ class TechniciansController extends Controller
                 'agendados' => $rows->sum('agendados'),
             ],
             'entities' => $dir->entities(),
-            'tecnicoProfileId' => $profiles->firstWhere('name', 'Técnico FL')['id'] ?? 0,
+            'tecnicoProfileId' => $profiles->firstWhere('name', $tecnicoProfile)['id'] ?? 0,
         ]);
     }
 }

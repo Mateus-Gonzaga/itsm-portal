@@ -12,9 +12,6 @@ use Illuminate\Http\Request;
  */
 class DirectoryController extends Controller
 {
-    /** Perfis que o gestor pode atribuir (anti-escalonamento de privilégio). */
-    private const ALLOWED_PROFILES = ['Self-Service', 'Técnico FL', 'Gestor - Clientes'];
-
     public function __construct(
         private readonly GlpiDirectoryRepositoryInterface $dir,
     ) {
@@ -28,7 +25,7 @@ class DirectoryController extends Controller
     private function guardAssignment(int $profileId, int $entityId): void
     {
         $okProfile = $this->dir->profiles()
-            ->whereIn('name', self::ALLOWED_PROFILES)
+            ->whereIn('name', (array) config('portal.assignable_profiles', []))
             ->contains(fn ($p) => (int) $p['id'] === $profileId);
 
         $okEntity = $this->dir->entities()

@@ -20,7 +20,7 @@ class ClientsController extends Controller
         // Só estes perfis podem ser atribuídos pela tela (espelha a trava do
         // DirectoryController::guardAssignment — evita oferecer Super-Admin etc.).
         $assignableProfiles = $profiles
-            ->whereIn('name', ['Self-Service', 'Técnico FL', 'Gestor - Clientes'])
+            ->whereIn('name', (array) config('portal.assignable_profiles', []))
             ->values();
 
         return view('modules.clients', [

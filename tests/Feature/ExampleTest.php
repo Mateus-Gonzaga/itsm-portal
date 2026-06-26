@@ -10,10 +10,12 @@ class ExampleTest extends TestCase
     /**
      * A basic test example.
      */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_a_tela_de_login_carrega(): void
     {
-        $response = $this->get('/');
+        // '/' redireciona para o dashboard (e, sem login, para /login).
+        $this->get('/')->assertRedirect();
 
-        $response->assertStatus(200);
+        // A tela de login responde normalmente.
+        $this->get('/login')->assertOk();
     }
 }
