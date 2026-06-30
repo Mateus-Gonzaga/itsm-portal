@@ -50,8 +50,10 @@ class FortifyServiceProvider extends ServiceProvider
             }
 
             $base = rtrim((string) config('glpi.api.url'), '/');
+            $appToken = (string) config('glpi.api.app_token');
             try {
                 $resp = Http::baseUrl($base)->acceptJson()
+                    ->withHeaders(array_filter(['App-Token' => $appToken ?: null]))
                     ->withBasicAuth($login, $password)
                     ->get('/initSession', ['get_full_session' => 'true']);
             } catch (\Throwable) {
