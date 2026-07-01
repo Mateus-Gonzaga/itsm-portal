@@ -25,6 +25,7 @@ class User extends Authenticatable
         'password',
         'role',
         'glpi_id',
+        'notifications_seen_at',
     ];
 
     /**
@@ -48,6 +49,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'notifications_seen_at' => 'datetime',
         ];
     }
 }

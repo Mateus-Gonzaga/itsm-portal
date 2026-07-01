@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardsController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\TechniciansController;
 use App\Http\Controllers\ServiceWindowController;
@@ -16,6 +17,10 @@ Route::get('/', fn () => redirect()->route('dashboard'));
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+    // Notificações do sino (derivadas do GLPI) — poll via AJAX.
+    Route::get('/notificacoes', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notificacoes/ler', [NotificationController::class, 'markRead'])->name('notifications.read');
 
     // Módulos futuros (placeholders — estrutura preparada / "em construção")
     Route::get('/dashboard-analitico', DashboardsController::class)->middleware('role:gestor')->name('modules.analytics');

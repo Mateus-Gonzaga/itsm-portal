@@ -68,16 +68,21 @@
                     <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema claro/escuro">
                         <i class="bi bi-circle-half"></i>
                     </button>
-                    <div class="dropdown">
-                        <button class="theme-toggle position-relative" data-bs-toggle="dropdown" title="Notificações" aria-expanded="false">
+                    <div class="dropdown" id="notifWrap">
+                        <button class="theme-toggle position-relative" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Notificações" aria-expanded="false">
                             <i class="bi bi-bell"></i>
-                            <span class="notif-dot"></span>
+                            <span class="notif-dot d-none" id="notifDot"></span>
+                            <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle d-none" id="notifCount" style="font-size:.62rem">0</span>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width: 280px">
-                            <li class="dropdown-header">Notificações</li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li class="px-2 py-2 text-muted small">Em construção — você será avisado por aqui sobre atualizações dos seus chamados.</li>
-                        </ul>
+                        <div class="dropdown-menu dropdown-menu-end p-0" style="min-width: 320px; max-width: 340px">
+                            <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+                                <span class="fw-semibold small">Notificações</span>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="notifMarkRead">Marcar como lidas</button>
+                            </div>
+                            <div id="notifList" style="max-height: 360px; overflow-y: auto">
+                                <div class="px-3 py-4 text-center text-muted small">Carregando…</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -114,6 +119,64 @@
         localStorage.setItem('sidebar', collapsed ? 'collapsed' : 'expanded');
     }
 </script>
+@auth
+<style>.notif-item:hover { background: rgba(6,138,79,.08); }</style>
+<script>
+(function () {
+    const wrap = document.getElementById('notifWrap');
+    if (!wrap) return;
+    const listEl = document.getElementById('notifList');
+    const countEl = document.getElementById('notifCount');
+    const dotEl = document.getElementById('notifDot');
+    const markBtn = document.getElementById('notifMarkRead');
+    const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+    const INDEX_URL = "{{ route('notifications.index') }}";
+    const READ_URL = "{{ route('notifications.read') }}";
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = (s == null ? '' : s); return d.innerHTML; }
+
+    function render(data) {
+        const n = data.count || 0;
+        if (n > 0) {
+            countEl.textContent = n > 9 ? '9+' : n;
+            countEl.classList.remove('d-none');
+            dotEl.classList.remove('d-none');
+            markBtn.classList.remove('d-none');
+        } else {
+            countEl.classList.add('d-none');
+            dotEl.classList.add('d-none');
+            markBtn.classList.add('d-none');
+        }
+        if (!data.items || !data.items.length) {
+            listEl.innerHTML = '<div class="px-3 py-4 text-center text-muted small"><i class="bi bi-check2-all d-block fs-5 mb-1"></i>Nenhuma novidade.</div>';
+            return;
+        }
+        listEl.innerHTML = data.items.map(function (i) {
+            return '<a href="' + i.url + '" class="d-flex gap-2 px-3 py-2 text-decoration-none border-bottom notif-item">'
+                + '<i class="bi ' + esc(i.icon) + ' text-success mt-1"></i>'
+                + '<span class="flex-grow-1 overflow-hidden"><span class="d-block small fw-semibold text-body">' + esc(i.title) + '</span>'
+                + '<span class="d-block small text-secondary text-truncate">' + esc(i.detail) + '</span>'
+                + '<span class="d-block text-muted" style="font-size:.72rem">' + esc(i.when) + '</span></span></a>';
+        }).join('');
+    }
+
+    function load() {
+        fetch(INDEX_URL, { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) { if (d) render(d); })
+            .catch(function () {});
+    }
+
+    markBtn.addEventListener('click', function () {
+        fetch(READ_URL, { method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } })
+            .then(function () { load(); });
+    });
+
+    load();
+    setInterval(load, 60000);
+})();
+</script>
+@endauth
 @stack('scripts')
 </body>
 </html>
