@@ -184,15 +184,20 @@ class TicketController extends Controller
             return;
         }
 
-        // Dono por ID do GLPI (confiável). O nome é fallback quando o ID do
-        // solicitante não veio carregado (ex.: driver fake antigo).
-        $ownById = $ticket->requesterGlpiId !== null && $user->glpi_id !== null
-            && (int) $ticket->requesterGlpiId === (int) $user->glpi_id;
-        $ownByName = $ticket->requesterName === $user->name;
-
-        if (! $ownById && ! $ownByName) {
-            abort(403, 'Você não tem acesso a este chamado.');
+        // O repositório lê o chamado com o TOKEN do próprio usuário no GLPI,
+        // então o GLPI já aplicou a visibilidade dele: se find() devolveu o
+        // chamado, o cliente tem acesso. Com sessão GLPI ativa, confiamos nisso
+        // (era aqui que nascia o falso 403 por divergência de nome/ID).
+        if (session('glpi_token')) {
+            return;
         }
+
+        // Sem token de usuário (fallback raro pela conta de serviço): garante
+        // que o chamado é do próprio solicitante comparando com a lista dele.
+        $owns = $this->tickets->all($this->requesterFilter($user))
+            ->contains(fn (TicketData $t) => (string) $t->id === (string) $ticket->id);
+
+        abort_unless($owns, 403, 'Você não tem acesso a este chamado.');
     }
 
     private function listView(Request $request, array $base, string $heading): View
