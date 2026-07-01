@@ -255,7 +255,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             // campo bruto; já com atores carregados, ausência = sem técnico (null).
             requesterName: ($actors['requester'] ?? null)
                 ?? $this->dropdownName($t['users_id_recipient'] ?? null) ?? '—',
-            entity: $this->dropdownName($t['entities_id'] ?? null) ?? '—',
+            entity: $this->entityName($t['entities_id'] ?? null),
             createdAt: $this->date($t['date'] ?? null),
             technicianName: $actors !== null
                 ? ($actors['technician'] ?? null)
@@ -323,7 +323,30 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             return null;
         }
 
-        return (string) $value;
+        // O GLPI devolve nomes com entidades HTML (ex.: "&#62;" = ">"); decodifica.
+        return html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    /**
+     * Nome do cliente a partir do caminho da entidade. O GLPI devolve o caminho
+     * completo (ex.: "Entidade raiz > CLIENTES > Drogacei > FL 02"); exibimos só
+     * o trecho a partir do cliente (depois de "CLIENTES"). Sem "CLIENTES" no
+     * caminho, mostra o último nível.
+     */
+    private function entityName(mixed $value): string
+    {
+        $name = $this->dropdownName($value);
+        if ($name === null) {
+            return '—';
+        }
+
+        $parts = array_map('trim', explode('>', $name));
+        $idx = array_search('CLIENTES', $parts, true);
+        if ($idx !== false && isset($parts[$idx + 1])) {
+            return implode(' › ', array_slice($parts, $idx + 1));
+        }
+
+        return end($parts) ?: $name;
     }
 
     private function mapStatus(int $s): TicketStatus
