@@ -68,6 +68,17 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         return $out->sortBy([['type', 'asc'], ['name', 'asc']])->values();
     }
 
+    public function moveAsset(string $itemtype, int $id, int $entityId): void
+    {
+        if (! isset(self::TYPES[$itemtype]) || $id <= 0 || $entityId <= 0) {
+            throw new RuntimeException('Ativo ou entidade inválidos.');
+        }
+
+        $this->client()->put("/{$itemtype}/{$id}", [
+            'input' => ['id' => $id, 'entities_id' => $entityId],
+        ])->throw();
+    }
+
     /** Com expand_dropdowns, FKs viram nomes; 0/""/null = "—". */
     private function val(mixed $v): string
     {

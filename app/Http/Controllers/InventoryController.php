@@ -2,15 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
+use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiInventoryRepositoryInterface;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class InventoryController extends Controller
 {
-    public function __invoke(Request $request, GlpiInventoryRepositoryInterface $inventory): View
-    {
+    public function index(
+        Request $request,
+        GlpiInventoryRepositoryInterface $inventory,
+        GlpiDirectoryRepositoryInterface $directory,
+    ): View {
         $assets = $inventory->assets();
+        $isManager = $request->user()->role === UserRole::Gestor;
 
         // Contagem por tipo (na ordem dos tipos suportados).
         $counts = collect($inventory->types())
@@ -25,7 +32,27 @@ class InventoryController extends Controller
             'assets' => $assets,
             'counts' => $counts,
             'total' => $assets->count(),
-            'isManager' => $request->user()->role === \App\Enums\UserRole::Gestor,
+            'isManager' => $isManager,
+            // Só o gestor edita a entidade do ativo; lista para o seletor.
+            'entities' => $isManager ? $directory->entities() : collect(),
         ]);
+    }
+
+    /** Move um ativo para outra entidade do GLPI (gestor). */
+    public function move(Request $request, GlpiInventoryRepositoryInterface $inventory): RedirectResponse
+    {
+        $data = $request->validate([
+            'itemtype' => ['required', 'string', 'max:40'],
+            'id' => ['required', 'integer', 'min:1'],
+            'entity_id' => ['required', 'integer', 'min:1'],
+        ]);
+
+        try {
+            $inventory->moveAsset($data['itemtype'], (int) $data['id'], (int) $data['entity_id']);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Não foi possível mover o ativo: '.$e->getMessage());
+        }
+
+        return back()->with('status', 'Ativo movido para a nova entidade.');
     }
 }

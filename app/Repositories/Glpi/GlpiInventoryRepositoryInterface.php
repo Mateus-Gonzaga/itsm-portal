@@ -25,4 +25,10 @@ interface GlpiInventoryRepositoryInterface
      * @return Collection<int, array{id:int,type:string,typeKey:string,icon:string,name:string,entity:string,status:string,serial:string,model:string,manufacturer:string,location:string}>
      */
     public function assets(): Collection;
+
+    /**
+     * Move um ativo para outra entidade do GLPI (gestor). $itemtype é a chave
+     * do tipo (ex.: 'Computer'), $id o ativo e $entityId a entidade de destino.
+     */
+    public function moveAsset(string $itemtype, int $id, int $entityId): void;
 }

@@ -21,6 +21,13 @@
     </p>
 </div>
 
+@if (session('status'))
+    <div class="alert alert-success py-2 small">{{ session('status') }}</div>
+@endif
+@if (session('error'))
+    <div class="alert alert-danger py-2 small">{{ session('error') }}</div>
+@endif
+
 <div class="row g-2 mb-3">
     <div class="col-6 col-md">
         <button class="inv-card active" data-type="" type="button">
@@ -47,7 +54,7 @@
         <div class="table-wrap">
             <table class="table table-hover align-middle mb-0">
                 <thead>
-                    <tr><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Fabricante</th><th>Nº de série</th><th>Status</th></tr>
+                    <tr><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Fabricante</th><th>Nº de série</th><th>Status</th>@if ($isManager)<th class="text-end">Ações</th>@endif</tr>
                 </thead>
                 <tbody id="invBody">
                     @forelse ($assets as $a)
@@ -59,9 +66,19 @@
                             <td>{{ $a['manufacturer'] }}</td>
                             <td class="small">{{ $a['serial'] }}</td>
                             <td>@if ($a['status'] !== '—')<span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $a['status'] }}</span>@else<span class="text-muted">—</span>@endif</td>
+                            @if ($isManager)
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary js-move-asset"
+                                        data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}"
+                                        data-name="{{ $a['name'] }}" data-entity="{{ $a['entity'] }}"
+                                        title="Mover para outra entidade">
+                                        <i class="bi bi-arrow-left-right"></i>
+                                    </button>
+                                </td>
+                            @endif
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center text-muted py-5">
+                        <tr><td colspan="{{ $isManager ? 8 : 7 }}" class="text-center text-muted py-5">
                             <i class="bi bi-pc-display d-block fs-2 mb-2 opacity-50"></i>
                             Nenhum ativo inventariado ainda.<br><span class="small">Os equipamentos aparecem aqui conforme o GLPI Agent faz o inventário das máquinas.</span>
                         </td></tr>
@@ -71,6 +88,39 @@
         </div>
     </div>
 </div>
+
+@if ($isManager)
+<div class="modal fade" id="moveAssetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ route('inventory.move') }}" class="modal-content">
+            @csrf
+            <input type="hidden" name="itemtype" id="mvItemtype">
+            <input type="hidden" name="id" id="mvId">
+            <div class="modal-header">
+                <h5 class="modal-title">Mover ativo de entidade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-secondary mb-2">
+                    Ativo: <strong id="mvName"></strong><br>
+                    Entidade atual: <span id="mvEntity" class="text-secondary"></span>
+                </p>
+                <label class="form-label small">Nova entidade</label>
+                <select name="entity_id" class="form-select" required>
+                    <option value="" selected disabled>Selecione a entidade…</option>
+                    @foreach ($entities as $e)
+                        <option value="{{ $e['id'] }}">{{ html_entity_decode($e['completename'] ?? $e['name'], ENT_QUOTES | ENT_HTML5, 'UTF-8') }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success">Mover</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 @endsection
 
 @push('scripts')
@@ -97,6 +147,21 @@
             apply();
         });
     });
+
+    // Mover ativo de entidade (gestor): preenche o modal com o ativo clicado.
+    const moveModalEl = document.getElementById('moveAssetModal');
+    if (moveModalEl && window.bootstrap) {
+        const modal = new bootstrap.Modal(moveModalEl);
+        document.querySelectorAll('.js-move-asset').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.getElementById('mvItemtype').value = btn.dataset.type;
+                document.getElementById('mvId').value = btn.dataset.id;
+                document.getElementById('mvName').textContent = btn.dataset.name;
+                document.getElementById('mvEntity').textContent = btn.dataset.entity;
+                modal.show();
+            });
+        });
+    }
 })();
 </script>
 @endpush

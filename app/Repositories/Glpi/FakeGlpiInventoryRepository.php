@@ -27,4 +27,9 @@ class FakeGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
             ['id' => 3, 'type' => 'Monitores', 'typeKey' => 'Monitor', 'icon' => 'bi-display', 'name' => 'MON-01', 'entity' => 'Mel do Sol', 'status' => 'Em uso', 'serial' => 'MON-5521', 'model' => 'E2220H', 'manufacturer' => 'Dell', 'location' => '—'],
         ]);
     }
+
+    public function moveAsset(string $itemtype, int $id, int $entityId): void
+    {
+        // no-op (demo)
+    }
 }

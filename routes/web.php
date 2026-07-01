@@ -38,7 +38,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/janela-atendimento', [ServiceWindowController::class, 'index'])->name('modules.schedule');
         Route::post('/janela-atendimento', [ServiceWindowController::class, 'update'])->name('modules.schedule.update');
     });
-    Route::get('/inventario', InventoryController::class)->name('modules.inventory');
+    Route::get('/inventario', [InventoryController::class, 'index'])->name('modules.inventory');
+    Route::post('/inventario/mover', [InventoryController::class, 'move'])
+        ->middleware(['role:gestor', 'throttle:30,1'])->name('inventory.move');
     Route::get('/base-conhecimento', fn () => view('modules.placeholder', ['title' => 'Base de Conhecimento', 'icon' => 'bi-journal-text', 'desc' => 'Artigos e soluções para autoatendimento.']))->name('modules.kb');
     Route::get('/monitoramento', fn () => view('modules.placeholder', ['title' => 'Monitoramento', 'icon' => 'bi-activity', 'desc' => 'Status de serviços e alertas em tempo real.']))->name('modules.monitoring');
     Route::get('/automacoes', fn () => view('modules.placeholder', ['title' => 'Automações', 'icon' => 'bi-robot', 'desc' => 'Regras e fluxos automáticos de atendimento.']))->name('modules.automations');
