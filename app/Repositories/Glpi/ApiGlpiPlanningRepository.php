@@ -71,7 +71,47 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
             ))
             ->values();
 
-        return $taskEvents->merge($slaEvents)->values();
+        // Tarefas livres da equipe (PlanningExternalEvent): SEMPRE visíveis
+        // (demandas compartilhadas) — não entram no filtro por técnico.
+        return $taskEvents->merge($slaEvents)->merge($this->externalEvents())->values();
+    }
+
+    public function createEvent(string $title, CarbonImmutable $begin, CarbonImmutable $end, ?int $ownerGlpiId = null, ?string $content = null): void
+    {
+        $input = [
+            'name' => $title,
+            'text' => $content !== null && $content !== '' ? $content : $title,
+            'begin' => $begin->format('Y-m-d H:i:s'),
+            'end' => $end->format('Y-m-d H:i:s'),
+            'state' => 1, // 1 = a fazer
+        ];
+        if ($ownerGlpiId !== null && $ownerGlpiId > 0) {
+            $input['users_id'] = $ownerGlpiId;
+        }
+
+        $this->client()->post('/PlanningExternalEvent', ['input' => $input])->throw();
+    }
+
+    public function rescheduleEvent(int $eventId, CarbonImmutable $begin, CarbonImmutable $end): void
+    {
+        $this->client()->put("/PlanningExternalEvent/{$eventId}", [
+            'input' => [
+                'begin' => $begin->format('Y-m-d H:i:s'),
+                'end' => $end->format('Y-m-d H:i:s'),
+            ],
+        ])->throw();
+    }
+
+    public function setEventDone(int $eventId, bool $done): void
+    {
+        $this->client()->put("/PlanningExternalEvent/{$eventId}", [
+            'input' => ['state' => $done ? 2 : 1],
+        ])->throw();
+    }
+
+    public function deleteEvent(int $eventId): void
+    {
+        $this->client()->delete("/PlanningExternalEvent/{$eventId}")->throw();
     }
 
     public function reschedule(int $taskId, CarbonImmutable $begin, CarbonImmutable $end): void
@@ -123,6 +163,41 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
             taskId: (int) $t['id'],
             done: (int) ($t['state'] ?? 0) === 2,
         );
+    }
+
+    /**
+     * Tarefas livres da equipe (PlanningExternalEvent). Lidas com o token do
+     * usuário logado, então o GLPI já aplica o escopo por entidade/perfil.
+     *
+     * @return Collection<int, PlanningEvent>
+     */
+    private function externalEvents(): Collection
+    {
+        $resp = $this->client()->get('/PlanningExternalEvent', ['range' => '0-499']);
+        if (! $resp->successful() || ! is_array($resp->json())) {
+            return collect();
+        }
+
+        return collect($resp->json())
+            ->filter(fn (array $e) => $this->validDate($e['begin'] ?? null))
+            ->map(function (array $e) {
+                $ownerId = ((int) ($e['users_id'] ?? 0)) ?: null;
+
+                return new PlanningEvent(
+                    id: 'ext-'.(int) $e['id'],
+                    ticketId: 0,
+                    title: (string) ($e['name'] ?? 'Tarefa'),
+                    start: $this->date($e['begin']),
+                    end: $this->validDate($e['end'] ?? null) ? $this->date($e['end']) : null,
+                    type: 'event',
+                    movable: true,
+                    technicianName: $ownerId !== null ? ($this->userMap()[$ownerId] ?? null) : null,
+                    technicianId: $ownerId,
+                    done: (int) ($e['state'] ?? 0) === 2,
+                    eventId: (int) $e['id'],
+                );
+            })
+            ->values();
     }
 
     /** @return array<int, array{title: string, due: ?string, open: bool}> */

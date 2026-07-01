@@ -17,6 +17,8 @@ class FakeGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
 
     private const CREATED_KEY = 'fake_planning_created';
 
+    private const EVENTS_KEY = 'fake_planning_events';
+
     public function events(array $filters = []): Collection
     {
         $overrides = cache()->get(self::OVERRIDES_KEY, []);
@@ -45,7 +47,8 @@ class FakeGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
                 : in_array($e->ticketId, $ticketIds, true));
         }
 
-        return $events->values();
+        // Tarefas livres (compartilhadas) sempre aparecem, sem filtro por técnico.
+        return $events->merge($this->externalEvents())->values();
     }
 
     public function reschedule(int $taskId, CarbonImmutable $begin, CarbonImmutable $end): void
@@ -67,6 +70,77 @@ class FakeGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
             'end' => $end->toIso8601String(),
         ];
         cache()->forever(self::CREATED_KEY, $created);
+    }
+
+    public function createEvent(string $title, CarbonImmutable $begin, CarbonImmutable $end, ?int $ownerGlpiId = null, ?string $content = null): void
+    {
+        $events = cache()->get(self::EVENTS_KEY, []);
+        $eventId = 500 + count($events) + 1;
+        $events[] = [
+            'eventId' => $eventId,
+            'title' => $title,
+            'begin' => $begin->toIso8601String(),
+            'end' => $end->toIso8601String(),
+            'ownerId' => $ownerGlpiId,
+            'done' => false,
+        ];
+        cache()->forever(self::EVENTS_KEY, $events);
+    }
+
+    public function rescheduleEvent(int $eventId, CarbonImmutable $begin, CarbonImmutable $end): void
+    {
+        $this->mutateEvent($eventId, function (array $e) use ($begin, $end) {
+            $e['begin'] = $begin->toIso8601String();
+            $e['end'] = $end->toIso8601String();
+
+            return $e;
+        });
+    }
+
+    public function setEventDone(int $eventId, bool $done): void
+    {
+        $this->mutateEvent($eventId, function (array $e) use ($done) {
+            $e['done'] = $done;
+
+            return $e;
+        });
+    }
+
+    public function deleteEvent(int $eventId): void
+    {
+        $events = collect(cache()->get(self::EVENTS_KEY, []))
+            ->reject(fn (array $e) => (int) $e['eventId'] === $eventId)
+            ->values()->all();
+        cache()->forever(self::EVENTS_KEY, $events);
+    }
+
+    /** Aplica uma transformação a um evento livre e regrava o cache. */
+    private function mutateEvent(int $eventId, callable $fn): void
+    {
+        $events = collect(cache()->get(self::EVENTS_KEY, []))
+            ->map(fn (array $e) => (int) $e['eventId'] === $eventId ? $fn($e) : $e)
+            ->all();
+        cache()->forever(self::EVENTS_KEY, $events);
+    }
+
+    /** @return Collection<int, PlanningEvent> Tarefas livres criadas na tela (demo). */
+    private function externalEvents(): Collection
+    {
+        $names = [4 => 'Tiago Técnico', 2 => 'Gestor Demo'];
+
+        return collect(cache()->get(self::EVENTS_KEY, []))->map(fn (array $e) => new PlanningEvent(
+            id: 'ext-'.$e['eventId'],
+            ticketId: 0,
+            title: $e['title'],
+            start: CarbonImmutable::parse($e['begin']),
+            end: CarbonImmutable::parse($e['end']),
+            type: 'event',
+            movable: true,
+            technicianName: $e['ownerId'] !== null ? ($names[$e['ownerId']] ?? 'Responsável') : null,
+            technicianId: $e['ownerId'],
+            done: (bool) ($e['done'] ?? false),
+            eventId: (int) $e['eventId'],
+        ));
     }
 
     /** @return Collection<int, PlanningEvent> Tarefas agendadas pela tela (demo). */

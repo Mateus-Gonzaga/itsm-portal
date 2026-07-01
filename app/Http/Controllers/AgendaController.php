@@ -101,4 +101,65 @@ class AgendaController extends Controller
 
         return response()->json(['ok' => true]);
     }
+
+    /** Cria uma tarefa livre da equipe (PlanningExternalEvent). */
+    public function storeEvent(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'begin' => ['required', 'date'],
+            'end' => ['required', 'date', 'after:begin'],
+            'owner_glpi_id' => ['nullable', 'integer'],
+            'content' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $this->planning->createEvent(
+            $data['title'],
+            CarbonImmutable::parse($data['begin']),
+            CarbonImmutable::parse($data['end']),
+            ! empty($data['owner_glpi_id']) ? (int) $data['owner_glpi_id'] : null,
+            $data['content'] ?? null,
+        );
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Remarca uma tarefa livre (arrastar/redimensionar). */
+    public function rescheduleEvent(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'event_id' => ['required', 'integer'],
+            'begin' => ['required', 'date'],
+            'end' => ['required', 'date', 'after:begin'],
+        ]);
+
+        $this->planning->rescheduleEvent(
+            (int) $data['event_id'],
+            CarbonImmutable::parse($data['begin']),
+            CarbonImmutable::parse($data['end']),
+        );
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Marca/desmarca a tarefa livre como concluída. */
+    public function toggleEventDone(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'event_id' => ['required', 'integer'],
+            'done' => ['required', 'boolean'],
+        ]);
+
+        $this->planning->setEventDone((int) $data['event_id'], (bool) $data['done']);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Exclui uma tarefa livre. */
+    public function destroyEvent(int $id): JsonResponse
+    {
+        $this->planning->deleteEvent($id);
+
+        return response()->json(['ok' => true]);
+    }
 }

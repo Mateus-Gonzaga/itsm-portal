@@ -67,6 +67,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/agenda', [AgendaController::class, 'index'])->name('agenda.index');
         Route::post('/agenda/remarcar', [AgendaController::class, 'reschedule'])->name('agenda.reschedule');
         Route::post('/agenda/agendar', [AgendaController::class, 'store'])->name('agenda.store');
+
+        // Tarefas livres da equipe (PlanningExternalEvent)
+        Route::post('/agenda/tarefa', [AgendaController::class, 'storeEvent'])->name('agenda.event.store');
+        Route::post('/agenda/tarefa/remarcar', [AgendaController::class, 'rescheduleEvent'])->name('agenda.event.reschedule');
+        Route::post('/agenda/tarefa/concluir', [AgendaController::class, 'toggleEventDone'])->name('agenda.event.done');
+        Route::delete('/agenda/tarefa/{id}', [AgendaController::class, 'destroyEvent'])->name('agenda.event.destroy');
     });
 
     // Ações do solicitante (cliente)
