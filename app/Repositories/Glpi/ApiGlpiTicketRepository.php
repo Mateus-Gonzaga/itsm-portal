@@ -280,14 +280,24 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
 
         $actors = [];
         foreach ($resp->json() as $link) {
-            $name = $this->userMap()[(int) ($link['users_id'] ?? 0)] ?? null;
+            $uid = (int) ($link['users_id'] ?? 0);
+            $type = (int) ($link['type'] ?? 0);
+
+            // O ID do solicitante vem direto do vínculo — capturamos ANTES de
+            // resolver o nome, pois o cliente (Self-Service) pode não ter
+            // direito de listar /User (userMap vazio). O controle de acesso
+            // depende deste ID, então ele não pode ficar de fora.
+            if ($type === 1 && $uid > 0) {
+                $actors['requester_id'] = $uid;
+            }
+
+            $name = $this->userMap()[$uid] ?? null;
             if ($name === null) {
                 continue;
             }
-            if ((int) ($link['type'] ?? 0) === 1) {
+            if ($type === 1) {
                 $actors['requester'] = $name;
-                $actors['requester_id'] = (int) ($link['users_id'] ?? 0);
-            } elseif ((int) ($link['type'] ?? 0) === 2) {
+            } elseif ($type === 2) {
                 $actors['technician'] = $name;
             }
         }
