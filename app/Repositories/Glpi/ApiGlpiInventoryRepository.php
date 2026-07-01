@@ -140,18 +140,27 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         if (! $token) {
             throw new RuntimeException('GLPI initSession não retornou session_token.');
         }
-        $this->sessionToken = $token;
 
+        // A conta de serviço é ampla (pode ver todas as entidades). É OBRIGATÓRIO
+        // escopar na entidade do usuário logado; sem isso NÃO expomos ativos
+        // (fail-closed) — evita um cliente enxergar ativos de outro cliente.
         $entity = session('glpi_entity');
-        if ($entity !== null && $entity !== '') {
-            Http::baseUrl($this->apiUrl)
-                ->acceptJson()
-                ->withHeaders(array_filter(['Session-Token' => $token, 'App-Token' => $this->appToken ?: null]))
-                ->post('/changeActiveEntities', [
-                    'entities_id' => (int) $entity,
-                    'is_recursive' => (bool) session('glpi_entity_recursive'),
-                ]);
+        if ($entity === null || $entity === '') {
+            throw new RuntimeException('Sessão sem entidade GLPI: inventário não pode ser isolado.');
         }
+
+        $scoped = Http::baseUrl($this->apiUrl)
+            ->acceptJson()
+            ->withHeaders(array_filter(['Session-Token' => $token, 'App-Token' => $this->appToken ?: null]))
+            ->post('/changeActiveEntities', [
+                'entities_id' => (int) $entity,
+                'is_recursive' => (bool) session('glpi_entity_recursive'),
+            ]);
+        if (! $scoped->successful()) {
+            throw new RuntimeException('Falha ao aplicar o isolamento por entidade no GLPI.');
+        }
+
+        $this->sessionToken = $token;
 
         return $this->sessionToken;
     }
