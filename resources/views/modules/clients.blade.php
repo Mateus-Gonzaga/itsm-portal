@@ -92,6 +92,10 @@
                                     <td>@if ($u['recursive'])<span class="badge badge-rec"><i class="bi bi-diagram-3 me-1"></i>+ subentidades</span>@else<span class="text-muted small">somente esta</span>@endif</td>
                                     <td>@if ($u['active'])<span class="badge bg-success-subtle text-success-emphasis">Ativo</span>@else<span class="badge bg-secondary-subtle text-secondary-emphasis">Inativo</span>@endif</td>
                                     <td class="text-end text-nowrap">
+                                        @if (\Illuminate\Support\Str::endsWith(rtrim(html_entity_decode((string) $u['entity'])), 'CLIENTES'))
+                                            <button class="btn btn-sm btn-outline-success" title="Isolar em entidade própria" onclick="openIsolate(this)"
+                                                    data-id="{{ $u['id'] }}" data-name="{{ $u['name'] }}" data-profile="{{ $u['profile_id'] }}"><i class="bi bi-shield-lock"></i></button>
+                                        @endif
                                         <form method="POST" action="{{ route('directory.users.toggle', $u['id']) }}" class="d-inline">
                                             @csrf @method('PUT')
                                             <input type="hidden" name="active" value="{{ $u['active'] ? 0 : 1 }}">
@@ -206,6 +210,26 @@
         </div>
     </div>
 </div>
+
+{{-- Modal isolar cliente --}}
+<div class="modal fade" id="isolateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="isolateForm" method="POST" class="modal-content">
+            @csrf
+            <input type="hidden" name="_method" value="PUT">
+            <input type="hidden" name="profile_id" id="iso_profile">
+            <input type="hidden" name="name" id="iso_name">
+            <div class="modal-header"><h5 class="modal-title"><i class="bi bi-shield-lock me-2"></i>Isolar cliente</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <p class="small text-secondary">Cria a entidade da loja sob <strong>CLIENTES</strong> e move <strong id="iso_who"></strong> para ela (escopo "somente esta"). Assim os chamados e ativos dele ficam isolados dos demais clientes.</p>
+                <label class="form-label">Nome da entidade (loja)</label>
+                <input type="text" name="entity_name" id="iso_entity" class="form-control" maxlength="255" required>
+                <div class="form-text">Se já existir uma entidade com esse nome sob CLIENTES, ela é reaproveitada.</div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success"><i class="bi bi-shield-check me-1"></i> Isolar</button></div>
+        </form>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -215,9 +239,20 @@
     const ENT_UPD = "{{ url('diretorio/entidades') }}";
     const USR_STORE = "{{ route('directory.users.store') }}";
     const USR_UPD = "{{ url('diretorio/usuarios') }}";
+    const USR_UPD_ISO = "{{ url('diretorio/usuarios') }}";
     const entModal = new bootstrap.Modal(document.getElementById('entityModal'));
     const usrModal = new bootstrap.Modal(document.getElementById('userModal'));
+    const isoModal = new bootstrap.Modal(document.getElementById('isolateModal'));
     const $ = (id) => document.getElementById(id);
+
+    window.openIsolate = function (btn) {
+        $('isolateForm').action = USR_UPD_ISO + '/' + btn.dataset.id + '/isolar';
+        $('iso_profile').value = btn.dataset.profile;
+        $('iso_name').value = btn.dataset.name;
+        $('iso_who').textContent = btn.dataset.name;
+        $('iso_entity').value = btn.dataset.name;
+        isoModal.show();
+    };
 
     window.openEntity = function () {
         $('ent_title').textContent = 'Nova entidade';

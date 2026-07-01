@@ -25,7 +25,8 @@ interface GlpiDirectoryRepositoryInterface
      */
     public function users(): Collection;
 
-    public function createEntity(string $name, int $parentId): void;
+    /** Cria uma entidade e retorna o ID da nova entidade no GLPI. */
+    public function createEntity(string $name, int $parentId): int;
 
     public function updateEntity(int $id, string $name): void;
 

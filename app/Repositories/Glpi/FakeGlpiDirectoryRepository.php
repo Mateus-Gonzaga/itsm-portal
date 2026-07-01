@@ -36,9 +36,10 @@ class FakeGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
         ]);
     }
 
-    public function createEntity(string $name, int $parentId): void
+    public function createEntity(string $name, int $parentId): int
     {
-        // no-op (demo)
+        // Demo: devolve um ID fictício (nada é gravado).
+        return random_int(1000, 9999);
     }
 
     public function updateEntity(int $id, string $name): void

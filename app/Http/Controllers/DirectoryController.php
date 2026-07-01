@@ -112,4 +112,46 @@ class DirectoryController extends Controller
 
         return back()->with('status', $active ? 'Usuário ativado.' : 'Usuário desativado.');
     }
+
+    /**
+     * Isola um cliente em 1 passo: cria (ou reaproveita) a entidade da loja
+     * sob CLIENTES e move o usuário para ela (escopo "somente esta"). Resolve o
+     * problema de vários clientes ficarem soltos na entidade-pai CLIENTES.
+     */
+    public function isolateUser(Request $request, int $id): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'entity_name' => ['required', 'string', 'max:255'],
+            'profile_id' => ['required', 'integer'],
+        ]);
+
+        // Perfil precisa ser atribuível (evita virar Super-Admin via form).
+        $okProfile = $this->dir->profiles()
+            ->whereIn('name', (array) config('portal.assignable_profiles', []))
+            ->contains(fn ($p) => (int) $p['id'] === (int) $data['profile_id']);
+        abort_unless($okProfile, 403, 'Perfil não permitido para atribuição.');
+
+        // Entidade-pai = a entidade "CLIENTES".
+        $entities = $this->dir->entities();
+        $clientes = $entities->first(fn ($e) => $e['name'] === 'CLIENTES');
+        abort_unless($clientes, 422, 'Entidade "CLIENTES" não encontrada no GLPI.');
+        $parentId = (int) $clientes['id'];
+
+        // Reaproveita entidade de mesmo nome já existente sob CLIENTES; senão cria.
+        $target = $entities->first(fn ($e) => $e['name'] === $data['entity_name']
+            && str_contains(html_entity_decode((string) $e['completename']), 'CLIENTES'));
+        $entityId = $target ? (int) $target['id'] : $this->dir->createEntity($data['entity_name'], $parentId);
+
+        $this->dir->updateUser($id, [
+            'name' => $data['name'],
+            'entity_id' => $entityId,
+            'profile_id' => (int) $data['profile_id'],
+            'recursive' => false,
+            'active' => true,
+            'password' => null,
+        ]);
+
+        return back()->with('status', "Cliente isolado na entidade \"{$data['entity_name']}\".");
+    }
 }

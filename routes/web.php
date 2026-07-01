@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/diretorio/usuarios', [DirectoryController::class, 'storeUser'])->name('directory.users.store');
         Route::put('/diretorio/usuarios/{id}', [DirectoryController::class, 'updateUser'])->name('directory.users.update');
         Route::put('/diretorio/usuarios/{id}/ativo', [DirectoryController::class, 'toggleUser'])->name('directory.users.toggle');
+        Route::put('/diretorio/usuarios/{id}/isolar', [DirectoryController::class, 'isolateUser'])->name('directory.users.isolate');
     });
     Route::get('/tecnicos', TechniciansController::class)->middleware('role:gestor')->name('modules.technicians');
     Route::get('/configuracoes', fn () => view('modules.settings'))->name('modules.settings');

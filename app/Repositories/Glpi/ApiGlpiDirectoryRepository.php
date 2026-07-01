@@ -111,9 +111,12 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
     // Escrita
     // ----------------------------------------------------------------
 
-    public function createEntity(string $name, int $parentId): void
+    public function createEntity(string $name, int $parentId): int
     {
-        $this->client()->post('/Entity', ['input' => ['name' => $name, 'entities_id' => $parentId]])->throw();
+        $resp = $this->client()->post('/Entity', ['input' => ['name' => $name, 'entities_id' => $parentId]]);
+        $resp->throw();
+
+        return (int) ($resp->json('id') ?? $resp->json('0.id'));
     }
 
     public function updateEntity(int $id, string $name): void
