@@ -68,6 +68,7 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
             requesterName: $attributes['requester'] ?? 'Cliente Demo',
             entity: $attributes['entity'] ?? 'Minha Empresa',
             createdAt: CarbonImmutable::now(),
+            requesterGlpiId: isset($attributes['requester_glpi_id']) ? (int) $attributes['requester_glpi_id'] : null,
             category: $attributes['category'] ?? null,
             dueDate: ! empty($attributes['due_date'])
                 ? CarbonImmutable::parse($attributes['due_date'])

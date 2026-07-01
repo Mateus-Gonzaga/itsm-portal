@@ -263,6 +263,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             category: $this->dropdownName($t['itilcategories_id'] ?? null),
             dueDate: ! empty($t['time_to_resolve']) ? $this->date($t['time_to_resolve']) : null,
             updatedAt: ! empty($t['date_mod']) ? $this->date($t['date_mod']) : null,
+            requesterGlpiId: $actors['requester_id'] ?? null,
         );
     }
 
@@ -285,6 +286,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             }
             if ((int) ($link['type'] ?? 0) === 1) {
                 $actors['requester'] = $name;
+                $actors['requester_id'] = (int) ($link['users_id'] ?? 0);
             } elseif ((int) ($link['type'] ?? 0) === 2) {
                 $actors['technician'] = $name;
             }

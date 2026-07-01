@@ -31,6 +31,9 @@ final class TicketData
         public readonly ?string $category = null,
         public readonly ?CarbonImmutable $dueDate = null,
         public readonly ?CarbonImmutable $updatedAt = null,
+        // ID do solicitante no GLPI — usado no controle de acesso do cliente
+        // (comparação por ID é confiável; o nome pode variar realname × login).
+        public readonly ?int $requesterGlpiId = null,
     ) {
     }
 

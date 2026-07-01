@@ -179,7 +179,18 @@ class TicketController extends Controller
 
     private function denyIfNotOwner(Request $request, TicketData $ticket): void
     {
-        if ($request->user()->role === UserRole::Cliente && $ticket->requesterName !== $request->user()->name) {
+        $user = $request->user();
+        if ($user->role !== UserRole::Cliente) {
+            return;
+        }
+
+        // Dono por ID do GLPI (confiável). O nome é fallback quando o ID do
+        // solicitante não veio carregado (ex.: driver fake antigo).
+        $ownById = $ticket->requesterGlpiId !== null && $user->glpi_id !== null
+            && (int) $ticket->requesterGlpiId === (int) $user->glpi_id;
+        $ownByName = $ticket->requesterName === $user->name;
+
+        if (! $ownById && ! $ownByName) {
             abort(403, 'Você não tem acesso a este chamado.');
         }
     }
