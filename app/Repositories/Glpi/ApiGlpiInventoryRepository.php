@@ -129,6 +129,21 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
             return $this->sessionToken;
         }
 
+        // A conta de serviço é ampla (vê todas as entidades). É OBRIGATÓRIO
+        // escopar na entidade do usuário logado; sem isso NÃO expomos ativos
+        // (fail-closed) — evita um cliente enxergar ativos de outro/da raiz.
+        //
+        // Fail-closed também quando o escopo é a RAIZ sem recursividade: isso é
+        // sintoma de usuário mal atribuído (ex.: cliente na "Entidade raiz"),
+        // que senão veria os ativos da raiz. Retornamos '' → sem token → o GLPI
+        // recusa e a lista vem vazia, sem vazamento. (Gestor legítimo na raiz é
+        // recursivo, então não cai aqui.)
+        $entity = session('glpi_entity');
+        $recursive = (bool) session('glpi_entity_recursive');
+        if ($entity === null || $entity === '' || ((int) $entity === 0 && ! $recursive)) {
+            return '';
+        }
+
         $resp = Http::baseUrl($this->apiUrl)
             ->acceptJson()
             ->withBasicAuth($this->user, $this->password)
@@ -139,14 +154,6 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         $token = $resp->json('session_token');
         if (! $token) {
             throw new RuntimeException('GLPI initSession não retornou session_token.');
-        }
-
-        // A conta de serviço é ampla (pode ver todas as entidades). É OBRIGATÓRIO
-        // escopar na entidade do usuário logado; sem isso NÃO expomos ativos
-        // (fail-closed) — evita um cliente enxergar ativos de outro cliente.
-        $entity = session('glpi_entity');
-        if ($entity === null || $entity === '') {
-            throw new RuntimeException('Sessão sem entidade GLPI: inventário não pode ser isolado.');
         }
 
         $scoped = Http::baseUrl($this->apiUrl)

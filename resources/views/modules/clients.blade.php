@@ -92,8 +92,8 @@
                                     <td>@if ($u['recursive'])<span class="badge badge-rec"><i class="bi bi-diagram-3 me-1"></i>+ subentidades</span>@else<span class="text-muted small">somente esta</span>@endif</td>
                                     <td>@if ($u['active'])<span class="badge bg-success-subtle text-success-emphasis">Ativo</span>@else<span class="badge bg-secondary-subtle text-secondary-emphasis">Inativo</span>@endif</td>
                                     <td class="text-end text-nowrap">
-                                        @if (\Illuminate\Support\Str::endsWith(rtrim(html_entity_decode((string) $u['entity'])), 'CLIENTES'))
-                                            <button class="btn btn-sm btn-outline-success" title="Isolar em entidade própria" onclick="openIsolate(this)"
+                                        @if (! \Illuminate\Support\Str::contains(html_entity_decode((string) $u['entity']), 'CLIENTES >'))
+                                            <button class="btn btn-sm btn-outline-success" title="Isolar em entidade própria (cliente sem loja definida)" onclick="openIsolate(this)"
                                                     data-id="{{ $u['id'] }}" data-name="{{ $u['name'] }}" data-profile="{{ $u['profile_id'] }}"><i class="bi bi-shield-lock"></i></button>
                                         @endif
                                         <form method="POST" action="{{ route('directory.users.toggle', $u['id']) }}" class="d-inline">
