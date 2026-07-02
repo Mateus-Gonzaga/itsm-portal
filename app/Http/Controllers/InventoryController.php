@@ -53,6 +53,10 @@ class InventoryController extends Controller
             return back()->with('error', 'Não foi possível mover o ativo: '.$e->getMessage());
         }
 
-        return back()->with('status', 'Ativo movido para a nova entidade.');
+        $msg = $data['itemtype'] === 'Computer'
+            ? 'Computador e itens conectados movidos para a nova entidade.'
+            : 'Ativo movido para a nova entidade.';
+
+        return back()->with('status', $msg);
     }
 }

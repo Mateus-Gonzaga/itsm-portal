@@ -74,9 +74,39 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
             throw new RuntimeException('Ativo ou entidade inválidos.');
         }
 
+        // Move o ativo em si.
         $this->client()->put("/{$itemtype}/{$id}", [
             'input' => ['id' => $id, 'entities_id' => $entityId],
         ])->throw();
+
+        // Mover um computador leva junto os itens conectados (monitor, impressora,
+        // periférico, telefone). Editar só o campo entidade NÃO arrasta os
+        // conectados no GLPI, então fazemos isso aqui — o que o inventário faria
+        // por herança ao rodar o agent. Best-effort: falha num item não aborta.
+        if ($itemtype === 'Computer') {
+            $this->moveConnectedItems($id, $entityId);
+        }
+    }
+
+    /** Move os itens conectados a um computador para a mesma entidade. */
+    private function moveConnectedItems(int $computerId, int $entityId): void
+    {
+        $resp = $this->client()->get("/Computer/{$computerId}/Computer_Item");
+        if (! $resp->successful() || ! is_array($resp->json())) {
+            return;
+        }
+
+        $connectable = ['Monitor', 'Printer', 'Peripheral', 'Phone'];
+        foreach ($resp->json() as $link) {
+            $type = (string) ($link['itemtype'] ?? '');
+            $iid = (int) ($link['items_id'] ?? 0);
+            if ($iid > 0 && in_array($type, $connectable, true)) {
+                // Sem ->throw(): item global/compartilhado pode recusar; seguimos.
+                $this->client()->put("/{$type}/{$iid}", [
+                    'input' => ['id' => $iid, 'entities_id' => $entityId],
+                ]);
+            }
+        }
     }
 
     /** Com expand_dropdowns, FKs viram nomes; 0/""/null = "—". */
