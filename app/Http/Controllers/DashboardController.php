@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Data\TicketData;
+use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
+use App\Models\KanbanCard;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -47,11 +49,36 @@ class DashboardController extends Controller
             UserRole::Gestor => 'Visão geral completa do atendimento',
         };
 
+        // Distribuições por status/prioridade (só o que tem contagem > 0).
+        $byStatus = collect(TicketStatus::cases())
+            ->map(fn (TicketStatus $s) => ['label' => $s->label(), 'color' => $s->color(), 'count' => $list->where('status', $s)->count()])
+            ->filter(fn ($r) => $r['count'] > 0)->values();
+
+        $byPriority = collect(TicketPriority::cases())
+            ->map(fn (TicketPriority $p) => ['label' => $p->label(), 'color' => $p->color(), 'count' => $list->where('priority', $p)->count()])
+            ->filter(fn ($r) => $r['count'] > 0)->values();
+
+        // Próximos prazos (chamados abertos com data-limite, mais urgentes primeiro).
+        $upcoming = $list
+            ->filter(fn (TicketData $t) => ! in_array($t->status, $closed, true) && $t->dueDate !== null)
+            ->sortBy(fn (TicketData $t) => $t->dueDate)
+            ->take(5)
+            ->values();
+
+        // Resumo do quadro Kanban da equipe (staff).
+        $kanban = $user->role === UserRole::Cliente
+            ? collect()
+            : KanbanCard::selectRaw('status, count(*) as c')->groupBy('status')->pluck('c', 'status');
+
         return view('dashboard.index', [
             'role' => $user->role,
             'tickets' => $list,
             'metrics' => $metrics,
             'subtitle' => $subtitle,
+            'byStatus' => $byStatus,
+            'byPriority' => $byPriority,
+            'upcoming' => $upcoming,
+            'kanban' => $kanban,
         ]);
     }
 }
