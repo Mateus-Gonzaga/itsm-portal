@@ -128,18 +128,25 @@
 
 {{-- ===================== QUADRO KANBAN DA EQUIPE ===================== --}}
 <style>
-    .kanban-board { display:flex; gap:1rem; overflow-x:auto; padding-bottom:.5rem; }
-    .kanban-col { flex:1 1 0; min-width:260px; background:var(--bs-secondary-bg); border-radius:12px; padding:.6rem; }
+    .kanban-board { display:flex; gap:1rem; overflow-x:auto; padding-bottom:.5rem; align-items:flex-start; }
+    .kanban-col { flex:1 1 0; min-width:270px; background:var(--bs-secondary-bg); border-radius:12px; padding:.6rem; display:flex; flex-direction:column; }
     .kanban-col-head { font-weight:700; font-size:.9rem; padding:.25rem .5rem .6rem; display:flex; align-items:center; gap:.5rem; color:var(--bs-body-color); }
-    .kanban-col-head .count { font-size:.72rem; font-weight:600; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); border-radius:999px; padding:0 .5rem; }
-    .kanban-list { min-height:60px; display:flex; flex-direction:column; gap:.5rem; }
-    .kanban-card { position:relative; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); border-radius:10px; padding:.6rem .7rem .6rem .8rem; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.05); }
+    .kanban-col-head .count { margin-left:auto; font-size:.72rem; font-weight:600; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); border-radius:999px; padding:0 .5rem; }
+    .kanban-col-head .dot { width:.7rem; height:.7rem; border-radius:50%; flex:0 0 auto; }
+    .dot-todo { background:#94a3b8; } .dot-doing { background:#f59e0b; } .dot-done { background:#0a9d5a; }
+    .kanban-list { min-height:24px; display:flex; flex-direction:column; gap:.5rem; }
+    .kanban-card { position:relative; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); border-radius:10px; padding:.6rem .7rem .6rem .85rem; cursor:grab; box-shadow:0 1px 2px rgba(0,0,0,.05); transition:border-color .1s, transform .05s; }
     .kanban-card:hover { border-color:#A8CF45; }
+    .kanban-card:active { cursor:grabbing; }
     .kanban-card .kc-color { position:absolute; left:0; top:0; bottom:0; width:4px; border-radius:10px 0 0 10px; }
     .kanban-card .kc-title { font-weight:600; font-size:.9rem; margin-bottom:.25rem; }
     .kanban-card .kc-meta { display:flex; flex-wrap:wrap; gap:.4rem .7rem; font-size:.74rem; color:var(--bs-secondary-color); }
-    .kanban-card.sortable-ghost { opacity:.4; }
-    .kanban-list.drag-over { outline:2px dashed #A8CF45; outline-offset:2px; border-radius:8px; }
+    .kanban-card.sortable-ghost { opacity:.35; }
+    .kanban-card.sortable-chosen { border-color:#A8CF45; box-shadow:0 4px 12px rgba(3,61,34,.18); }
+    .kanban-empty { text-align:center; color:var(--bs-secondary-color); font-size:.78rem; padding:.9rem; border:1px dashed var(--bs-border-color); border-radius:8px; }
+    .kanban-list:has(.kanban-card) .kanban-empty { display:none; }
+    .kanban-add { margin-top:.5rem; width:100%; border:none; background:transparent; color:var(--bs-secondary-color); font-size:.84rem; font-weight:600; padding:.5rem; border-radius:8px; text-align:left; cursor:pointer; transition:.1s; }
+    .kanban-add:hover { background:var(--bs-body-bg); color:#067a45; }
 </style>
 
 @php
@@ -152,12 +159,14 @@
         <button class="btn btn-sm btn-success" onclick="openCard()"><i class="bi bi-plus-lg me-1"></i> Novo cartão</button>
     </div>
     <div class="card-body">
+        <p class="text-secondary small mb-3"><i class="bi bi-info-circle me-1"></i>Clique em <strong>+ Adicionar cartão</strong> numa coluna para criar. Arraste os cartões entre as colunas — salva sozinho.</p>
         <div class="kanban-board">
             @foreach ($kanbanCols as $key => $label)
                 <div class="kanban-col">
-                    <div class="kanban-col-head">{{ $label }} <span class="count">{{ ($kanban[$key] ?? collect())->count() }}</span></div>
+                    <div class="kanban-col-head"><span class="dot dot-{{ $key }}"></span>{{ $label }} <span class="count">{{ ($kanban[$key] ?? collect())->count() }}</span></div>
                     <div class="kanban-list" data-status="{{ $key }}">
                         @foreach (($kanban[$key] ?? collect()) as $c)
+                            @php $overdue = $c->due_date && $c->status !== 'done' && $c->due_date->lt(today()); @endphp
                             <div class="kanban-card" data-id="{{ $c->id }}" data-title="{{ $c->title }}"
                                  data-description="{{ $c->description }}" data-assignee="{{ $c->assignee_glpi_id }}"
                                  data-due="{{ optional($c->due_date)->format('Y-m-d') }}" data-color="{{ $c->color }}"
@@ -166,11 +175,13 @@
                                 <div class="kc-title">{{ $c->title }}</div>
                                 <div class="kc-meta">
                                     @if ($c->assignee_name)<span><i class="bi bi-person"></i> {{ $c->assignee_name }}</span>@endif
-                                    @if ($c->due_date)<span><i class="bi bi-calendar-event"></i> {{ $c->due_date->format('d/m/Y') }}</span>@endif
+                                    @if ($c->due_date)<span class="{{ $overdue ? 'text-danger fw-semibold' : '' }}"><i class="bi bi-calendar-event"></i> {{ $c->due_date->format('d/m/Y') }}@if ($overdue) (vencido)@endif</span>@endif
                                 </div>
                             </div>
                         @endforeach
+                        <div class="kanban-empty">Solte cartões aqui</div>
                     </div>
+                    <button type="button" class="kanban-add" onclick="openCard(null, '{{ $key }}')"><i class="bi bi-plus-lg"></i> Adicionar cartão</button>
                 </div>
             @endforeach
         </div>
@@ -609,7 +620,7 @@
     const cardModal = new bootstrap.Modal($('cardModal'));
 
     // ---- Criar / editar cartão ----
-    window.openCard = function (el) {
+    window.openCard = function (el, status) {
         const form = $('cardForm');
         $('card_delete').classList.add('d-none');
         // Reset etiqueta para "nenhuma"
@@ -640,7 +651,7 @@
             $('card_title_h').textContent = 'Novo cartão';
             form.action = STORE_URL;
             $('card_method').value = 'POST';
-            $('card_status').value = 'todo';
+            $('card_status').value = status || 'todo';
             $('card_title').value = ''; $('card_desc').value = '';
             $('card_assignee').value = ''; $('card_due').value = '';
         }
@@ -661,7 +672,9 @@
         new Sortable(list, {
             group: 'kanban',
             animation: 150,
+            draggable: '.kanban-card',
             ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
             onEnd: function (evt) {
                 const target = evt.to;
                 const ids = Array.from(target.querySelectorAll('.kanban-card')).map((c) => c.dataset.id);
