@@ -6,6 +6,9 @@ FROM php:8.4-fpm-alpine
 RUN apk add --no-cache git libpq-dev oniguruma-dev libzip-dev \
     && docker-php-ext-install pdo pdo_pgsql bcmath mbstring zip opcache
 
+# OPcache de produção (código pré-compilado em memória).
+COPY docker/opcache.ini /usr/local/etc/php/conf.d/zz-opcache.ini
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
