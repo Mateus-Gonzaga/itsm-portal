@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="apple-touch-icon" href="{{ asset('favicon.svg') }}">
     <title>@yield('title', 'FOURLINE — Central de Chamados')</title>
     <script>
         document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'light');
