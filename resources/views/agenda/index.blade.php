@@ -129,18 +129,18 @@
 {{-- ===================== QUADRO KANBAN DA EQUIPE ===================== --}}
 <style>
     .kanban-board { display:flex; gap:1rem; overflow-x:auto; padding-bottom:.5rem; align-items:flex-start; }
-    .kanban-col { flex:1 1 0; min-width:270px; background:var(--bs-secondary-bg); border-radius:12px; padding:.6rem; display:flex; flex-direction:column; }
+    .kanban-col { flex:1 1 0; min-width:300px; background:var(--bs-secondary-bg); border-radius:14px; padding:.85rem; display:flex; flex-direction:column; }
     .kanban-col-head { font-weight:700; font-size:.9rem; padding:.25rem .5rem .6rem; display:flex; align-items:center; gap:.5rem; color:var(--bs-body-color); }
     .kanban-col-head .count { margin-left:auto; font-size:.72rem; font-weight:600; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); border-radius:999px; padding:0 .5rem; }
     .kanban-col-head .dot { width:.7rem; height:.7rem; border-radius:50%; flex:0 0 auto; }
     .dot-todo { background:#94a3b8; } .dot-doing { background:#f59e0b; } .dot-done { background:#0a9d5a; }
-    .kanban-list { min-height:24px; display:flex; flex-direction:column; gap:.5rem; }
-    .kanban-card { position:relative; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); border-radius:10px; padding:.6rem .7rem .6rem .85rem; cursor:grab; box-shadow:0 1px 2px rgba(0,0,0,.05); transition:border-color .1s, transform .05s; }
+    .kanban-list { min-height:120px; display:flex; flex-direction:column; gap:.6rem; }
+    .kanban-card { position:relative; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); border-radius:12px; padding:.8rem .9rem .8rem 1rem; cursor:grab; box-shadow:0 1px 3px rgba(0,0,0,.06); transition:border-color .1s, transform .05s; }
     .kanban-card:hover { border-color:#A8CF45; }
     .kanban-card:active { cursor:grabbing; }
-    .kanban-card .kc-color { position:absolute; left:0; top:0; bottom:0; width:4px; border-radius:10px 0 0 10px; }
-    .kanban-card .kc-title { font-weight:600; font-size:.9rem; margin-bottom:.25rem; }
-    .kanban-card .kc-meta { display:flex; flex-wrap:wrap; gap:.4rem .7rem; font-size:.74rem; color:var(--bs-secondary-color); }
+    .kanban-card .kc-color { position:absolute; left:0; top:0; bottom:0; width:5px; border-radius:12px 0 0 12px; }
+    .kanban-card .kc-title { font-weight:600; font-size:1rem; margin-bottom:.35rem; }
+    .kanban-card .kc-meta { display:flex; flex-wrap:wrap; gap:.4rem .8rem; font-size:.8rem; color:var(--bs-secondary-color); }
     .kanban-card.sortable-ghost { opacity:.35; }
     .kanban-card.sortable-chosen { border-color:#A8CF45; box-shadow:0 4px 12px rgba(3,61,34,.18); }
     .kanban-empty { text-align:center; color:var(--bs-secondary-color); font-size:.78rem; padding:.9rem; border:1px dashed var(--bs-border-color); border-radius:8px; }
@@ -170,6 +170,8 @@
                             <div class="kanban-card" data-id="{{ $c->id }}" data-title="{{ $c->title }}"
                                  data-description="{{ $c->description }}" data-assignee="{{ $c->assignee_glpi_id }}"
                                  data-due="{{ optional($c->due_date)->format('Y-m-d') }}" data-color="{{ $c->color }}"
+                                 data-bs-toggle="tooltip" data-bs-placement="right" data-bs-custom-class="kanban-tip"
+                                 title="{{ $c->description ?: 'Sem descrição adicional.' }}"
                                  onclick="openCard(this)">
                                 @if ($c->color)<span class="kc-color" style="background: {{ $c->color }}"></span>@endif
                                 <div class="kc-title">{{ $c->title }}</div>
@@ -675,6 +677,7 @@
             draggable: '.kanban-card',
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
+            onStart: function () { document.querySelectorAll('.tooltip').forEach(function (t) { t.remove(); }); },
             onEnd: function (evt) {
                 const target = evt.to;
                 const ids = Array.from(target.querySelectorAll('.kanban-card')).map((c) => c.dataset.id);
@@ -685,6 +688,10 @@
                 }).catch(function () { alert('Não foi possível salvar a movimentação.'); });
             },
         });
+    });
+    // Tooltip com o conteúdo do cartão ao passar o mouse.
+    document.querySelectorAll('.kanban-card[data-bs-toggle="tooltip"]').forEach(function (el) {
+        new bootstrap.Tooltip(el, { container: 'body' });
     });
 })();
 </script>

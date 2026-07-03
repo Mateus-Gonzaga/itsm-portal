@@ -25,7 +25,7 @@
         <div class="sidebar-backdrop" onclick="document.body.classList.remove('sidebar-open')"></div>
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <img class="brand-full" src="{{ asset('logo-fourline-white.png') }}" alt="FOURLINE CONNECT">
+                <span class="brand-plate"><img class="brand-full" src="{{ asset('logo-fourline.png') }}" alt="FOURLINE CONNECT"></span>
                 <span class="brand-mini">FL</span>
             </div>
             <nav class="sidebar-nav">
