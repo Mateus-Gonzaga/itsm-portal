@@ -147,6 +147,23 @@
     .kanban-list:has(.kanban-card) .kanban-empty { display:none; }
     .kanban-add { margin-top:.5rem; width:100%; border:none; background:transparent; color:var(--bs-secondary-color); font-size:.84rem; font-weight:600; padding:.5rem; border-radius:8px; text-align:left; cursor:pointer; transition:.1s; }
     .kanban-add:hover { background:var(--bs-body-bg); color:#067a45; }
+
+    /* Tooltip do cartão com cara de cartão (claro, largo, texto à esquerda) */
+    .kanban-tip {
+        --bs-tooltip-bg: var(--bs-body-bg);
+        --bs-tooltip-color: var(--bs-body-color);
+        --bs-tooltip-max-width: 320px;
+        --bs-tooltip-opacity: 1;
+        --bs-tooltip-border-radius: 12px;
+        --bs-tooltip-padding-x: .9rem;
+        --bs-tooltip-padding-y: .75rem;
+        --bs-tooltip-font-size: .84rem;
+    }
+    .kanban-tip .tooltip-inner {
+        text-align:left; line-height:1.5; white-space:pre-line;
+        border:1px solid var(--bs-border-color);
+        box-shadow:0 10px 26px rgba(0,0,0,.18);
+    }
 </style>
 
 @php
