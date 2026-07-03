@@ -6,6 +6,7 @@ use App\Data\PlanningEvent;
 use App\Data\TicketData;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
+use App\Models\KanbanCard;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiPlanningRepositoryInterface;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
@@ -63,6 +64,8 @@ class AgendaController extends Controller
             'selfTechId' => $user->glpi_id,
             'selfTechName' => $user->name,
             'isManager' => $user->role === UserRole::Gestor,
+            // Quadro Kanban da equipe (agrupado por coluna).
+            'kanban' => KanbanCard::orderBy('position')->orderBy('id')->get()->groupBy('status'),
         ]);
     }
 

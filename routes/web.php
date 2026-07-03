@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardsController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\KanbanController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\TechniciansController;
@@ -73,6 +74,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/agenda', [AgendaController::class, 'index'])->name('agenda.index');
         Route::post('/agenda/remarcar', [AgendaController::class, 'reschedule'])->name('agenda.reschedule');
         Route::post('/agenda/agendar', [AgendaController::class, 'store'])->name('agenda.store');
+
+        // Quadro Kanban da equipe (na mesma aba da agenda)
+        Route::post('/kanban', [KanbanController::class, 'store'])->name('kanban.store');
+        Route::put('/kanban/{card}', [KanbanController::class, 'update'])->name('kanban.update');
+        Route::post('/kanban/mover', [KanbanController::class, 'move'])->name('kanban.move');
+        Route::delete('/kanban/{card}', [KanbanController::class, 'destroy'])->name('kanban.destroy');
 
         // Tarefas livres da equipe (PlanningExternalEvent)
         Route::post('/agenda/tarefa', [AgendaController::class, 'storeEvent'])->name('agenda.event.store');

@@ -126,6 +126,119 @@
     </div>
 </div>
 
+{{-- ===================== QUADRO KANBAN DA EQUIPE ===================== --}}
+<style>
+    .kanban-board { display:flex; gap:1rem; overflow-x:auto; padding-bottom:.5rem; }
+    .kanban-col { flex:1 1 0; min-width:260px; background:var(--bs-secondary-bg); border-radius:12px; padding:.6rem; }
+    .kanban-col-head { font-weight:700; font-size:.9rem; padding:.25rem .5rem .6rem; display:flex; align-items:center; gap:.5rem; color:var(--bs-body-color); }
+    .kanban-col-head .count { font-size:.72rem; font-weight:600; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); border-radius:999px; padding:0 .5rem; }
+    .kanban-list { min-height:60px; display:flex; flex-direction:column; gap:.5rem; }
+    .kanban-card { position:relative; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); border-radius:10px; padding:.6rem .7rem .6rem .8rem; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.05); }
+    .kanban-card:hover { border-color:#A8CF45; }
+    .kanban-card .kc-color { position:absolute; left:0; top:0; bottom:0; width:4px; border-radius:10px 0 0 10px; }
+    .kanban-card .kc-title { font-weight:600; font-size:.9rem; margin-bottom:.25rem; }
+    .kanban-card .kc-meta { display:flex; flex-wrap:wrap; gap:.4rem .7rem; font-size:.74rem; color:var(--bs-secondary-color); }
+    .kanban-card.sortable-ghost { opacity:.4; }
+    .kanban-list.drag-over { outline:2px dashed #A8CF45; outline-offset:2px; border-radius:8px; }
+</style>
+
+@php
+    $kanbanCols = ['todo' => 'A fazer', 'doing' => 'Em andamento', 'done' => 'Concluído'];
+@endphp
+
+<div class="card mt-4" id="kanbanSection">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span class="fw-semibold"><i class="bi bi-kanban me-2 text-success"></i>Quadro da equipe</span>
+        <button class="btn btn-sm btn-success" onclick="openCard()"><i class="bi bi-plus-lg me-1"></i> Novo cartão</button>
+    </div>
+    <div class="card-body">
+        <div class="kanban-board">
+            @foreach ($kanbanCols as $key => $label)
+                <div class="kanban-col">
+                    <div class="kanban-col-head">{{ $label }} <span class="count">{{ ($kanban[$key] ?? collect())->count() }}</span></div>
+                    <div class="kanban-list" data-status="{{ $key }}">
+                        @foreach (($kanban[$key] ?? collect()) as $c)
+                            <div class="kanban-card" data-id="{{ $c->id }}" data-title="{{ $c->title }}"
+                                 data-description="{{ $c->description }}" data-assignee="{{ $c->assignee_glpi_id }}"
+                                 data-due="{{ optional($c->due_date)->format('Y-m-d') }}" data-color="{{ $c->color }}"
+                                 onclick="openCard(this)">
+                                @if ($c->color)<span class="kc-color" style="background: {{ $c->color }}"></span>@endif
+                                <div class="kc-title">{{ $c->title }}</div>
+                                <div class="kc-meta">
+                                    @if ($c->assignee_name)<span><i class="bi bi-person"></i> {{ $c->assignee_name }}</span>@endif
+                                    @if ($c->due_date)<span><i class="bi bi-calendar-event"></i> {{ $c->due_date->format('d/m/Y') }}</span>@endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+
+{{-- Modal: cartão do Kanban --}}
+<div class="modal fade" id="cardModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="cardForm" method="POST">
+                @csrf
+                <input type="hidden" name="_method" id="card_method" value="POST">
+                <input type="hidden" name="status" id="card_status" value="todo">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="card_title_h">Novo cartão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Título</label>
+                        <input type="text" name="title" id="card_title" class="form-control" maxlength="255" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição <span class="text-muted small">— opcional</span></label>
+                        <textarea name="description" id="card_desc" rows="2" class="form-control"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Responsável <span class="text-muted small">— opcional</span></label>
+                            <select name="assignee_glpi_id" id="card_assignee" class="form-select">
+                                <option value="">— sem responsável —</option>
+                                @foreach ($technicianUsers as $t)
+                                    <option value="{{ $t['id'] }}">{{ $t['name'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Prazo <span class="text-muted small">— opcional</span></label>
+                            <input type="date" name="due_date" id="card_due" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label">Etiqueta</label>
+                        <div class="d-flex gap-2" id="card_colors">
+                            @foreach (['' => 'Nenhuma', '#0a9d5a' => 'Verde', '#f59e0b' => 'Laranja', '#dc3545' => 'Vermelho', '#4338ca' => 'Índigo'] as $hex => $name)
+                                <label class="border rounded px-2 py-1 small" style="cursor:pointer">
+                                    <input type="radio" name="color" value="{{ $hex }}" class="me-1" @if ($hex === '') checked @endif>
+                                    <span style="display:inline-block;width:.8rem;height:.8rem;border-radius:3px;vertical-align:middle;background:{{ $hex ?: 'transparent' }};border:1px solid var(--bs-border-color)"></span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-outline-danger d-none" id="card_delete"><i class="bi bi-trash"></i></button>
+                    <div class="ms-auto">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Salvar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{-- Form oculto para excluir cartão --}}
+<form id="cardDeleteForm" method="POST" class="d-none">@csrf @method('DELETE')</form>
+
 {{-- Modal: novo agendamento --}}
 <div class="modal fade" id="schedModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -480,6 +593,85 @@
         if (!currentEvent) return;
         if (!confirm('Excluir esta tarefa?')) return;
         eventAction(EVENT_DESTROY_URL + '/' + currentEvent.extendedProps.eventId, null, 'DELETE');
+    });
+})();
+</script>
+
+{{-- ===================== KANBAN: arrastar + criar/editar ===================== --}}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+(function () {
+    const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+    const STORE_URL = "{{ route('kanban.store') }}";
+    const MOVE_URL = "{{ route('kanban.move') }}";
+    const BASE_URL = "{{ url('kanban') }}"; // + '/' + id
+    const $ = (id) => document.getElementById(id);
+    const cardModal = new bootstrap.Modal($('cardModal'));
+
+    // ---- Criar / editar cartão ----
+    window.openCard = function (el) {
+        const form = $('cardForm');
+        $('card_delete').classList.add('d-none');
+        // Reset etiqueta para "nenhuma"
+        form.querySelectorAll('input[name="color"]').forEach((r) => { r.checked = (r.value === ''); });
+
+        if (el) { // editar
+            $('card_title_h').textContent = 'Editar cartão';
+            form.action = BASE_URL + '/' + el.dataset.id;
+            $('card_method').value = 'PUT';
+            $('card_status').value = el.closest('.kanban-list').dataset.status;
+            $('card_title').value = el.dataset.title || '';
+            $('card_desc').value = el.dataset.description || '';
+            $('card_assignee').value = el.dataset.assignee || '';
+            $('card_due').value = el.dataset.due || '';
+            const col = el.dataset.color || '';
+            const radio = form.querySelector('input[name="color"][value="' + col + '"]');
+            if (radio) radio.checked = true;
+            // Botão excluir
+            const del = $('card_delete');
+            del.classList.remove('d-none');
+            del.onclick = function () {
+                if (!confirm('Excluir este cartão?')) return;
+                const df = $('cardDeleteForm');
+                df.action = BASE_URL + '/' + el.dataset.id;
+                df.submit();
+            };
+        } else { // novo
+            $('card_title_h').textContent = 'Novo cartão';
+            form.action = STORE_URL;
+            $('card_method').value = 'POST';
+            $('card_status').value = 'todo';
+            $('card_title').value = ''; $('card_desc').value = '';
+            $('card_assignee').value = ''; $('card_due').value = '';
+        }
+        cardModal.show();
+    };
+
+    // Selecionar responsável guarda o nome também (para exibir no cartão).
+    const assigneeSel = $('card_assignee');
+    const cardForm = $('cardForm');
+    cardForm.addEventListener('submit', function () {
+        let hidden = cardForm.querySelector('input[name="assignee_name"]');
+        if (!hidden) { hidden = document.createElement('input'); hidden.type = 'hidden'; hidden.name = 'assignee_name'; cardForm.appendChild(hidden); }
+        hidden.value = assigneeSel.value ? assigneeSel.options[assigneeSel.selectedIndex].text : '';
+    });
+
+    // ---- Arrastar entre colunas (persiste coluna + ordem) ----
+    document.querySelectorAll('.kanban-list').forEach(function (list) {
+        new Sortable(list, {
+            group: 'kanban',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function (evt) {
+                const target = evt.to;
+                const ids = Array.from(target.querySelectorAll('.kanban-card')).map((c) => c.dataset.id);
+                fetch(MOVE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+                    body: JSON.stringify({ status: target.dataset.status, order: ids }),
+                }).catch(function () { alert('Não foi possível salvar a movimentação.'); });
+            },
+        });
     });
 })();
 </script>
