@@ -6,7 +6,7 @@ use App\Data\PlanningEvent;
 use App\Data\TicketData;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
-use App\Models\User;
+use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiPlanningRepositoryInterface;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
 use Carbon\CarbonImmutable;
@@ -19,6 +19,7 @@ class AgendaController extends Controller
     public function __construct(
         private readonly GlpiPlanningRepositoryInterface $planning,
         private readonly GlpiTicketRepositoryInterface $tickets,
+        private readonly GlpiDirectoryRepositoryInterface $directory,
     ) {
     }
 
@@ -45,12 +46,13 @@ class AgendaController extends Controller
             ->map(fn (TicketData $t) => ['id' => $t->id, 'label' => "#{$t->id} — {$t->title}"])
             ->values();
 
-        $technicianUsers = User::query()
-            ->whereIn('role', [UserRole::Tecnico, UserRole::Gestor])
-            ->whereNotNull('glpi_id')
-            ->orderBy('name')
-            ->get(['name', 'glpi_id'])
-            ->map(fn (User $u) => ['id' => $u->glpi_id, 'name' => $u->name]);
+        // Responsáveis = técnicos/gestores DIRETO do GLPI (não só quem já logou
+        // no portal), para que qualquer técnico possa ser atribuído.
+        $roleMap = (array) config('portal.profile_roles', []);
+        $technicianUsers = $this->directory->users()
+            ->filter(fn (array $u) => in_array($roleMap[$u['profile']] ?? '', ['tecnico', 'gestor'], true))
+            ->map(fn (array $u) => ['id' => (int) $u['id'], 'name' => $u['name']])
+            ->unique('id')->sortBy('name')->values();
 
         return view('agenda.index', [
             'events' => $events->map(fn (PlanningEvent $e) => $e->toCalendar())->values(),

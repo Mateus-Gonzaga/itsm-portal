@@ -357,9 +357,9 @@
     calendar.render();
 
     const novoBtn = el.querySelector('.fc-novo-button');
-    if (novoBtn) { novoBtn.innerHTML = '<i class="bi bi-plus-lg me-1"></i> Novo agendamento'; novoBtn.title = 'Agendar um atendimento em um chamado'; }
+    if (novoBtn) { novoBtn.title = 'Agendar um atendimento em um chamado'; }
     const novaTarefaBtn = el.querySelector('.fc-novaTarefa-button');
-    if (novaTarefaBtn) { novaTarefaBtn.innerHTML = '<i class="bi bi-list-task me-1"></i> Nova tarefa'; novaTarefaBtn.title = 'Criar uma tarefa/demanda da equipe (sem chamado)'; }
+    if (novaTarefaBtn) { novaTarefaBtn.title = 'Criar uma tarefa/demanda da equipe (sem chamado)'; }
 
     const sel = document.getElementById('filterTech');
     if (sel) sel.addEventListener('change', function () { filterTech = this.value; refresh(); });
