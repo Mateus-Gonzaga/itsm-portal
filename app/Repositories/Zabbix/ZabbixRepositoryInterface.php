@@ -24,9 +24,17 @@ interface ZabbixRepositoryInterface
 
     /**
      * @param  array<int,string>|null  $groupIds
-     * @return Collection<int, array{name:string,enabled:bool,available:int,cpu:?int,ram:?int,disk:?int}>
+     * @return Collection<int, array{id:string,name:string,enabled:bool,available:int,cpu:?int,ram:?int,disk:?int}>
      */
     public function hosts(?array $groupIds = null): Collection;
+
+    /**
+     * Histórico (série temporal) de CPU e RAM de um host nas últimas $hours horas.
+     * Cada ponto é [timestamp_ms, valor_percentual].
+     *
+     * @return array{cpu:array<int,array{0:int,1:float}>, ram:array<int,array{0:int,1:float}>}
+     */
+    public function history(string $hostId, int $hours = 6): array;
 
     /**
      * @param  array<int,string>|null  $groupIds

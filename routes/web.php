@@ -24,7 +24,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/notificacoes/ler', [NotificationController::class, 'markRead'])->name('notifications.read');
 
     // Módulos futuros (placeholders — estrutura preparada / "em construção")
-    Route::get('/dashboard-analitico', DashboardsController::class)->middleware('role:gestor')->name('modules.analytics');
+    Route::middleware('role:gestor')->group(function () {
+        Route::get('/dashboard-analitico', [DashboardsController::class, 'index'])->name('modules.analytics');
+        Route::get('/dashboard-analitico/host/{hostid}/historico', [DashboardsController::class, 'history'])->name('modules.analytics.history');
+    });
     Route::get('/relatorios', ReportsController::class)->middleware('role:gestor')->name('modules.reports');
     Route::get('/clientes', ClientsController::class)->middleware('role:gestor')->name('modules.clients');
 

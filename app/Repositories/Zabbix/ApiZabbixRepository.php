@@ -81,6 +81,7 @@ class ApiZabbixRepository implements ZabbixRepositoryInterface
             $m = $metrics[(string) $h['hostid']] ?? [];
 
             return [
+                'id' => (string) ($h['hostid'] ?? ''),
                 'name' => (string) ($h['name'] ?? '?'),
                 'enabled' => (int) ($h['status'] ?? 0) === 0,
                 'available' => (int) ($h['active_available'] ?? 0),
@@ -89,6 +90,69 @@ class ApiZabbixRepository implements ZabbixRepositoryInterface
                 'disk' => $m['disk'] ?? null,
             ];
         })->values();
+    }
+
+    public function history(string $hostId, int $hours = 6): array
+    {
+        if ($hostId === '') {
+            return ['cpu' => [], 'ram' => []];
+        }
+
+        // Descobre os itens de CPU e RAM do host (chaves variam por template).
+        $items = $this->call('item.get', [
+            'output' => ['itemid', 'key_', 'value_type'],
+            'hostids' => [$hostId],
+            'search' => ['key_' => ['system.cpu.util', 'vm.memory.util', 'vm.memory.size']],
+            'searchByAny' => true,
+        ]);
+
+        $cpu = null;
+        $ram = null;
+        $ramInvert = false; // memory.size[pavailable] = disponível -> inverter p/ usada
+        foreach ($items as $it) {
+            $key = (string) ($it['key_'] ?? '');
+            if ($cpu === null && str_starts_with($key, 'system.cpu.util')) {
+                $cpu = $it;
+            } elseif ($ram === null && str_starts_with($key, 'vm.memory.util')) {
+                $ram = $it;
+                $ramInvert = false;
+            } elseif ($ram === null && str_starts_with($key, 'vm.memory.size') && str_contains($key, 'pavailable')) {
+                $ram = $it;
+                $ramInvert = true;
+            }
+        }
+
+        $from = time() - $hours * 3600;
+
+        return [
+            'cpu' => $cpu ? $this->historySeries($cpu, $from, false) : [],
+            'ram' => $ram ? $this->historySeries($ram, $from, $ramInvert) : [],
+        ];
+    }
+
+    /** @return array<int,array{0:int,1:float}> pontos [ts_ms, valor%] em ordem cronológica */
+    private function historySeries(array $item, int $from, bool $invert): array
+    {
+        $rows = $this->call('history.get', [
+            'output' => 'extend',
+            'itemids' => [(string) $item['itemid']],
+            'history' => (int) ($item['value_type'] ?? 0),
+            'time_from' => $from,
+            'sortfield' => 'clock',
+            'sortorder' => 'DESC', // pega os mais recentes; invertemos p/ ordem cronológica
+            'limit' => 500,
+        ]);
+
+        $out = [];
+        foreach ($rows as $r) {
+            $v = (float) ($r['value'] ?? 0);
+            if ($invert) {
+                $v = 100 - $v;
+            }
+            $out[] = [((int) ($r['clock'] ?? 0)) * 1000, round($v, 1)];
+        }
+
+        return array_reverse($out);
     }
 
     public function problems(?array $groupIds = null): Collection

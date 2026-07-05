@@ -3,13 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Repositories\Zabbix\ZabbixRepositoryInterface;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use RuntimeException;
 
 class DashboardsController extends Controller
 {
-    public function __invoke(Request $request, ZabbixRepositoryInterface $zabbix): View
+    /** Histórico (CPU/RAM) de um host para o gráfico de linha (AJAX). */
+    public function history(Request $request, ZabbixRepositoryInterface $zabbix, string $hostid): JsonResponse
+    {
+        $hours = max(1, min(48, (int) $request->integer('hours', 6)));
+
+        try {
+            return response()->json($zabbix->history($hostid, $hours));
+        } catch (RuntimeException $e) {
+            return response()->json(['cpu' => [], 'ram' => [], 'error' => $e->getMessage()]);
+        }
+    }
+
+    public function index(Request $request, ZabbixRepositoryInterface $zabbix): View
     {
         try {
             // Deriva os "clientes" dos host groups: "Clientes/<Cliente>/<Tipo>".

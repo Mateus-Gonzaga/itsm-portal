@@ -37,10 +37,26 @@ class FakeZabbixRepository implements ZabbixRepositoryInterface
         }
 
         return collect([
-            ['name' => 'srv-empresaA-01', 'enabled' => true, 'available' => 1, 'cpu' => 23, 'ram' => 61, 'disk' => 78],
-            ['name' => 'caixa-empresaA-01', 'enabled' => true, 'available' => 1, 'cpu' => 12, 'ram' => 44, 'disk' => 55],
-            ['name' => 'srv-empresaB-01', 'enabled' => true, 'available' => 2, 'cpu' => null, 'ram' => null, 'disk' => null],
+            ['id' => '101', 'name' => 'srv-empresaA-01', 'enabled' => true, 'available' => 1, 'cpu' => 23, 'ram' => 61, 'disk' => 78],
+            ['id' => '102', 'name' => 'caixa-empresaA-01', 'enabled' => true, 'available' => 1, 'cpu' => 12, 'ram' => 44, 'disk' => 55],
+            ['id' => '103', 'name' => 'srv-empresaB-01', 'enabled' => true, 'available' => 2, 'cpu' => null, 'ram' => null, 'disk' => null],
         ]);
+    }
+
+    public function history(string $hostId, int $hours = 6): array
+    {
+        // Série sintética (senoide + ruído) só para a demonstração do gráfico.
+        $now = time();
+        $points = $hours * 12; // 1 ponto a cada 5 min
+        $cpu = [];
+        $ram = [];
+        for ($i = $points; $i >= 0; $i--) {
+            $ts = ($now - $i * 300) * 1000;
+            $cpu[] = [$ts, round(35 + 20 * sin($i / 6) + random_int(-5, 5), 1)];
+            $ram[] = [$ts, round(60 + 12 * sin($i / 9 + 1) + random_int(-4, 4), 1)];
+        }
+
+        return ['cpu' => $cpu, 'ram' => $ram];
     }
 
     public function problems(?array $groupIds = null): Collection
