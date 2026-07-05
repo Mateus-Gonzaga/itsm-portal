@@ -80,11 +80,16 @@
         <div class="col-sm-3 col-6"><div class="mon-card"><div class="ic ic-red"><i class="bi bi-exclamation-triangle"></i></div><div><div class="v">{{ $overview['problemas'] }}</div><div class="l">Problemas ativos</div></div></div></div>
     </div>
 
+    @php
+        $topHostsData = $hosts->map(fn ($h) => [
+            'name' => $h['name'], 'cpu' => $h['cpu'], 'ram' => $h['ram'], 'disk' => $h['disk'],
+        ])->values();
+    @endphp
     <div class="row g-4 mb-4">
         <div class="col-lg-8">
             <div class="card h-100">
                 <div class="card-header bg-transparent fw-semibold"><i class="bi bi-bar-chart-steps me-1"></i> Top hosts por uso <span class="text-secondary small fw-normal">(maior recurso)</span></div>
-                <div class="card-body"><div id="topHosts" data-hosts='@json($hosts->map(fn ($h) => ['name' => $h['name'], 'cpu' => $h['cpu'], 'ram' => $h['ram'], 'disk' => $h['disk']])->values())'></div></div>
+                <div class="card-body"><div id="topHosts" data-hosts='@json($topHostsData)'></div></div>
             </div>
         </div>
         <div class="col-lg-4">
