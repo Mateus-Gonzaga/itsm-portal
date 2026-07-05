@@ -80,6 +80,21 @@
         <div class="col-sm-3 col-6"><div class="mon-card"><div class="ic ic-red"><i class="bi bi-exclamation-triangle"></i></div><div><div class="v">{{ $overview['problemas'] }}</div><div class="l">Problemas ativos</div></div></div></div>
     </div>
 
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-bar-chart-steps me-1"></i> Top hosts por uso <span class="text-secondary small fw-normal">(maior recurso)</span></div>
+                <div class="card-body"><div id="topHosts" data-hosts='@json($hosts->map(fn ($h) => ['name' => $h['name'], 'cpu' => $h['cpu'], 'ram' => $h['ram'], 'disk' => $h['disk']])->values())'></div></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-reception-4 me-1"></i> Disponibilidade</div>
+                <div class="card-body"><div id="availDonut" data-on="{{ $overview['disponiveis'] }}" data-off="{{ $overview['indisponiveis'] }}" data-unk="{{ max(0, $overview['hosts'] - $overview['disponiveis'] - $overview['indisponiveis']) }}"></div></div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-4">
         <div class="col-lg-7">
             <div class="card h-100">
@@ -189,6 +204,42 @@
                 dataLabels: { enabled: true, formatter: function (val, o) { return o.w.config.series[o.seriesIndex]; } },
                 plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Problemas' } } } } },
             }).render();
+        }
+    }
+
+    // ---- Disponibilidade (rosca) ----
+    var availEl = document.getElementById('availDonut');
+    if (availEl) {
+        var on = +availEl.dataset.on || 0, off = +availEl.dataset.off || 0, unk = +availEl.dataset.unk || 0;
+        if (on + off + unk > 0) {
+            new ApexCharts(availEl, {
+                chart: { type: 'donut', height: 250 },
+                series: [on, off, unk], labels: ['Disponível', 'Indisponível', 'Desconhecido'],
+                colors: ['#0a9d5a', '#dc3545', '#9aa1a8'], legend: { position: 'bottom' }, stroke: { width: 0 },
+                dataLabels: { enabled: true, formatter: function (val, o) { return o.w.config.series[o.seriesIndex]; } },
+                plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Hosts' } } } } },
+            }).render();
+        }
+    }
+
+    // ---- Top hosts por uso (barra horizontal) ----
+    var topEl = document.getElementById('topHosts');
+    if (topEl) {
+        var list = []; try { list = JSON.parse(topEl.dataset.hosts || '[]'); } catch (e) {}
+        var rows = list.map(function (h) { return { name: h.name, uso: Math.max(h.cpu || 0, h.ram || 0, h.disk || 0) }; })
+            .filter(function (r) { return r.uso > 0; }).sort(function (a, b) { return b.uso - a.uso; }).slice(0, 8);
+        if (rows.length) {
+            new ApexCharts(topEl, {
+                chart: { type: 'bar', height: Math.max(180, rows.length * 40), toolbar: { show: false } },
+                series: [{ name: 'Uso', data: rows.map(function (r) { return r.uso; }) }],
+                colors: rows.map(function (r) { return colorFor(r.uso); }),
+                plotOptions: { bar: { horizontal: true, borderRadius: 4, distributed: true, barHeight: '62%' } },
+                dataLabels: { enabled: true, formatter: function (v) { return v + '%'; } }, legend: { show: false },
+                xaxis: { categories: rows.map(function (r) { return r.name; }), max: 100, labels: { formatter: function (v) { return Math.round(v) + '%'; } } },
+                tooltip: { y: { formatter: function (v) { return v + '%'; } } },
+            }).render();
+        } else {
+            topEl.innerHTML = '<p class="text-muted small mb-0 text-center py-4">Sem dados de uso ainda.</p>';
         }
     }
 
