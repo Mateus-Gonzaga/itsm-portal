@@ -52,11 +52,10 @@ class AgendaController extends Controller
             ->map(fn (TicketData $t) => ['id' => $t->id, 'label' => "#{$t->id} — {$t->title}"])
             ->values();
 
-        // Responsáveis = técnicos/gestores DIRETO do GLPI (não só quem já logou
-        // no portal), para que qualquer técnico possa ser atribuído.
-        $roleMap = (array) config('portal.profile_roles', []);
+        // Responsáveis = qualquer usuário do GLPI cujo perfil vira técnico/gestor
+        // (mesma lógica do login, com fallback — pega até Super-Admin como o halley).
         $technicianUsers = $this->directory->users()
-            ->filter(fn (array $u) => in_array($roleMap[$u['profile']] ?? '', ['tecnico', 'gestor'], true))
+            ->filter(fn (array $u) => UserRole::fromGlpiProfile((string) ($u['profile'] ?? ''))->isStaff())
             ->map(fn (array $u) => ['id' => (int) $u['id'], 'name' => $u['name']])
             ->unique('id')->sortBy('name')->values();
 

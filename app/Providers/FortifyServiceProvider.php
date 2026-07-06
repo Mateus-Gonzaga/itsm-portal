@@ -129,22 +129,9 @@ class FortifyServiceProvider extends ServiceProvider
         });
     }
 
-    /** Converte o nome do perfil do GLPI no papel do portal. */
+    /** Converte o nome do perfil do GLPI no papel do portal (lógica compartilhada). */
     private static function mapRole(string $profile): UserRole
     {
-        // 1) Mapeamento explícito por config (config/portal.php) — fonte de verdade.
-        $map = (array) config('portal.profile_roles', []);
-        if (isset($map[$profile]) && ($r = UserRole::tryFrom($map[$profile]))) {
-            return $r;
-        }
-
-        // 2) Fallback por palavra-chave (perfis não listados na config).
-        $p = Str::lower($profile);
-
-        return match (true) {
-            str_contains($p, 'gestor'), str_contains($p, 'admin') => UserRole::Gestor, // 'admin' cobre 'Super-Admin'
-            str_contains($p, 'técnico'), str_contains($p, 'tecnico'), str_contains($p, 'technician'), str_contains($p, 'supervisor') => UserRole::Tecnico,
-            default => UserRole::Cliente,
-        };
+        return UserRole::fromGlpiProfile($profile);
     }
 }

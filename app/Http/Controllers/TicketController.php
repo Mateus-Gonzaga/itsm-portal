@@ -61,10 +61,8 @@ class TicketController extends Controller
     /** Técnicos/gestores do GLPI, para o seletor "Atribuir a". */
     private function staffTechnicians(GlpiDirectoryRepositoryInterface $dir): Collection
     {
-        $roleMap = (array) config('portal.profile_roles', []);
-
         return $dir->users()
-            ->filter(fn (array $u) => in_array($roleMap[$u['profile']] ?? '', ['tecnico', 'gestor'], true))
+            ->filter(fn (array $u) => UserRole::fromGlpiProfile((string) ($u['profile'] ?? ''))->isStaff())
             ->map(fn (array $u) => ['id' => (int) $u['id'], 'name' => $u['name']])
             ->unique('id')->sortBy('name')->values();
     }

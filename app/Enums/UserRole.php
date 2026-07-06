@@ -2,11 +2,41 @@
 
 namespace App\Enums;
 
+use Illuminate\Support\Str;
+
 enum UserRole: string
 {
     case Cliente = 'cliente';
     case Tecnico = 'tecnico';
     case Gestor = 'gestor';
+
+    /**
+     * Converte o nome do perfil do GLPI no papel do portal.
+     * Fonte de verdade: config/portal.php (profile_roles). Perfis não listados
+     * caem no fallback por palavra-chave (ex.: "Super-Admin" → gestor). Usado no
+     * login E nas listas de equipe, para ficarem sempre consistentes.
+     */
+    public static function fromGlpiProfile(string $profile): self
+    {
+        $map = (array) config('portal.profile_roles', []);
+        if (isset($map[$profile]) && ($r = self::tryFrom($map[$profile]))) {
+            return $r;
+        }
+
+        $p = Str::lower($profile);
+
+        return match (true) {
+            str_contains($p, 'gestor'), str_contains($p, 'admin') => self::Gestor, // 'admin' cobre 'Super-Admin'
+            str_contains($p, 'técnico'), str_contains($p, 'tecnico'), str_contains($p, 'technician'), str_contains($p, 'supervisor') => self::Tecnico,
+            default => self::Cliente,
+        };
+    }
+
+    /** Papéis considerados "equipe" (podem ser responsáveis/atribuídos). */
+    public function isStaff(): bool
+    {
+        return $this === self::Tecnico || $this === self::Gestor;
+    }
 
     public function label(): string
     {
