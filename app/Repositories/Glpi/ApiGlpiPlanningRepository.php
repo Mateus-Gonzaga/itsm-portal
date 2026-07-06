@@ -71,9 +71,9 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
             ))
             ->values();
 
-        // Tarefas livres da equipe (PlanningExternalEvent): SEMPRE visíveis
-        // (demandas compartilhadas) — não entram no filtro por técnico.
-        return $taskEvents->merge($slaEvents)->merge($this->externalEvents())->values();
+        // Tarefas livres agora são LOCAIS (tabela agenda_tasks), montadas no
+        // AgendaController — não vêm mais do GLPI aqui (evita duplicar).
+        return $taskEvents->merge($slaEvents)->values();
     }
 
     public function createEvent(string $title, CarbonImmutable $begin, CarbonImmutable $end, ?int $ownerGlpiId = null, ?string $content = null): void

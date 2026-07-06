@@ -47,9 +47,23 @@
 
 <div class="card">
     <div class="card-body">
-        <div class="input-group input-group-sm mb-3" style="max-width:360px">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
-            <input type="text" id="invFilter" class="form-control" placeholder="Buscar por nome, série, modelo...">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <div class="input-group input-group-sm" style="max-width:320px">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="invFilter" class="form-control" placeholder="Buscar por nome, série, modelo...">
+            </div>
+            @php $invEntities = $assets->pluck('entity')->unique()->sort()->values(); @endphp
+            @if ($invEntities->count() > 1)
+                <div class="input-group input-group-sm" style="max-width:340px">
+                    <span class="input-group-text"><i class="bi bi-diagram-3"></i></span>
+                    <select id="invEntity" class="form-select">
+                        <option value="">Todas as entidades</option>
+                        @foreach ($invEntities as $e)
+                            <option value="{{ $e }}">{{ $e }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
         </div>
         <div class="table-wrap">
             <table class="table table-hover align-middle mb-0">
@@ -58,7 +72,7 @@
                 </thead>
                 <tbody id="invBody">
                     @forelse ($assets as $a)
-                        <tr data-type="{{ $a['type'] }}">
+                        <tr data-type="{{ $a['type'] }}" data-entity="{{ $a['entity'] }}">
                             <td class="text-nowrap"><i class="bi {{ $a['icon'] }} text-success me-1"></i>{{ $a['type'] }}</td>
                             <td class="fw-semibold">{{ $a['name'] }}</td>
                             <td class="small text-secondary">{{ $a['entity'] }}</td>
@@ -127,18 +141,22 @@
 <script>
 (function () {
     const filterInput = document.getElementById('invFilter');
+    const entitySel = document.getElementById('invEntity');
     const rows = Array.from(document.querySelectorAll('#invBody tr[data-type]'));
     let typeFilter = '';
+    let entityFilter = '';
 
     function apply() {
         const q = filterInput.value.toLowerCase();
         rows.forEach(function (tr) {
             const okType = !typeFilter || tr.dataset.type === typeFilter;
+            const okEntity = !entityFilter || tr.dataset.entity === entityFilter;
             const okText = tr.textContent.toLowerCase().includes(q);
-            tr.style.display = (okType && okText) ? '' : 'none';
+            tr.style.display = (okType && okEntity && okText) ? '' : 'none';
         });
     }
     filterInput.addEventListener('input', apply);
+    if (entitySel) entitySel.addEventListener('change', function () { entityFilter = this.value; apply(); });
     document.querySelectorAll('.inv-card').forEach(function (card) {
         card.addEventListener('click', function () {
             document.querySelectorAll('.inv-card').forEach((c) => c.classList.remove('active'));

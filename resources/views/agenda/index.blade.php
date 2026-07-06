@@ -362,9 +362,24 @@
                             <input type="datetime-local" name="end" class="form-control" required>
                         </div>
                     </div>
-                    <div class="mb-1">
+                    <div class="mb-2">
                         <label class="form-label">Detalhes <span class="text-muted small">— opcional</span></label>
                         <textarea name="content" rows="2" class="form-control" placeholder="Observações da tarefa."></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="taskRepeat">
+                        <label class="form-check-label" for="taskRepeat"><i class="bi bi-arrow-repeat me-1"></i>Repetir em vários dias</label>
+                    </div>
+                    <div id="taskRepeatBox" class="border rounded p-2 mb-1 bg-body-tertiary d-none">
+                        <label class="form-label small mb-1">Repetir nos dias da semana:</label>
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            @foreach (['0' => 'Dom', '1' => 'Seg', '2' => 'Ter', '3' => 'Qua', '4' => 'Qui', '5' => 'Sex', '6' => 'Sáb'] as $val => $lbl)
+                                <input type="checkbox" class="btn-check task-weekday" id="wd{{ $val }}" value="{{ $val }}" autocomplete="off" @checked(in_array($val, ['1', '2', '3', '4', '5']))>
+                                <label class="btn btn-sm btn-outline-success mb-0" for="wd{{ $val }}">{{ $lbl }}</label>
+                            @endforeach
+                        </div>
+                        <label class="form-label small mb-1">Repetir até:</label>
+                        <input type="date" id="taskUntil" class="form-control form-control-sm">
                     </div>
                     <div class="text-danger small mt-2 d-none" id="taskError"></div>
                 </div>
@@ -389,7 +404,8 @@
                 <p class="mb-3" id="taskActionsTitle"></p>
                 <div class="d-grid gap-2">
                     <button type="button" class="btn btn-success" id="taskDoneBtn"><i class="bi bi-check2-circle me-1"></i> Concluir</button>
-                    <button type="button" class="btn btn-outline-danger" id="taskDeleteBtn"><i class="bi bi-trash me-1"></i> Excluir</button>
+                    <button type="button" class="btn btn-outline-danger" id="taskDeleteBtn"><i class="bi bi-trash me-1"></i> Excluir este dia</button>
+                    <button type="button" class="btn btn-outline-danger d-none" id="taskDeleteSeriesBtn"><i class="bi bi-trash3 me-1"></i> Excluir todos os dias (série)</button>
                 </div>
                 <div class="text-danger small mt-2 d-none" id="taskActionsError"></div>
             </div>
@@ -554,6 +570,11 @@
     const taskForm = document.getElementById('taskForm');
     const taskErr = document.getElementById('taskError');
 
+    const taskRepeat = document.getElementById('taskRepeat');
+    const taskRepeatBox = document.getElementById('taskRepeatBox');
+    const taskUntil = document.getElementById('taskUntil');
+    taskRepeat.addEventListener('change', function () { taskRepeatBox.classList.toggle('d-none', !this.checked); });
+
     function openTaskModal(date, allDay) {
         const begin = new Date(date);
         if (allDay || (begin.getHours() === 0 && begin.getMinutes() === 0)) begin.setHours(9, 0, 0, 0);
@@ -561,19 +582,29 @@
         taskForm.reset();
         taskForm.begin.value = fmt(begin);
         taskForm.end.value = fmt(end);
+        taskRepeat.checked = false;
+        taskRepeatBox.classList.add('d-none');
+        taskUntil.value = fmt(begin).slice(0, 10);
         taskErr.classList.add('d-none');
         taskModal.show();
     }
     taskForm.addEventListener('submit', function (e) {
         e.preventDefault();
         taskErr.classList.add('d-none');
+        const ownerSel = taskForm.owner_glpi_id;
         const payload = {
             title: taskForm.title.value,
-            owner_glpi_id: taskForm.owner_glpi_id.value || null,
+            owner_glpi_id: ownerSel.value || null,
+            owner_name: ownerSel.value ? ownerSel.options[ownerSel.selectedIndex].text : null,
             begin: new Date(taskForm.begin.value).toISOString(),
             end: new Date(taskForm.end.value).toISOString(),
             content: taskForm.content.value,
         };
+        if (taskRepeat.checked && taskUntil.value) {
+            payload.repeat = true;
+            payload.until = taskUntil.value;
+            payload.weekdays = Array.from(document.querySelectorAll('.task-weekday:checked')).map(function (c) { return +c.value; });
+        }
         fetch(EVENT_STORE_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
@@ -591,6 +622,7 @@
     const taskActionsErr = document.getElementById('taskActionsError');
     const taskDoneBtn = document.getElementById('taskDoneBtn');
     const taskDeleteBtn = document.getElementById('taskDeleteBtn');
+    const taskDeleteSeriesBtn = document.getElementById('taskDeleteSeriesBtn');
     let currentEvent = null;
 
     function openTaskActions(event) {
@@ -600,6 +632,8 @@
         taskDoneBtn.innerHTML = done
             ? '<i class="bi bi-arrow-counterclockwise me-1"></i> Reabrir'
             : '<i class="bi bi-check2-circle me-1"></i> Concluir';
+        // Botão de série só quando a tarefa faz parte de uma recorrência.
+        taskDeleteSeriesBtn.classList.toggle('d-none', !event.extendedProps.seriesId);
         taskActionsErr.classList.add('d-none');
         taskActionsModal.show();
     }
@@ -623,6 +657,11 @@
         if (!currentEvent) return;
         if (!confirm('Excluir esta tarefa?')) return;
         eventAction(EVENT_DESTROY_URL + '/' + currentEvent.extendedProps.eventId, null, 'DELETE');
+    });
+    taskDeleteSeriesBtn.addEventListener('click', function () {
+        if (!currentEvent) return;
+        if (!confirm('Excluir TODAS as ocorrências desta tarefa recorrente?')) return;
+        eventAction(EVENT_DESTROY_URL + '/' + currentEvent.extendedProps.eventId + '/serie', null, 'DELETE');
     });
 })();
 </script>

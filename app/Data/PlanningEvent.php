@@ -26,7 +26,8 @@ final class PlanningEvent
         public readonly ?int $technicianId = null,
         public readonly ?int $taskId = null,  // id da TicketTask (só quando type=task)
         public readonly bool $done = false,
-        public readonly ?int $eventId = null, // id do PlanningExternalEvent (só type=event)
+        public readonly ?int $eventId = null, // id da tarefa livre local (só type=event)
+        public readonly ?string $seriesId = null, // agrupa ocorrências recorrentes
     ) {
     }
 
@@ -51,6 +52,7 @@ final class PlanningEvent
                 'technicianId' => $this->technicianId,
                 'technicianName' => $this->technicianName,
                 'done' => $this->done,
+                'seriesId' => $this->seriesId,
             ],
         ];
     }

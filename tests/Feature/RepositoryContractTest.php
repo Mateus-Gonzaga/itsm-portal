@@ -41,26 +41,6 @@ class RepositoryContractTest extends TestCase
         $this->assertTrue($doTec->every(fn ($e) => $e->technicianId === 4));
     }
 
-    public function test_tarefa_livre_cria_conclui_e_exclui(): void
-    {
-        $r = new FakeGlpiPlanningRepository();
-
-        $r->createEvent('Instalar antivírus', CarbonImmutable::parse('2026-07-02 09:00'), CarbonImmutable::parse('2026-07-02 10:00'), 4, 'obs');
-        $evento = $r->events()->firstWhere('type', 'event');
-        $this->assertNotNull($evento);
-        $this->assertSame('Instalar antivírus', $evento->title);
-        $this->assertFalse($evento->done);
-
-        // Tarefa livre é compartilhada: aparece mesmo filtrando por outro técnico.
-        $this->assertNotNull($r->events(['technician_glpi_id' => 999])->firstWhere('type', 'event'));
-
-        $r->setEventDone($evento->eventId, true);
-        $this->assertTrue($r->events()->firstWhere('type', 'event')->done);
-
-        $r->deleteEvent($evento->eventId);
-        $this->assertNull($r->events()->firstWhere('type', 'event'));
-    }
-
     public function test_diretorio_lista_entidades_usuarios_perfis(): void
     {
         $d = new FakeGlpiDirectoryRepository();

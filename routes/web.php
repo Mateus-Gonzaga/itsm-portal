@@ -89,6 +89,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/agenda/tarefa/remarcar', [AgendaController::class, 'rescheduleEvent'])->name('agenda.event.reschedule');
         Route::post('/agenda/tarefa/concluir', [AgendaController::class, 'toggleEventDone'])->name('agenda.event.done');
         Route::delete('/agenda/tarefa/{id}', [AgendaController::class, 'destroyEvent'])->name('agenda.event.destroy');
+        Route::delete('/agenda/tarefa/{id}/serie', [AgendaController::class, 'destroyEventSeries'])->name('agenda.event.destroySeries');
     });
 
     // Ações do solicitante (cliente)

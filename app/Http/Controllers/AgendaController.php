@@ -6,13 +6,17 @@ use App\Data\PlanningEvent;
 use App\Data\TicketData;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
+use App\Models\AgendaTask;
 use App\Models\KanbanCard;
+use App\Models\User;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiPlanningRepositoryInterface;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AgendaController extends Controller
@@ -33,7 +37,8 @@ class AgendaController extends Controller
             ? ['technician_glpi_id' => $user->glpi_id]
             : [];
 
-        $events = $this->planning->events($filters);
+        // Eventos = tarefas de chamado + prazos (GLPI) + tarefas livres (locais).
+        $events = $this->planning->events($filters)->merge($this->localEvents($user));
 
         // Lista de técnicos para o filtro (derivada dos próprios eventos).
         $technicians = $events
@@ -67,6 +72,33 @@ class AgendaController extends Controller
             // Quadro Kanban da equipe (agrupado por coluna).
             'kanban' => KanbanCard::orderBy('position')->orderBy('id')->get()->groupBy('status'),
         ]);
+    }
+
+    /** Tarefas livres locais (com escopo por papel) como eventos do calendário. */
+    private function localEvents(User $user): Collection
+    {
+        $tasks = AgendaTask::orderBy('start_at')->get();
+
+        // Técnico vê as suas + as sem responsável (demandas da equipe); gestor vê tudo.
+        if ($user->role === UserRole::Tecnico && $user->glpi_id) {
+            $tasks = $tasks->filter(fn (AgendaTask $t) => $t->owner_glpi_id === null
+                || (int) $t->owner_glpi_id === (int) $user->glpi_id);
+        }
+
+        return $tasks->map(fn (AgendaTask $t) => new PlanningEvent(
+            id: 'atask-'.$t->id,
+            ticketId: 0,
+            title: $t->title,
+            start: CarbonImmutable::parse($t->start_at),
+            end: CarbonImmutable::parse($t->end_at),
+            type: 'event',
+            movable: true,
+            technicianName: $t->owner_name,
+            technicianId: $t->owner_glpi_id,
+            done: (bool) $t->done,
+            eventId: $t->id,
+            seriesId: $t->series_id,
+        ))->values();
     }
 
     public function reschedule(Request $request): JsonResponse
@@ -107,7 +139,10 @@ class AgendaController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    /** Cria uma tarefa livre da equipe (PlanningExternalEvent). */
+    /**
+     * Cria uma tarefa livre da equipe (local). Opção de recorrência: repetir em
+     * dias da semana selecionados até uma data — gera uma ocorrência por dia.
+     */
     public function storeEvent(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -115,18 +150,53 @@ class AgendaController extends Controller
             'begin' => ['required', 'date'],
             'end' => ['required', 'date', 'after:begin'],
             'owner_glpi_id' => ['nullable', 'integer'],
+            'owner_name' => ['nullable', 'string', 'max:150'],
             'content' => ['nullable', 'string', 'max:2000'],
+            'repeat' => ['nullable', 'boolean'],
+            'until' => ['nullable', 'date'],
+            'weekdays' => ['nullable', 'array'],
+            'weekdays.*' => ['integer', 'between:0,6'],
         ]);
 
-        $this->planning->createEvent(
-            $data['title'],
-            CarbonImmutable::parse($data['begin']),
-            CarbonImmutable::parse($data['end']),
-            ! empty($data['owner_glpi_id']) ? (int) $data['owner_glpi_id'] : null,
-            $data['content'] ?? null,
-        );
+        $begin = CarbonImmutable::parse($data['begin']);
+        $end = CarbonImmutable::parse($data['end']);
+        $duration = max(1, $begin->diffInMinutes($end));
+        $owner = ! empty($data['owner_glpi_id']) ? (int) $data['owner_glpi_id'] : null;
 
-        return response()->json(['ok' => true]);
+        $base = [
+            'title' => $data['title'],
+            'description' => $data['content'] ?? null,
+            'owner_glpi_id' => $owner,
+            'owner_name' => $owner ? ($data['owner_name'] ?? null) : null,
+            'created_by' => $request->user()->id,
+        ];
+
+        // Sem recorrência: uma única tarefa.
+        if (! $request->boolean('repeat') || empty($data['until'])) {
+            AgendaTask::create($base + ['start_at' => $begin, 'end_at' => $end]);
+
+            return response()->json(['ok' => true, 'created' => 1]);
+        }
+
+        // Recorrência: uma ocorrência por dia da semana escolhido, até a data-limite.
+        $until = CarbonImmutable::parse($data['until'])->endOfDay();
+        $weekdays = ! empty($data['weekdays']) ? array_map('intval', $data['weekdays']) : range(0, 6);
+        $series = (string) Str::uuid();
+        $count = 0;
+        for ($d = $begin; $d->lte($until) && $count < 180; $d = $d->addDay()) {
+            if (! in_array($d->dayOfWeek, $weekdays, true)) {
+                continue;
+            }
+            $s = $d->setTime($begin->hour, $begin->minute, 0);
+            AgendaTask::create($base + [
+                'series_id' => $series,
+                'start_at' => $s,
+                'end_at' => $s->addMinutes($duration),
+            ]);
+            $count++;
+        }
+
+        return response()->json(['ok' => true, 'created' => $count]);
     }
 
     /** Remarca uma tarefa livre (arrastar/redimensionar). */
@@ -138,11 +208,10 @@ class AgendaController extends Controller
             'end' => ['required', 'date', 'after:begin'],
         ]);
 
-        $this->planning->rescheduleEvent(
-            (int) $data['event_id'],
-            CarbonImmutable::parse($data['begin']),
-            CarbonImmutable::parse($data['end']),
-        );
+        AgendaTask::where('id', (int) $data['event_id'])->update([
+            'start_at' => CarbonImmutable::parse($data['begin']),
+            'end_at' => CarbonImmutable::parse($data['end']),
+        ]);
 
         return response()->json(['ok' => true]);
     }
@@ -155,15 +224,28 @@ class AgendaController extends Controller
             'done' => ['required', 'boolean'],
         ]);
 
-        $this->planning->setEventDone((int) $data['event_id'], (bool) $data['done']);
+        AgendaTask::where('id', (int) $data['event_id'])->update(['done' => (bool) $data['done']]);
 
         return response()->json(['ok' => true]);
     }
 
-    /** Exclui uma tarefa livre. */
+    /** Exclui uma tarefa livre (só a ocorrência). */
     public function destroyEvent(int $id): JsonResponse
     {
-        $this->planning->deleteEvent($id);
+        AgendaTask::where('id', $id)->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Exclui a SÉRIE inteira (todas as ocorrências recorrentes). */
+    public function destroyEventSeries(int $id): JsonResponse
+    {
+        $task = AgendaTask::find($id);
+        if ($task && $task->series_id) {
+            AgendaTask::where('series_id', $task->series_id)->delete();
+        } elseif ($task) {
+            $task->delete();
+        }
 
         return response()->json(['ok' => true]);
     }

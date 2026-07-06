@@ -47,8 +47,8 @@ class FakeGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
                 : in_array($e->ticketId, $ticketIds, true));
         }
 
-        // Tarefas livres (compartilhadas) sempre aparecem, sem filtro por técnico.
-        return $events->merge($this->externalEvents())->values();
+        // Tarefas livres agora são locais (tabela agenda_tasks) — não entram aqui.
+        return $events->values();
     }
 
     public function reschedule(int $taskId, CarbonImmutable $begin, CarbonImmutable $end): void
