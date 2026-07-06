@@ -69,9 +69,26 @@
                 <div class="card-header bg-white fw-semibold">Atendimento</div>
                 <div class="card-body">
                     @if ($ticket->technicianName !== $u->name)
-                        <form method="POST" action="{{ route('tickets.assign', $ticket->id) }}" class="mb-3">
+                        <form method="POST" action="{{ route('tickets.assign', $ticket->id) }}" class="mb-2">
                             @csrf
                             <button class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-person-check me-1"></i> Assumir chamado</button>
+                        </form>
+                    @endif
+                    @if ($technicians->isNotEmpty())
+                        <form method="POST" action="{{ route('tickets.assign', $ticket->id) }}" class="mb-3">
+                            @csrf
+                            <label class="form-label small mb-1">Atribuir a</label>
+                            <div class="input-group input-group-sm">
+                                <select name="technician_glpi_id" class="form-select" required
+                                        onchange="this.form.technician_name.value = this.options[this.selectedIndex].text">
+                                    <option value="">— escolher técnico —</option>
+                                    @foreach ($technicians as $t)
+                                        <option value="{{ $t['id'] }}" @selected($ticket->technicianName === $t['name'])>{{ $t['name'] }}</option>
+                                    @endforeach
+                                </select>
+                                <input type="hidden" name="technician_name" value="{{ $ticket->technicianName }}">
+                                <button class="btn btn-outline-primary"><i class="bi bi-person-check"></i></button>
+                            </div>
                         </form>
                     @endif
                     <form method="POST" action="{{ route('tickets.status', $ticket->id) }}">

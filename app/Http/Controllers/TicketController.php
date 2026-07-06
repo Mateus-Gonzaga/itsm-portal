@@ -7,10 +7,12 @@ use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\TicketType;
 use App\Enums\UserRole;
+use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -42,7 +44,7 @@ class TicketController extends Controller
         return $this->listView($request, $this->requesterFilter($request->user()), 'Meus chamados');
     }
 
-    public function show(Request $request, int|string $id): View
+    public function show(Request $request, int|string $id, GlpiDirectoryRepositoryInterface $dir): View
     {
         $ticket = $this->tickets->find($id);
         abort_if($ticket === null, 404, 'Chamado não encontrado.');
@@ -51,7 +53,20 @@ class TicketController extends Controller
         return view('tickets.show', [
             'ticket' => $ticket,
             'timeline' => $this->tickets->timeline($id),
+            // Lista de técnicos/gestores para atribuição (só p/ staff).
+            'technicians' => $request->user()->role === UserRole::Cliente ? collect() : $this->staffTechnicians($dir),
         ]);
+    }
+
+    /** Técnicos/gestores do GLPI, para o seletor "Atribuir a". */
+    private function staffTechnicians(GlpiDirectoryRepositoryInterface $dir): Collection
+    {
+        $roleMap = (array) config('portal.profile_roles', []);
+
+        return $dir->users()
+            ->filter(fn (array $u) => in_array($roleMap[$u['profile']] ?? '', ['tecnico', 'gestor'], true))
+            ->map(fn (array $u) => ['id' => (int) $u['id'], 'name' => $u['name']])
+            ->unique('id')->sortBy('name')->values();
     }
 
     public function create(): View
@@ -98,14 +113,28 @@ class TicketController extends Controller
     public function assign(Request $request, int|string $id): RedirectResponse
     {
         abort_if($this->tickets->find($id) === null, 404);
+
+        $data = $request->validate([
+            'technician_glpi_id' => ['nullable', 'integer'],
+            'technician_name' => ['nullable', 'string', 'max:150'],
+        ]);
+
+        $user = $request->user();
+        // Sem técnico informado = "assumir" (atribui a si mesmo).
+        $toId = ! empty($data['technician_glpi_id']) ? (int) $data['technician_glpi_id'] : (int) $user->glpi_id;
+        $self = $toId === (int) $user->glpi_id;
+        $toName = $self ? $user->name : ($data['technician_name'] ?: 'Técnico');
+
         $this->tickets->update($id, [
-            'technician' => $request->user()->name,
-            'technician_glpi_id' => $request->user()->glpi_id,
+            'technician' => $toName,
+            'technician_glpi_id' => $toId,
             'status' => TicketStatus::InProgress->value,
         ]);
-        $this->tickets->addFollowup($id, 'Chamado assumido por '.$request->user()->name.'.');
+        $this->tickets->addFollowup($id, $self
+            ? 'Chamado assumido por '.$user->name.'.'
+            : 'Chamado atribuído a '.$toName.' por '.$user->name.'.');
 
-        return back()->with('status', 'Você assumiu o chamado.');
+        return back()->with('status', $self ? 'Você assumiu o chamado.' : 'Chamado atribuído a '.$toName.'.');
     }
 
     public function updateSla(Request $request, int|string $id): RedirectResponse
