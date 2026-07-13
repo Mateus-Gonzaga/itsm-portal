@@ -67,6 +67,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/tickets/{id}', [TicketController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{id}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
 
+    // Anexos do chamado (upload + exibição inline via proxy do GLPI)
+    Route::post('/tickets/{id}/anexos', [TicketController::class, 'storeAttachment'])->name('tickets.attachments.store');
+    Route::get('/tickets/{id}/anexos/{docId}', [TicketController::class, 'showAttachment'])
+        ->whereNumber('docId')->name('tickets.attachments.show');
+
     // Ações do atendimento (técnico/gestor)
     Route::middleware('role:tecnico,gestor')->group(function () {
         Route::post('/tickets/{id}/assign', [TicketController::class, 'assign'])->name('tickets.assign');

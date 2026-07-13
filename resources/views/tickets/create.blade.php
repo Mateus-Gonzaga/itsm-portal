@@ -6,7 +6,7 @@
         <h1 class="h3 mb-3">Abrir chamado</h1>
         <div class="card border-0 shadow-sm">
             <div class="card-body">
-                <form method="POST" action="{{ route('tickets.store') }}">
+                <form method="POST" action="{{ route('tickets.store') }}" enctype="multipart/form-data">
                     @csrf
                     <div class="mb-3">
                         <label class="form-label">Título</label>
@@ -57,6 +57,13 @@
                         <textarea name="description" rows="5"
                                   class="form-control @error('description') is-invalid @enderror" required>{{ old('description') }}</textarea>
                         @error('description') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Anexos <span class="text-muted small">— opcional (foto do problema, PDF)</span></label>
+                        <input type="file" name="files[]" class="form-control @error('files.*') is-invalid @enderror"
+                               accept="image/*,.pdf" multiple>
+                        <div class="form-text">Imagens ou PDF, até 8 MB cada (máx. 5 arquivos).</div>
+                        @error('files.*') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary"><i class="bi bi-send me-1"></i> Enviar</button>

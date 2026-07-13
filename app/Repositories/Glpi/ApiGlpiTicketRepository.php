@@ -196,6 +196,78 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         ])->throw();
     }
 
+    public function attachments(int|string $ticketId): Collection
+    {
+        $links = $this->client()->get("/Ticket/{$ticketId}/Document_Item");
+        if (! $links->successful() || ! is_array($links->json())) {
+            return collect();
+        }
+
+        return collect($links->json())
+            ->pluck('documents_id')->filter()->unique()->values()
+            ->map(function ($docId) {
+                $d = $this->client()->get('/Document/'.(int) $docId);
+                if (! $d->successful()) {
+                    return null;
+                }
+                $j = $d->json();
+                $mime = (string) ($j['mime'] ?? '');
+
+                return [
+                    'id' => (int) $docId,
+                    'name' => (string) ($j['name'] ?? 'anexo'),
+                    'filename' => (string) ($j['filename'] ?? 'arquivo'),
+                    'mime' => $mime,
+                    'isImage' => str_starts_with($mime, 'image/'),
+                ];
+            })
+            ->filter()
+            ->values();
+    }
+
+    public function addAttachment(int|string $ticketId, string $path, string $originalName): void
+    {
+        // Upload multipart do GLPI: parte "uploadManifest" (JSON) + "filename[0]".
+        // O itemtype/items_id no manifest já vincula o Documento ao chamado.
+        $manifest = json_encode(['input' => [
+            'name' => $originalName,
+            '_filename' => [$originalName],
+            'itemtype' => 'Ticket',
+            'items_id' => (int) $ticketId,
+        ]]);
+
+        Http::baseUrl($this->apiUrl)
+            ->withHeaders(array_filter([
+                'Session-Token' => $this->session(),
+                'App-Token' => $this->appToken ?: null,
+            ]))
+            ->attach('filename[0]', file_get_contents($path), $originalName)
+            ->post('/Document', ['uploadManifest' => $manifest])
+            ->throw();
+    }
+
+    public function downloadAttachment(int $documentId): array
+    {
+        $meta = $this->client()->get("/Document/{$documentId}");
+        $j = $meta->successful() ? (array) $meta->json() : [];
+
+        // Com Accept: octet-stream o GLPI devolve o ARQUIVO em vez do JSON.
+        $resp = Http::baseUrl($this->apiUrl)
+            ->withHeaders(array_filter([
+                'Session-Token' => $this->session(),
+                'App-Token' => $this->appToken ?: null,
+                'Accept' => 'application/octet-stream',
+            ]))
+            ->get("/Document/{$documentId}", ['alt' => 'media']);
+        $resp->throw();
+
+        return [
+            'content' => $resp->body(),
+            'mime' => (string) ($j['mime'] ?? ($resp->header('Content-Type') ?: 'application/octet-stream')),
+            'filename' => (string) ($j['filename'] ?? 'anexo'),
+        ];
+    }
+
     // ----------------------------------------------------------------
     // Infra HTTP / sessão
     // ----------------------------------------------------------------

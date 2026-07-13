@@ -79,11 +79,17 @@ class FortifyServiceProvider extends ServiceProvider
                 ],
             );
 
+            // CLIENTE nunca enxerga de forma recursiva: vê só a própria entidade,
+            // nunca as sub-entidades (evita um cliente mal atribuído num nível pai
+            // ver os ativos/chamados de outras lojas). Equipe mantém o recursivo real.
+            $recursive = $user->role !== UserRole::Cliente
+                && (bool) ($s['glpiactive_entity_recursive'] ?? false);
+
             session([
                 'glpi_token' => $token,
                 'glpi_profile' => $profile,
                 'glpi_entity' => $s['glpiactive_entity'] ?? null,
-                'glpi_entity_recursive' => (bool) ($s['glpiactive_entity_recursive'] ?? false),
+                'glpi_entity_recursive' => $recursive,
             ]);
 
             return $user;

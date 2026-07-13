@@ -37,4 +37,21 @@ interface GlpiTicketRepositoryInterface
     public function timeline(int|string $id): Collection;
 
     public function addFollowup(int|string $id, string $content): void;
+
+    /**
+     * Anexos (Documentos do GLPI) vinculados ao chamado.
+     *
+     * @return Collection<int, array{id:int,name:string,filename:string,mime:string,isImage:bool}>
+     */
+    public function attachments(int|string $ticketId): Collection;
+
+    /** Envia um arquivo e vincula ao chamado (Document + Document_Item). */
+    public function addAttachment(int|string $ticketId, string $path, string $originalName): void;
+
+    /**
+     * Baixa o conteúdo de um anexo (para o portal servir inline).
+     *
+     * @return array{content:string,mime:string,filename:string}
+     */
+    public function downloadAttachment(int $documentId): array;
 }

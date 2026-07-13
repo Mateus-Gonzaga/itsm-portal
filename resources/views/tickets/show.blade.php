@@ -26,6 +26,45 @@
             </div>
         </div>
 
+        {{-- Anexos: imagens exibidas inline; demais arquivos como link --}}
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-paperclip me-1"></i> Anexos <span class="text-secondary small fw-normal">({{ $attachments->count() }})</span></span>
+            </div>
+            <div class="card-body">
+                @if ($attachments->isEmpty())
+                    <p class="text-muted small mb-3">Nenhum anexo ainda. Envie uma imagem do problema — ajuda muito no atendimento.</p>
+                @else
+                    <div class="d-flex flex-wrap gap-3 mb-3">
+                        @foreach ($attachments as $a)
+                            @php $url = route('tickets.attachments.show', [$ticket->id, $a['id']]); @endphp
+                            @if ($a['isImage'])
+                                <a href="{{ $url }}" target="_blank" title="{{ $a['filename'] }}" class="d-block border rounded overflow-hidden" style="width:150px;height:110px">
+                                    <img src="{{ $url }}" alt="{{ $a['filename'] }}" loading="lazy"
+                                         style="width:100%;height:100%;object-fit:cover">
+                                </a>
+                            @else
+                                <a href="{{ $url }}" target="_blank" class="d-flex align-items-center gap-2 border rounded px-3 py-2 text-decoration-none" style="max-width:230px">
+                                    <i class="bi bi-file-earmark-pdf fs-4 text-danger"></i>
+                                    <span class="small text-truncate">{{ $a['filename'] }}</span>
+                                </a>
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
+                <form method="POST" action="{{ route('tickets.attachments.store', $ticket->id) }}" enctype="multipart/form-data" class="d-flex gap-2 align-items-start flex-wrap">
+                    @csrf
+                    <div>
+                        <input type="file" name="files[]" class="form-control form-control-sm @error('files.*') is-invalid @enderror"
+                               accept="image/*,.pdf" multiple required>
+                        @error('files.*') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        <div class="form-text">Imagens ou PDF, até 8 MB cada (máx. 5).</div>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm"><i class="bi bi-upload me-1"></i> Enviar</button>
+                </form>
+            </div>
+        </div>
+
         <div class="card border-0 shadow-sm mt-4">
             <div class="card-header bg-white fw-semibold"><i class="bi bi-chat-left-dots me-1"></i> Acompanhamento</div>
             <div class="card-body">

@@ -139,6 +139,22 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
         cache()->forever($key, [...cache()->get($key, []), $comment]);
     }
 
+    public function attachments(int|string $ticketId): Collection
+    {
+        // Demo: sem anexos persistidos.
+        return collect();
+    }
+
+    public function addAttachment(int|string $ticketId, string $path, string $originalName): void
+    {
+        // no-op (demo)
+    }
+
+    public function downloadAttachment(int $documentId): array
+    {
+        return ['content' => '', 'mime' => 'application/octet-stream', 'filename' => 'anexo'];
+    }
+
     /** Prazo de SLA (horas) por prioridade — só ilustrativo no mock. */
     private function slaHours(TicketPriority $priority): int
     {

@@ -55,6 +55,51 @@ class TicketController extends Controller
             'timeline' => $this->tickets->timeline($id),
             // Lista de técnicos/gestores para atribuição (só p/ staff).
             'technicians' => $request->user()->role === UserRole::Cliente ? collect() : $this->staffTechnicians($dir),
+            'attachments' => $this->tickets->attachments($id),
+        ]);
+    }
+
+    /** Anexa arquivos (imagens/PDF) a um chamado existente. */
+    public function storeAttachment(Request $request, int|string $id): RedirectResponse
+    {
+        $ticket = $this->tickets->find($id);
+        abort_if($ticket === null, 404);
+        $this->denyIfNotOwner($request, $ticket);
+
+        $request->validate([
+            'files' => ['required', 'array', 'max:5'],
+            'files.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,pdf', 'max:8192'],
+        ]);
+
+        foreach ($request->file('files', []) as $file) {
+            $this->tickets->addAttachment($id, $file->getRealPath(), $file->getClientOriginalName());
+        }
+
+        return back()->with('status', 'Anexo(s) enviado(s).');
+    }
+
+    /**
+     * Serve um anexo INLINE (proxy do GLPI): permite exibir imagens direto na
+     * página (o navegador não consegue chamar a API do GLPI com os tokens).
+     */
+    public function showAttachment(Request $request, int|string $id, int $docId): \Illuminate\Http\Response
+    {
+        $ticket = $this->tickets->find($id);
+        abort_if($ticket === null, 404);
+        $this->denyIfNotOwner($request, $ticket);
+
+        // O documento precisa pertencer a ESTE chamado (evita ler doc alheio por id).
+        abort_unless(
+            $this->tickets->attachments($id)->contains(fn (array $a) => $a['id'] === $docId),
+            404, 'Anexo não encontrado neste chamado.',
+        );
+
+        $file = $this->tickets->downloadAttachment($docId);
+
+        return response($file['content'], 200, [
+            'Content-Type' => $file['mime'],
+            'Content-Disposition' => 'inline; filename="'.addslashes($file['filename']).'"',
+            'Cache-Control' => 'private, max-age=300',
         ]);
     }
 
@@ -85,12 +130,23 @@ class TicketController extends Controller
             'type' => ['required', 'string'],
             'category' => ['nullable', 'string'],
             'due_date' => ['nullable', 'date'],
+            'files' => ['nullable', 'array', 'max:5'],
+            'files.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,pdf', 'max:8192'],
         ]);
 
         $ticket = $this->tickets->create([
             ...$data,
             ...$this->requesterFilter($request->user()),
         ]);
+
+        // Anexos enviados junto com a abertura (falha num anexo não perde o chamado).
+        foreach ($request->file('files', []) as $file) {
+            try {
+                $this->tickets->addAttachment($ticket->id, $file->getRealPath(), $file->getClientOriginalName());
+            } catch (\Throwable) {
+                // segue: o chamado já foi criado
+            }
+        }
 
         return redirect()->route('tickets.show', $ticket->id)
             ->with('status', "Chamado \"{$ticket->title}\" aberto com sucesso (#{$ticket->id}).");
