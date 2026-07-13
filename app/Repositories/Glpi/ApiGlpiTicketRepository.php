@@ -227,11 +227,19 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
 
     public function addAttachment(int|string $ticketId, string $path, string $originalName): void
     {
+        // O GLPI exige que o _filename do manifest case EXATAMENTE com o nome do
+        // arquivo enviado — espaços/acentos quebram esse casamento ("Arquivo X
+        // não encontrado"). Então sanitizamos o nome antes de enviar.
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $base = pathinfo($originalName, PATHINFO_FILENAME);
+        $base = \Illuminate\Support\Str::slug($base) ?: 'anexo';
+        $safe = $base.($ext !== '' ? ".{$ext}" : '');
+
         // Upload multipart do GLPI: parte "uploadManifest" (JSON) + "filename[0]".
         // O itemtype/items_id no manifest já vincula o Documento ao chamado.
         $manifest = json_encode(['input' => [
-            'name' => $originalName,
-            '_filename' => [$originalName],
+            'name' => $safe,
+            '_filename' => [$safe],
             'itemtype' => 'Ticket',
             'items_id' => (int) $ticketId,
         ]]);
@@ -241,7 +249,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
                 'Session-Token' => $this->session(),
                 'App-Token' => $this->appToken ?: null,
             ]))
-            ->attach('filename[0]', file_get_contents($path), $originalName)
+            ->attach('filename[0]', file_get_contents($path), $safe)
             ->post('/Document', ['uploadManifest' => $manifest])
             ->throw();
     }

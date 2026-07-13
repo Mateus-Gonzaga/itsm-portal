@@ -71,8 +71,14 @@ class TicketController extends Controller
             'files.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,pdf', 'max:8192'],
         ]);
 
-        foreach ($request->file('files', []) as $file) {
-            $this->tickets->addAttachment($id, $file->getRealPath(), $file->getClientOriginalName());
+        try {
+            foreach ($request->file('files', []) as $file) {
+                $this->tickets->addAttachment($id, $file->getRealPath(), $file->getClientOriginalName());
+            }
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $detail = (string) ($e->response?->json('1') ?? $e->response?->json('0') ?? 'o GLPI recusou o envio');
+
+            return back()->with('error', 'Não foi possível anexar: '.$detail);
         }
 
         return back()->with('status', 'Anexo(s) enviado(s).');
