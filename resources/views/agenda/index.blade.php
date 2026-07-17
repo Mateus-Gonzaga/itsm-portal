@@ -89,43 +89,6 @@
     <p class="text-secondary small mb-0">Tarefas dos chamados, prazos de atendimento e tarefas livres da equipe. Clique num dia para lançar uma tarefa.</p>
 </div>
 
-<div class="card agenda-card">
-    <div class="card-header d-flex flex-wrap gap-3 align-items-center justify-content-between py-3">
-        <div class="agenda-toolbar">
-            @if ($canFilter && $technicians->isNotEmpty())
-                <div class="input-group input-group-sm" style="width:auto">
-                    <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
-                    <select id="filterTech" class="form-select" style="min-width:170px">
-                        <option value="">Todos os técnicos</option>
-                        @foreach ($technicians as $t)
-                            <option value="{{ $t['id'] }}">{{ $t['name'] }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            @endif
-            <div class="form-check form-switch mb-0">
-                <input class="form-check-input" type="checkbox" id="toggleSla" checked>
-                <label class="form-check-label small" for="toggleSla">Prazos (SLA)</label>
-            </div>
-        </div>
-        <div class="agenda-legend">
-            <span><span class="dot dot-task"></span>Chamado</span>
-            <span><span class="dot dot-event"></span>Tarefa livre</span>
-            <span><span class="dot dot-done"></span>Concluída</span>
-            <span><span class="dot dot-sla"></span>Prazo</span>
-        </div>
-    </div>
-    <div class="card-body">
-        @if ($events->isEmpty())
-            <div class="alert alert-light border d-flex align-items-center gap-2" role="alert">
-                <i class="bi bi-calendar2-week fs-5 text-success"></i>
-                <div class="small mb-0">Nenhum agendamento ainda. Clique em <strong>Novo agendamento</strong> (ou em um dia do calendário) para criar o primeiro.</div>
-            </div>
-        @endif
-        <div id="calendar"></div>
-    </div>
-</div>
-
 {{-- ===================== QUADRO KANBAN DA EQUIPE ===================== --}}
 <style>
     .kanban-board { display:flex; gap:1rem; overflow-x:auto; padding-bottom:.5rem; align-items:flex-start; }
@@ -204,6 +167,43 @@
                 </div>
             @endforeach
         </div>
+    </div>
+</div>
+
+<div class="card agenda-card mt-4">
+    <div class="card-header d-flex flex-wrap gap-3 align-items-center justify-content-between py-3">
+        <div class="agenda-toolbar">
+            @if ($canFilter && $technicians->isNotEmpty())
+                <div class="input-group input-group-sm" style="width:auto">
+                    <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                    <select id="filterTech" class="form-select" style="min-width:170px">
+                        <option value="">Todos os técnicos</option>
+                        @foreach ($technicians as $t)
+                            <option value="{{ $t['id'] }}">{{ $t['name'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="toggleSla" checked>
+                <label class="form-check-label small" for="toggleSla">Prazos (SLA)</label>
+            </div>
+        </div>
+        <div class="agenda-legend">
+            <span><span class="dot dot-task"></span>Chamado</span>
+            <span><span class="dot dot-event"></span>Tarefa livre</span>
+            <span><span class="dot dot-done"></span>Concluída</span>
+            <span><span class="dot dot-sla"></span>Prazo</span>
+        </div>
+    </div>
+    <div class="card-body">
+        @if ($events->isEmpty())
+            <div class="alert alert-light border d-flex align-items-center gap-2" role="alert">
+                <i class="bi bi-calendar2-week fs-5 text-success"></i>
+                <div class="small mb-0">Nenhum agendamento ainda. Clique em <strong>Novo agendamento</strong> (ou em um dia do calendário) para criar o primeiro.</div>
+            </div>
+        @endif
+        <div id="calendar"></div>
     </div>
 </div>
 
