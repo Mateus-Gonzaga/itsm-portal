@@ -88,7 +88,13 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
             ->reject(fn (array $u) => in_array((string) ($u['name'] ?? ''), self::SYSTEM, true))
             ->map(function (array $u) use ($primary, $entityNames, $profileNames) {
                 $login = (string) ($u['name'] ?? '');
-                $real = trim((string) ($u['realname'] ?? '').' '.(string) ($u['firstname'] ?? ''));
+                $sobrenome = trim((string) ($u['realname'] ?? ''));
+                $nome = trim((string) ($u['firstname'] ?? ''));
+                // Dedup: contas de loja costumam ter o MESMO texto nos dois campos
+                // ("ADAL"+"ADAL") — não repetir na exibição.
+                $real = mb_strtolower($sobrenome) === mb_strtolower($nome)
+                    ? $sobrenome
+                    : trim($sobrenome.' '.$nome);
                 $pu = $primary((int) ($u['id'] ?? 0));
 
                 return [
@@ -148,7 +154,10 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
 
     public function updateUser(int $id, array $data): void
     {
-        $input = ['id' => $id, 'realname' => $data['name'], 'is_active' => $data['active'] ? 1 : 0];
+        // O "Nome de exibição" do portal é a fonte única: grava no realname e
+        // LIMPA o firstname — senão o firstname antigo continua concatenado na
+        // exibição (causa do "ADAL ADAL" e da edição que "não pegava").
+        $input = ['id' => $id, 'realname' => $data['name'], 'firstname' => '', 'is_active' => $data['active'] ? 1 : 0];
         if (! empty($data['password'])) {
             $input['password'] = $data['password'];
             $input['password2'] = $data['password'];
