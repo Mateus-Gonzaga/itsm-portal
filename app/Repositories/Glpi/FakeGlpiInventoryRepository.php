@@ -13,7 +13,7 @@ class FakeGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
             'Computer' => ['label' => 'Computadores', 'icon' => 'bi-pc-display'],
             'Monitor' => ['label' => 'Monitores', 'icon' => 'bi-display'],
             'Printer' => ['label' => 'Impressoras', 'icon' => 'bi-printer'],
-            'Phone' => ['label' => 'Telefones', 'icon' => 'bi-telephone'],
+            'NetworkEquipment' => ['label' => 'Rede', 'icon' => 'bi-hdd-network'],
             'Peripheral' => ['label' => 'Periféricos', 'icon' => 'bi-usb-plug'],
             'PluginGenericobjectDvr' => ['label' => 'DVRs', 'icon' => 'bi-camera-video'],
             'PluginGenericobjectAlarme' => ['label' => 'Alarmes', 'icon' => 'bi-bell'],
