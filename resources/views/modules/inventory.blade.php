@@ -36,7 +36,7 @@
         </button>
     </div>
     @foreach ($counts as $c)
-        <div class="col-6 col-md">
+        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
             <button class="inv-card" data-type="{{ $c['label'] }}" type="button">
                 <span class="ic"><i class="bi {{ $c['icon'] }}"></i></span>
                 <span><span class="v">{{ $c['count'] }}</span><br><span class="l">{{ $c['label'] }}</span></span>

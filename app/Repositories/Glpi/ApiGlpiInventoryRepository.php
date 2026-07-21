@@ -18,7 +18,6 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         'Computer' => ['label' => 'Computadores', 'icon' => 'bi-pc-display', 'model' => 'computermodels_id'],
         'Monitor' => ['label' => 'Monitores', 'icon' => 'bi-display', 'model' => 'monitormodels_id'],
         'Printer' => ['label' => 'Impressoras', 'icon' => 'bi-printer', 'model' => 'printermodels_id'],
-        'NetworkEquipment' => ['label' => 'Rede', 'icon' => 'bi-hdd-network', 'model' => 'networkequipmentmodels_id'],
         'Phone' => ['label' => 'Telefones', 'icon' => 'bi-telephone', 'model' => 'phonemodels_id'],
         'Peripheral' => ['label' => 'Periféricos', 'icon' => 'bi-usb-plug', 'model' => 'peripheralmodels_id'],
         // Ativos do plugin GenericObject (câmeras/segurança).
