@@ -22,6 +22,7 @@
         <p class="text-secondary small mb-0">Entidades, usuários e perfis sincronizados do GLPI.</p>
     </div>
     <div class="d-flex gap-2">
+        <a href="{{ route('modules.map') }}" class="btn btn-outline-success btn-sm"><i class="bi bi-geo-alt me-1"></i> Mapa</a>
         <button class="btn btn-outline-primary btn-sm" onclick="openEntity()"><i class="bi bi-diagram-3 me-1"></i> Nova entidade</button>
         <button class="btn btn-primary btn-sm" onclick="openUser()"><i class="bi bi-person-plus me-1"></i> Novo usuário</button>
     </div>

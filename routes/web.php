@@ -30,6 +30,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::get('/relatorios', ReportsController::class)->middleware('role:gestor')->name('modules.reports');
     Route::get('/clientes', ClientsController::class)->middleware('role:gestor')->name('modules.clients');
+    Route::get('/mapa-clientes', fn () => view('modules.map'))->middleware('role:gestor')->name('modules.map');
 
     // Escrita do diretório (entidades/usuários) — gestor (+ rate limit anti-abuso)
     Route::middleware(['role:gestor', 'throttle:30,1'])->group(function () {
