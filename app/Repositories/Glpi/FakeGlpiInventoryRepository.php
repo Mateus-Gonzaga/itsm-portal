@@ -16,6 +16,8 @@ class FakeGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
             'NetworkEquipment' => ['label' => 'Rede', 'icon' => 'bi-hdd-network'],
             'Phone' => ['label' => 'Telefones', 'icon' => 'bi-telephone'],
             'Peripheral' => ['label' => 'Periféricos', 'icon' => 'bi-usb-plug'],
+            'PluginGenericobjectDvr' => ['label' => 'DVRs', 'icon' => 'bi-camera-video'],
+            'PluginGenericobjectAlarme' => ['label' => 'Alarmes', 'icon' => 'bi-bell'],
         ];
     }
 

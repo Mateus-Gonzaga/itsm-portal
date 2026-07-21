@@ -21,6 +21,9 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         'NetworkEquipment' => ['label' => 'Rede', 'icon' => 'bi-hdd-network', 'model' => 'networkequipmentmodels_id'],
         'Phone' => ['label' => 'Telefones', 'icon' => 'bi-telephone', 'model' => 'phonemodels_id'],
         'Peripheral' => ['label' => 'Periféricos', 'icon' => 'bi-usb-plug', 'model' => 'peripheralmodels_id'],
+        // Ativos do plugin GenericObject (câmeras/segurança).
+        'PluginGenericobjectDvr' => ['label' => 'DVRs', 'icon' => 'bi-camera-video', 'model' => 'plugin_genericobject_dvrmodels_id'],
+        'PluginGenericobjectAlarme' => ['label' => 'Alarmes', 'icon' => 'bi-bell', 'model' => 'plugin_genericobject_alarmemodels_id'],
     ];
 
     private ?string $sessionToken = null;
