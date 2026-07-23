@@ -80,6 +80,30 @@
     .fc-list-event.ev-done .fc-list-event-dot { border-color:#9aa1a8; }
     .fc-list-event.ev-done .fc-list-event-title { text-decoration:line-through; opacity:.8; }
     .fc .fc-list-event-title .bi { color:var(--bs-secondary-color); margin-right:.3rem; }
+
+    /* Prévia da tarefa no hover: cartão claro, largo e legível */
+    .agenda-tip {
+        --bs-tooltip-bg: var(--bs-body-bg);
+        --bs-tooltip-color: var(--bs-body-color);
+        --bs-tooltip-max-width: 360px;
+        --bs-tooltip-opacity: 1;
+        --bs-tooltip-border-radius: 12px;
+        --bs-tooltip-padding-x: 0;
+        --bs-tooltip-padding-y: 0;
+        --bs-tooltip-font-size: .84rem;
+    }
+    .agenda-tip .tooltip-inner {
+        text-align:left; max-width:360px; overflow:hidden;
+        border:1px solid var(--bs-border-color);
+        box-shadow:0 12px 28px rgba(0,0,0,.2);
+    }
+    .agenda-tip .tip-head { padding:.6rem .8rem; border-bottom:1px solid var(--bs-border-color); }
+    .agenda-tip .tip-title { font-weight:700; font-size:.9rem; line-height:1.3; }
+    .agenda-tip .tip-meta { font-size:.75rem; color:var(--bs-secondary-color); margin-top:.15rem; }
+    .agenda-tip .tip-meta .bi { margin-right:.2rem; }
+    .agenda-tip .tip-desc { padding:.6rem .8rem; white-space:pre-line; line-height:1.55; max-height:240px; overflow-y:auto; }
+    .agenda-tip .tip-empty { padding:.55rem .8rem; font-size:.78rem; color:var(--bs-secondary-color); font-style:italic; }
+    .agenda-tip .tip-bar { height:4px; }
 </style>
 @endpush
 
@@ -452,6 +476,24 @@
     let filterTech = '';
     let showSla = true;
 
+    // Escapa texto do usuário (o tooltip usa HTML).
+    function esc(s) { const d = document.createElement('div'); d.textContent = (s == null ? '' : s); return d.innerHTML; }
+
+    // "06/07/2026 08:00 – 18:00" (ou só a data, se não tiver hora útil).
+    function quando(ev) {
+        const d2 = (n) => String(n).padStart(2, '0');
+        const i = ev.start, f = ev.end;
+        const data = d2(i.getDate()) + '/' + d2(i.getMonth() + 1) + '/' + i.getFullYear();
+        const hi = d2(i.getHours()) + ':' + d2(i.getMinutes());
+        if (!f) return data + ' ' + hi;
+        const mesmoDia = i.toDateString() === f.toDateString();
+        const hf = d2(f.getHours()) + ':' + d2(f.getMinutes());
+        return mesmoDia ? (data + ' ' + hi + ' – ' + hf) : (data + ' ' + hi);
+    }
+
+    // Some com tooltips abertos (evita ficarem "presos" ao arrastar/recarregar).
+    function limparTips() { document.querySelectorAll('.tooltip').forEach(function (t) { t.remove(); }); }
+
     function visibleEvents() {
         return ALL_EVENTS.filter(function (e) {
             if (e.extendedProps.type === 'sla' && !showSla) return false;
@@ -506,19 +548,38 @@
         selectable: true,
         eventDrop: persist,
         eventResize: persist,
+        eventDragStart: limparTips,
+        eventResizeStart: limparTips,
         eventClick: function (info) {
+            limparTips();
             const p = info.event.extendedProps;
             if (p.type === 'event') { openTaskActions(info.event); return; }
             if (p.ticketId) window.location = TICKET_URL + '/' + p.ticketId;
         },
         dateClick: function (info) { openTaskModal(info.date, info.allDay); },
-        // Prévia da descrição ao passar o mouse (tooltip nativo, sem plugin).
+        // Prévia da tarefa ao passar o mouse: cartão estilizado (Bootstrap tooltip).
         eventDidMount: function (info) {
             const p = info.event.extendedProps;
-            const linhas = [info.event.title];
-            if (p.technicianName) linhas.push('Responsável: ' + p.technicianName);
-            if (p.description) linhas.push('', p.description);
-            info.el.setAttribute('title', linhas.join('\n'));
+            const cor = (p.type === 'event' && p.color) ? p.color
+                : (p.type === 'sla' ? '#f59e0b' : (p.type === 'event' ? '#4338ca' : '#067a45'));
+
+            let meta = '<i class="bi bi-calendar-event"></i>' + esc(quando(info.event));
+            if (p.technicianName) meta += ' &nbsp;·&nbsp; <i class="bi bi-person"></i>' + esc(p.technicianName);
+            if (p.done) meta += ' &nbsp;·&nbsp; <span class="text-success">✓ concluída</span>';
+
+            const corpo = p.description
+                ? '<div class="tip-desc">' + esc(p.description) + '</div>'
+                : (p.type === 'event' ? '<div class="tip-empty">Sem detalhes. Clique para editar.</div>' : '');
+
+            const html = '<div class="tip-bar" style="background:' + esc(cor) + '"></div>'
+                + '<div class="tip-head"><div class="tip-title">' + esc(info.event.title) + '</div>'
+                + '<div class="tip-meta">' + meta + '</div></div>' + corpo;
+
+            new bootstrap.Tooltip(info.el, {
+                title: html, html: true, placement: 'top', container: 'body',
+                customClass: 'agenda-tip', trigger: 'hover',
+            });
+
             // Cor personalizada da tarefa livre.
             if (p.type === 'event' && p.color && !p.done) {
                 const inner = info.el.querySelector('.ev-inner');
