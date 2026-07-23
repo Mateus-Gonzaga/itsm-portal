@@ -92,6 +92,7 @@ Route::middleware('auth')->group(function () {
 
         // Tarefas livres da equipe (PlanningExternalEvent)
         Route::post('/agenda/tarefa', [AgendaController::class, 'storeEvent'])->name('agenda.event.store');
+        Route::put('/agenda/tarefa/{id}', [AgendaController::class, 'updateEvent'])->whereNumber('id')->name('agenda.event.update');
         Route::post('/agenda/tarefa/remarcar', [AgendaController::class, 'rescheduleEvent'])->name('agenda.event.reschedule');
         Route::post('/agenda/tarefa/concluir', [AgendaController::class, 'toggleEventDone'])->name('agenda.event.done');
         Route::delete('/agenda/tarefa/{id}', [AgendaController::class, 'destroyEvent'])->name('agenda.event.destroy');

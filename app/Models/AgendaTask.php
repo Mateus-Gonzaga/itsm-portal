@@ -11,6 +11,7 @@ class AgendaTask extends Model
         'series_id',
         'title',
         'description',
+        'color',
         'owner_glpi_id',
         'owner_name',
         'start_at',

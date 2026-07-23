@@ -29,6 +29,7 @@ final class PlanningEvent
         public readonly ?int $eventId = null, // id da tarefa livre local (só type=event)
         public readonly ?string $seriesId = null, // agrupa ocorrências recorrentes
         public readonly ?string $description = null, // detalhes exibidos ao clicar
+        public readonly ?string $color = null,       // cor personalizada (hex) da tarefa
     ) {
     }
 
@@ -55,6 +56,7 @@ final class PlanningEvent
                 'done' => $this->done,
                 'seriesId' => $this->seriesId,
                 'description' => $this->description,
+                'color' => $this->color,
             ],
         ];
     }

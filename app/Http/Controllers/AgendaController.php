@@ -98,6 +98,7 @@ class AgendaController extends Controller
             eventId: $t->id,
             seriesId: $t->series_id,
             description: $t->description,
+            color: $t->color,
         ))->values();
     }
 
@@ -152,6 +153,7 @@ class AgendaController extends Controller
             'owner_glpi_id' => ['nullable', 'integer'],
             'owner_name' => ['nullable', 'string', 'max:150'],
             'content' => ['nullable', 'string', 'max:2000'],
+            'color' => ['nullable', 'string', 'max:20'],
             'repeat' => ['nullable', 'boolean'],
             'until' => ['nullable', 'date'],
             'weekdays' => ['nullable', 'array'],
@@ -166,6 +168,7 @@ class AgendaController extends Controller
         $base = [
             'title' => $data['title'],
             'description' => $data['content'] ?? null,
+            'color' => $data['color'] ?? null,
             'owner_glpi_id' => $owner,
             'owner_name' => $owner ? ($data['owner_name'] ?? null) : null,
             'created_by' => $request->user()->id,
@@ -197,6 +200,57 @@ class AgendaController extends Controller
         }
 
         return response()->json(['ok' => true, 'created' => $count]);
+    }
+
+    /** Edita uma tarefa livre (título, detalhes, responsável, cor, horário). */
+    public function updateEvent(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'begin' => ['required', 'date'],
+            'end' => ['required', 'date', 'after:begin'],
+            'owner_glpi_id' => ['nullable', 'integer'],
+            'owner_name' => ['nullable', 'string', 'max:150'],
+            'content' => ['nullable', 'string', 'max:2000'],
+            'color' => ['nullable', 'string', 'max:20'],
+            'apply_series' => ['nullable', 'boolean'],
+        ]);
+
+        $task = AgendaTask::find($id);
+        if (! $task) {
+            return response()->json(['ok' => false], 404);
+        }
+
+        $owner = ! empty($data['owner_glpi_id']) ? (int) $data['owner_glpi_id'] : null;
+        $comum = [
+            'title' => $data['title'],
+            'description' => $data['content'] ?? null,
+            'color' => $data['color'] ?? null,
+            'owner_glpi_id' => $owner,
+            'owner_name' => $owner ? ($data['owner_name'] ?? null) : null,
+        ];
+
+        // "Aplicar a todos os dias": muda o conteúdo da série inteira, mas cada
+        // ocorrência mantém a SUA data (só o horário do dia é replicado).
+        if ($request->boolean('apply_series') && $task->series_id) {
+            $begin = CarbonImmutable::parse($data['begin']);
+            $end = CarbonImmutable::parse($data['end']);
+            $duration = max(1, $begin->diffInMinutes($end));
+
+            foreach (AgendaTask::where('series_id', $task->series_id)->get() as $t) {
+                $s = CarbonImmutable::parse($t->start_at)->setTime($begin->hour, $begin->minute, 0);
+                $t->update($comum + ['start_at' => $s, 'end_at' => $s->addMinutes($duration)]);
+            }
+
+            return response()->json(['ok' => true]);
+        }
+
+        $task->update($comum + [
+            'start_at' => CarbonImmutable::parse($data['begin']),
+            'end_at' => CarbonImmutable::parse($data['end']),
+        ]);
+
+        return response()->json(['ok' => true]);
     }
 
     /** Remarca uma tarefa livre (arrastar/redimensionar). */

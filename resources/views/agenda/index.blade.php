@@ -335,7 +335,7 @@
         <div class="modal-content">
             <form id="taskForm">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-list-task me-2"></i>Nova tarefa</h5>
+                    <h5 class="modal-title" id="taskModalTitle"><i class="bi bi-list-task me-2"></i>Nova tarefa</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body">
@@ -366,9 +366,25 @@
                         <label class="form-label">Detalhes <span class="text-muted small">— opcional</span></label>
                         <textarea name="content" rows="2" class="form-control" placeholder="Observações da tarefa."></textarea>
                     </div>
-                    <div class="form-check form-switch mb-2">
+                    <div class="mb-2">
+                        <label class="form-label">Cor</label>
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach (['' => 'Padrão', '#4338ca' => 'Índigo', '#0a9d5a' => 'Verde', '#f59e0b' => 'Laranja', '#dc3545' => 'Vermelho', '#0ea5e9' => 'Azul', '#7c3aed' => 'Roxo', '#64748b' => 'Cinza'] as $hex => $nome)
+                                <input type="radio" class="btn-check task-color" name="color" id="tc{{ $loop->index }}" value="{{ $hex }}" autocomplete="off" @checked($hex === '')>
+                                <label class="btn btn-sm btn-outline-secondary mb-0 d-inline-flex align-items-center gap-1" for="tc{{ $loop->index }}" title="{{ $nome }}">
+                                    <span style="display:inline-block;width:.8rem;height:.8rem;border-radius:3px;background:{{ $hex ?: '#4338ca' }};border:1px solid rgba(0,0,0,.15)"></span>
+                                    <span class="small">{{ $nome }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div class="form-check form-switch mb-2" id="taskRepeatWrap">
                         <input class="form-check-input" type="checkbox" id="taskRepeat">
                         <label class="form-check-label" for="taskRepeat"><i class="bi bi-arrow-repeat me-1"></i>Repetir em vários dias</label>
+                    </div>
+                    <div class="form-check form-switch mb-2 d-none" id="taskApplySeriesWrap">
+                        <input class="form-check-input" type="checkbox" id="taskApplySeries">
+                        <label class="form-check-label" for="taskApplySeries">Aplicar a <strong>todos os dias</strong> desta série</label>
                     </div>
                     <div id="taskRepeatBox" class="border rounded p-2 mb-1 bg-body-tertiary d-none">
                         <label class="form-label small mb-1">Repetir nos dias da semana:</label>
@@ -385,7 +401,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success"><i class="bi bi-check2 me-1"></i> Criar tarefa</button>
+                    <button type="submit" class="btn btn-success" id="taskSubmitBtn"><i class="bi bi-check2 me-1"></i> Criar tarefa</button>
                 </div>
             </form>
         </div>
@@ -406,6 +422,7 @@
                 <div class="border rounded bg-body-tertiary p-2 mb-3 small d-none" id="taskActionsDesc"
                      style="white-space:pre-line; max-height:220px; overflow-y:auto"></div>
                 <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary" id="taskEditBtn"><i class="bi bi-pencil me-1"></i> Editar tarefa</button>
                     <button type="button" class="btn btn-success" id="taskDoneBtn"><i class="bi bi-check2-circle me-1"></i> Concluir</button>
                     <button type="button" class="btn btn-outline-danger" id="taskDeleteBtn"><i class="bi bi-trash me-1"></i> Excluir este dia</button>
                     <button type="button" class="btn btn-outline-danger d-none" id="taskDeleteSeriesBtn"><i class="bi bi-trash3 me-1"></i> Excluir todos os dias (série)</button>
@@ -429,6 +446,7 @@
     const EVENT_RESCHEDULE_URL = "{{ route('agenda.event.reschedule') }}";
     const EVENT_DONE_URL = "{{ route('agenda.event.done') }}";
     const EVENT_DESTROY_URL = "{{ url('agenda/tarefa') }}"; // + '/' + id
+    const EVENT_BASE_URL = "{{ url('agenda/tarefa') }}";    // + '/' + id (PUT = editar)
     const TICKET_URL = "{{ url('tickets') }}";
 
     let filterTech = '';
@@ -494,6 +512,24 @@
             if (p.ticketId) window.location = TICKET_URL + '/' + p.ticketId;
         },
         dateClick: function (info) { openTaskModal(info.date, info.allDay); },
+        // Prévia da descrição ao passar o mouse (tooltip nativo, sem plugin).
+        eventDidMount: function (info) {
+            const p = info.event.extendedProps;
+            const linhas = [info.event.title];
+            if (p.technicianName) linhas.push('Responsável: ' + p.technicianName);
+            if (p.description) linhas.push('', p.description);
+            info.el.setAttribute('title', linhas.join('\n'));
+            // Cor personalizada da tarefa livre.
+            if (p.type === 'event' && p.color && !p.done) {
+                const inner = info.el.querySelector('.ev-inner');
+                if (inner) {
+                    inner.style.background = p.color;
+                    inner.style.borderLeftColor = 'rgba(255,255,255,.55)';
+                }
+                const dot = info.el.querySelector('.fc-list-event-dot');
+                if (dot) dot.style.borderColor = p.color;
+            }
+        },
         eventContent: function (arg) {
             const p = arg.event.extendedProps;
             let icon;
@@ -578,16 +614,54 @@
     const taskUntil = document.getElementById('taskUntil');
     taskRepeat.addEventListener('change', function () { taskRepeatBox.classList.toggle('d-none', !this.checked); });
 
+    let editingId = null; // null = criando; id = editando
+
+    function setColor(hex) {
+        const alvo = Array.from(document.querySelectorAll('.task-color'))
+            .find(function (r) { return r.value === (hex || ''); });
+        if (alvo) alvo.checked = true;
+    }
+
     function openTaskModal(date, allDay) {
         const begin = new Date(date);
         if (allDay || (begin.getHours() === 0 && begin.getMinutes() === 0)) begin.setHours(9, 0, 0, 0);
         const end = new Date(begin.getTime() + 3600000);
+        editingId = null;
         taskForm.reset();
+        setColor('');
         taskForm.begin.value = fmt(begin);
         taskForm.end.value = fmt(end);
         taskRepeat.checked = false;
         taskRepeatBox.classList.add('d-none');
         taskUntil.value = fmt(begin).slice(0, 10);
+        document.getElementById('taskModalTitle').innerHTML = '<i class="bi bi-list-task me-2"></i>Nova tarefa';
+        document.getElementById('taskSubmitBtn').innerHTML = '<i class="bi bi-check2 me-1"></i> Criar tarefa';
+        document.getElementById('taskRepeatWrap').classList.remove('d-none');
+        document.getElementById('taskApplySeriesWrap').classList.add('d-none');
+        taskErr.classList.add('d-none');
+        taskModal.show();
+    }
+
+    // Abre o modal em modo EDIÇÃO, preenchido com a tarefa clicada.
+    function openTaskEdit(event) {
+        const p = event.extendedProps;
+        editingId = p.eventId;
+        taskForm.reset();
+        taskForm.title.value = event.title || '';
+        taskForm.content.value = p.description || '';
+        taskForm.owner_glpi_id.value = p.technicianId || '';
+        setColor(p.color || '');
+        taskForm.begin.value = fmt(event.start);
+        taskForm.end.value = fmt(event.end || new Date(event.start.getTime() + 3600000));
+        taskRepeat.checked = false;
+        taskRepeatBox.classList.add('d-none');
+        // Repetir só faz sentido ao criar; ao editar, oferecemos "aplicar à série".
+        document.getElementById('taskRepeatWrap').classList.add('d-none');
+        const serieWrap = document.getElementById('taskApplySeriesWrap');
+        serieWrap.classList.toggle('d-none', !p.seriesId);
+        document.getElementById('taskApplySeries').checked = false;
+        document.getElementById('taskModalTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar tarefa';
+        document.getElementById('taskSubmitBtn').innerHTML = '<i class="bi bi-check2 me-1"></i> Salvar';
         taskErr.classList.add('d-none');
         taskModal.show();
     }
@@ -595,6 +669,7 @@
         e.preventDefault();
         taskErr.classList.add('d-none');
         const ownerSel = taskForm.owner_glpi_id;
+        const corSel = document.querySelector('.task-color:checked');
         const payload = {
             title: taskForm.title.value,
             owner_glpi_id: ownerSel.value || null,
@@ -602,19 +677,27 @@
             begin: new Date(taskForm.begin.value).toISOString(),
             end: new Date(taskForm.end.value).toISOString(),
             content: taskForm.content.value,
+            color: corSel && corSel.value ? corSel.value : null,
         };
-        if (taskRepeat.checked && taskUntil.value) {
+
+        let url = EVENT_STORE_URL, method = 'POST';
+        if (editingId) { // edição
+            url = EVENT_BASE_URL + '/' + editingId;
+            method = 'PUT';
+            payload.apply_series = document.getElementById('taskApplySeries').checked;
+        } else if (taskRepeat.checked && taskUntil.value) {
             payload.repeat = true;
             payload.until = taskUntil.value;
             payload.weekdays = Array.from(document.querySelectorAll('.task-weekday:checked')).map(function (c) { return +c.value; });
         }
-        fetch(EVENT_STORE_URL, {
-            method: 'POST',
+
+        fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
             body: JSON.stringify(payload),
         }).then(function (r) {
             if (r.ok) { window.location.reload(); return; }
-            return r.json().then(function (j) { throw new Error(j.message || 'Não foi possível criar a tarefa.'); });
+            return r.json().then(function (j) { throw new Error(j.message || 'Não foi possível salvar a tarefa.'); });
         }).catch(function (err) {
             taskErr.textContent = err.message; taskErr.classList.remove('d-none');
         });
@@ -679,6 +762,11 @@
         if (!currentEvent) return;
         if (!confirm('Excluir esta tarefa?')) return;
         eventAction(EVENT_DESTROY_URL + '/' + currentEvent.extendedProps.eventId, null, 'DELETE');
+    });
+    document.getElementById('taskEditBtn').addEventListener('click', function () {
+        if (!currentEvent) return;
+        taskActionsModal.hide();
+        openTaskEdit(currentEvent);
     });
     taskDeleteSeriesBtn.addEventListener('click', function () {
         if (!currentEvent) return;
