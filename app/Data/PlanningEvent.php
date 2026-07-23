@@ -28,6 +28,7 @@ final class PlanningEvent
         public readonly bool $done = false,
         public readonly ?int $eventId = null, // id da tarefa livre local (só type=event)
         public readonly ?string $seriesId = null, // agrupa ocorrências recorrentes
+        public readonly ?string $description = null, // detalhes exibidos ao clicar
     ) {
     }
 
@@ -53,6 +54,7 @@ final class PlanningEvent
                 'technicianName' => $this->technicianName,
                 'done' => $this->done,
                 'seriesId' => $this->seriesId,
+                'description' => $this->description,
             ],
         ];
     }

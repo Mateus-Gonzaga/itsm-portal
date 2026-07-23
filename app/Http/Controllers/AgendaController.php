@@ -97,6 +97,7 @@ class AgendaController extends Controller
             done: (bool) $t->done,
             eventId: $t->id,
             seriesId: $t->series_id,
+            description: $t->description,
         ))->values();
     }
 

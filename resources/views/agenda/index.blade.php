@@ -394,14 +394,17 @@
 
 {{-- Modal: ações de uma tarefa livre --}}
 <div class="modal fade" id="taskActionsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-list-task me-2"></i>Tarefa</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-3" id="taskActionsTitle"></p>
+                <p class="fw-semibold mb-1" id="taskActionsTitle"></p>
+                <p class="small text-secondary mb-2 d-none" id="taskActionsMeta"></p>
+                <div class="border rounded bg-body-tertiary p-2 mb-3 small d-none" id="taskActionsDesc"
+                     style="white-space:pre-line; max-height:220px; overflow-y:auto"></div>
                 <div class="d-grid gap-2">
                     <button type="button" class="btn btn-success" id="taskDoneBtn"><i class="bi bi-check2-circle me-1"></i> Concluir</button>
                     <button type="button" class="btn btn-outline-danger" id="taskDeleteBtn"><i class="bi bi-trash me-1"></i> Excluir este dia</button>
@@ -627,8 +630,27 @@
 
     function openTaskActions(event) {
         currentEvent = event;
-        const done = event.extendedProps.done;
+        const p = event.extendedProps;
+        const done = p.done;
         document.getElementById('taskActionsTitle').textContent = event.title;
+
+        // Responsável + data/hora
+        const metaEl = document.getElementById('taskActionsMeta');
+        const partes = [];
+        if (p.technicianName) partes.push('👤 ' + p.technicianName);
+        if (event.start) {
+            const d = event.start;
+            const p2 = (n) => String(n).padStart(2, '0');
+            partes.push('📅 ' + p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear() +
+                ' às ' + p2(d.getHours()) + ':' + p2(d.getMinutes()));
+        }
+        metaEl.textContent = partes.join('   ');
+        metaEl.classList.toggle('d-none', partes.length === 0);
+
+        // Descrição (detalhes) — respeita quebras de linha
+        const descEl = document.getElementById('taskActionsDesc');
+        descEl.textContent = p.description || '';
+        descEl.classList.toggle('d-none', !p.description);
         taskDoneBtn.innerHTML = done
             ? '<i class="bi bi-arrow-counterclockwise me-1"></i> Reabrir'
             : '<i class="bi bi-check2-circle me-1"></i> Concluir';
