@@ -14,11 +14,14 @@ class KanbanController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validateCard($request);
+        $board = $data['board'] ?? 'equipe';
+        $status = $data['status'] ?? 'todo';
 
         KanbanCard::create([
             ...$data,
-            'status' => $data['status'] ?? 'todo',
-            'position' => (int) KanbanCard::where('status', $data['status'] ?? 'todo')->max('position') + 1,
+            'board' => $board,
+            'status' => $status,
+            'position' => (int) KanbanCard::where('board', $board)->where('status', $status)->max('position') + 1,
             'created_by' => $request->user()->id,
         ]);
 
@@ -65,6 +68,7 @@ class KanbanController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'status' => ['nullable', Rule::in(KanbanCard::STATUSES)],
+            'board' => ['nullable', Rule::in(KanbanCard::BOARDS)],
             'assignee_glpi_id' => ['nullable', 'integer'],
             'assignee_name' => ['nullable', 'string', 'max:150'],
             'due_date' => ['nullable', 'date'],

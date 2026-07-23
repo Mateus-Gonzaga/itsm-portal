@@ -9,7 +9,10 @@ class KanbanCard extends Model
 {
     public const STATUSES = ['todo', 'doing', 'done'];
 
+    public const BOARDS = ['equipe', 'urgente'];
+
     protected $fillable = [
+        'board',
         'status',
         'title',
         'description',

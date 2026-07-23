@@ -68,8 +68,9 @@ class AgendaController extends Controller
             'selfTechId' => $user->glpi_id,
             'selfTechName' => $user->name,
             'isManager' => $user->role === UserRole::Gestor,
-            // Quadro Kanban da equipe (agrupado por coluna).
-            'kanban' => KanbanCard::orderBy('position')->orderBy('id')->get()->groupBy('status'),
+            // Quadros Kanban (equipe + atenção/urgente), agrupados por coluna.
+            'kanban' => KanbanCard::where('board', 'equipe')->orderBy('position')->orderBy('id')->get()->groupBy('status'),
+            'kanbanUrgente' => KanbanCard::where('board', 'urgente')->orderBy('position')->orderBy('id')->get()->groupBy('status'),
         ]);
     }
 

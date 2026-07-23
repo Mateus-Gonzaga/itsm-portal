@@ -153,46 +153,9 @@
     }
 </style>
 
-@php
-    $kanbanCols = ['todo' => 'A fazer', 'doing' => 'Em andamento', 'done' => 'Concluído'];
-@endphp
-
-<div class="card mt-4" id="kanbanSection">
-    <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span class="fw-semibold"><i class="bi bi-kanban me-2 text-success"></i>Quadro da equipe</span>
-        <button class="btn btn-sm btn-success" onclick="openCard()"><i class="bi bi-plus-lg me-1"></i> Novo cartão</button>
-    </div>
-    <div class="card-body">
-        <p class="text-secondary small mb-3"><i class="bi bi-info-circle me-1"></i>Clique em <strong>+ Adicionar cartão</strong> numa coluna para criar. Arraste os cartões entre as colunas — salva sozinho.</p>
-        <div class="kanban-board">
-            @foreach ($kanbanCols as $key => $label)
-                <div class="kanban-col">
-                    <div class="kanban-col-head"><span class="dot dot-{{ $key }}"></span>{{ $label }} <span class="count">{{ ($kanban[$key] ?? collect())->count() }}</span></div>
-                    <div class="kanban-list" data-status="{{ $key }}">
-                        @foreach (($kanban[$key] ?? collect()) as $c)
-                            @php $overdue = $c->due_date && $c->status !== 'done' && $c->due_date->lt(today()); @endphp
-                            <div class="kanban-card" data-id="{{ $c->id }}" data-title="{{ $c->title }}"
-                                 data-description="{{ $c->description }}" data-assignee="{{ $c->assignee_glpi_id }}"
-                                 data-due="{{ optional($c->due_date)->format('Y-m-d') }}" data-color="{{ $c->color }}"
-                                 data-bs-toggle="tooltip" data-bs-placement="right" data-bs-custom-class="kanban-tip"
-                                 title="{{ $c->description ?: 'Sem descrição adicional.' }}"
-                                 onclick="openCard(this)">
-                                @if ($c->color)<span class="kc-color" style="background: {{ $c->color }}"></span>@endif
-                                <div class="kc-title">{{ $c->title }}</div>
-                                <div class="kc-meta">
-                                    @if ($c->assignee_name)<span><i class="bi bi-person"></i> {{ $c->assignee_name }}</span>@endif
-                                    @if ($c->due_date)<span class="{{ $overdue ? 'text-danger fw-semibold' : '' }}"><i class="bi bi-calendar-event"></i> {{ $c->due_date->format('d/m/Y') }}@if ($overdue) (vencido)@endif</span>@endif
-                                </div>
-                            </div>
-                        @endforeach
-                        <div class="kanban-empty">Solte cartões aqui</div>
-                    </div>
-                    <button type="button" class="kanban-add" onclick="openCard(null, '{{ $key }}')"><i class="bi bi-plus-lg"></i> Adicionar cartão</button>
-                </div>
-            @endforeach
-        </div>
-    </div>
-</div>
+<p class="text-secondary small mb-0 mt-4"><i class="bi bi-info-circle me-1"></i>Clique em <strong>+ Adicionar cartão</strong> numa coluna. Arraste os cartões entre as colunas — salva sozinho.</p>
+@include('partials.kanban-board', ['board' => 'equipe', 'title' => 'Quadro da equipe', 'icon' => 'bi-kanban', 'headClass' => 'text-success', 'btnClass' => 'btn-success', 'cards' => $kanban])
+@include('partials.kanban-board', ['board' => 'urgente', 'title' => 'Atenção / Urgente', 'icon' => 'bi-exclamation-triangle-fill', 'headClass' => 'text-danger', 'btnClass' => 'btn-danger', 'cards' => $kanbanUrgente])
 
 <div class="card agenda-card mt-4">
     <div class="card-header d-flex flex-wrap gap-3 align-items-center justify-content-between py-3">
@@ -239,6 +202,7 @@
                 @csrf
                 <input type="hidden" name="_method" id="card_method" value="POST">
                 <input type="hidden" name="status" id="card_status" value="todo">
+                <input type="hidden" name="board" id="card_board" value="equipe">
                 <div class="modal-header">
                     <h5 class="modal-title" id="card_title_h">Novo cartão</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -849,9 +813,10 @@
     const cardModal = new bootstrap.Modal($('cardModal'));
 
     // ---- Criar / editar cartão ----
-    window.openCard = function (el, status) {
+    window.openCard = function (el, status, board) {
         const form = $('cardForm');
         $('card_delete').classList.add('d-none');
+        $('card_board').value = el ? (el.dataset.board || 'equipe') : (board || 'equipe');
         // Reset etiqueta para "nenhuma"
         form.querySelectorAll('input[name="color"]').forEach((r) => { r.checked = (r.value === ''); });
 
@@ -899,7 +864,7 @@
     // ---- Arrastar entre colunas (persiste coluna + ordem) ----
     document.querySelectorAll('.kanban-list').forEach(function (list) {
         new Sortable(list, {
-            group: 'kanban',
+            group: 'kanban-' + (list.dataset.board || 'equipe'), // não mistura os dois quadros
             animation: 150,
             draggable: '.kanban-card',
             ghostClass: 'sortable-ghost',
