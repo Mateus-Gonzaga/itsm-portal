@@ -47,6 +47,58 @@ class DemandasJulhoSeeder extends Seeder
                 'Impressora da filial 15 que, após a troca do roteador, não conectava de jeito algum na rede interna',
                 'Conversão de um documento para o Halley',
             ],
+            '2026-07-13' => [
+                'Filial 01 — resolver computador com estática e instalação do nosso sistema',
+                'Verificação do servidor da FL 04',
+                'Escritório da Drogacei — arrumar a impressora e o computador que não abria o WhatsApp',
+                'Reinício do servidor Mel do Sol',
+            ],
+            '2026-07-14' => [
+                'Filial 01 — resolvido o problema de estática',
+                'Verificar o erro das notas da Mel do Sol',
+                'Fátima 09 — instalação no local',
+                'Ajuda na folha de ponto para os meninos do Jardim Brasília',
+            ],
+            '2026-07-15' => [
+                'Instalação do nobreak no financeiro',
+                'Parte da resolução da folha de ponto para a Tamires',
+                'Identificação do chamado sem dono',
+                'Instalação do sistema na filial ao lado do cartório',
+            ],
+            '2026-07-16' => [
+                'Notas da RK',
+                'Mel do Sol — ajuda para emitir um relatório com base na região',
+                'Finalizada a correção de erros para a Tamires',
+                'Conferência e autorização da instalação da internet na Filial 01',
+            ],
+            '2026-07-17' => [
+                'Verificação da possibilidade de o GLPI conter DVR e alarmes, e como monitorar essas coisas',
+                'Verificação de computador que não conectava no Vetor',
+                'Subir atualização do Zabbix',
+                'Filial 03 — implantação do sistema e subida dos computadores',
+            ],
+            '2026-07-20' => [
+                'Instalação dos 3 Offices',
+                'FL 09 — impressora de cupom não fiscal que não estava funcionando',
+                'Arrumada a folha de ponto do Jardim Brasília',
+            ],
+            '2026-07-21' => [
+                'Coleta das informações do alarme e DVR da filial Fátima 04',
+                'Verificação da integridade das câmeras da filial 13 da Cei',
+                'Recplan — resolver problema relacionado à internet e depois ao e-mail',
+            ],
+            '2026-07-22' => [
+                'Junsoft — solicitação para apagar os backups do servidor',
+                'A2 — subida do sistema e do esquema de monitoramento',
+            ],
+            '2026-07-23' => [
+                'Conferência das câmeras da Cei',
+                'Resolução do erro do WhatsApp da Thais',
+                'Reinstalação, em todos os computadores, da questão do scanner da impressora',
+                'Criação da folha de demandas',
+                'Colocar o servidor antigo online na Mel do Sol',
+                'Adição de pessoas às câmeras',
+            ],
             '2026-07-24' => [
                 'Mel do Sol — Resolução do erro 656',
                 'Mel do Sol — Resolução do erro nas notas fiscais',
