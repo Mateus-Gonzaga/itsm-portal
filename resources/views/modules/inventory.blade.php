@@ -65,10 +65,13 @@
                 </div>
             @endif
         </div>
+        <div class="d-flex justify-content-end mb-2">
+            <span class="badge bg-success-subtle text-success-emphasis fs-6"><i class="bi bi-cash-coin me-1"></i>Valor total do inventário: R$ {{ number_format($valorTotal, 2, ',', '.') }}</span>
+        </div>
         <div class="table-wrap">
             <table class="table table-hover align-middle mb-0">
                 <thead>
-                    <tr><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Fabricante</th><th>Nº de série</th><th>Status</th>@if ($isManager)<th class="text-end">Ações</th>@endif</tr>
+                    <tr><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Fabricante</th><th>Nº de série</th><th>Status</th><th class="text-end">Valor</th>@if ($isManager)<th class="text-end">Ações</th>@endif</tr>
                 </thead>
                 <tbody id="invBody">
                     @forelse ($assets as $a)
@@ -80,6 +83,13 @@
                             <td>{{ $a['manufacturer'] }}</td>
                             <td class="small">{{ $a['serial'] }}</td>
                             <td>@if ($a['status'] !== '—')<span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $a['status'] }}</span>@else<span class="text-muted">—</span>@endif</td>
+                            <td class="text-end text-nowrap">
+                                @if (! empty($a['value']))<span class="text-success fw-semibold">R$ {{ number_format($a['value'], 2, ',', '.') }}</span>@else<span class="text-muted">—</span>@endif
+                                @if ($isManager)
+                                    <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-decoration-none js-set-value" title="Definir valor"
+                                            data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}" data-name="{{ $a['name'] }}" data-value="{{ $a['value'] }}"><i class="bi bi-pencil"></i></button>
+                                @endif
+                            </td>
                             @if ($isManager)
                                 <td class="text-end">
                                     <button type="button" class="btn btn-sm btn-outline-secondary js-move-asset"
@@ -92,7 +102,7 @@
                             @endif
                         </tr>
                     @empty
-                        <tr><td colspan="{{ $isManager ? 8 : 7 }}" class="text-center text-muted py-5">
+                        <tr><td colspan="{{ $isManager ? 9 : 8 }}" class="text-center text-muted py-5">
                             <i class="bi bi-pc-display d-block fs-2 mb-2 opacity-50"></i>
                             Nenhum ativo inventariado ainda.<br><span class="small">Os equipamentos aparecem aqui conforme o GLPI Agent faz o inventário das máquinas.</span>
                         </td></tr>
@@ -134,6 +144,30 @@
         </form>
     </div>
 </div>
+
+<div class="modal fade" id="valueModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{{ route('inventory.value') }}" class="modal-content">
+            @csrf
+            <input type="hidden" name="itemtype" id="vlItemtype">
+            <input type="hidden" name="id" id="vlId">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-cash-coin me-2 text-success"></i>Valor do ativo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-secondary mb-2">Ativo: <strong id="vlName"></strong></p>
+                <label class="form-label small">Valor (R$)</label>
+                <input type="number" step="0.01" min="0" name="value" id="vlValue" class="form-control" placeholder="0,00">
+                <div class="form-text">Deixe em branco e salve para <strong>remover</strong> o valor.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endif
 @endsection
 
@@ -165,6 +199,21 @@
             apply();
         });
     });
+
+    // Definir valor do ativo (gestor).
+    const valueModalEl = document.getElementById('valueModal');
+    if (valueModalEl && window.bootstrap) {
+        const vmodal = new bootstrap.Modal(valueModalEl);
+        document.querySelectorAll('.js-set-value').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.getElementById('vlItemtype').value = btn.dataset.type;
+                document.getElementById('vlId').value = btn.dataset.id;
+                document.getElementById('vlName').textContent = btn.dataset.name;
+                document.getElementById('vlValue').value = btn.dataset.value || '';
+                vmodal.show();
+            });
+        });
+    }
 
     // Mover ativo de entidade (gestor): preenche o modal com o ativo clicado.
     const moveModalEl = document.getElementById('moveAssetModal');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Models\AssetValue;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiInventoryRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +19,14 @@ class InventoryController extends Controller
     ): View {
         $assets = $inventory->assets();
         $isManager = $request->user()->role === UserRole::Gestor;
+
+        // Junta os valores (guardados no portal) a cada ativo por itemtype+id.
+        $valores = AssetValue::get()->keyBy(fn (AssetValue $v) => $v->itemtype.'-'.$v->item_id);
+        $assets = $assets->map(function (array $a) use ($valores) {
+            $a['value'] = optional($valores->get(($a['typeKey'] ?? '').'-'.($a['id'] ?? 0)))->value;
+
+            return $a;
+        });
 
         // Contagem por tipo (na ordem dos tipos suportados).
         $counts = collect($inventory->types())
@@ -35,7 +44,31 @@ class InventoryController extends Controller
             'isManager' => $isManager,
             // Só o gestor edita a entidade do ativo; lista para o seletor.
             'entities' => $isManager ? $directory->entities() : collect(),
+            'valorTotal' => (float) $assets->sum(fn (array $a) => (float) ($a['value'] ?? 0)),
         ]);
+    }
+
+    /** Define/limpa o valor de um ativo (gestor). */
+    public function setValue(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'itemtype' => ['required', 'string', 'max:60'],
+            'id' => ['required', 'integer', 'min:1'],
+            'value' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        if ($data['value'] === null) {
+            AssetValue::where('itemtype', $data['itemtype'])->where('item_id', (int) $data['id'])->delete();
+
+            return back()->with('status', 'Valor do ativo removido.');
+        }
+
+        AssetValue::updateOrCreate(
+            ['itemtype' => $data['itemtype'], 'item_id' => (int) $data['id']],
+            ['value' => $data['value']],
+        );
+
+        return back()->with('status', 'Valor do ativo salvo.');
     }
 
     /** Move um ativo para outra entidade do GLPI (gestor). */

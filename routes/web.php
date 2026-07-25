@@ -51,8 +51,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/janela-atendimento', [ServiceWindowController::class, 'update'])->name('modules.schedule.update');
     });
     Route::get('/inventario', [InventoryController::class, 'index'])->name('modules.inventory');
-    Route::post('/inventario/mover', [InventoryController::class, 'move'])
-        ->middleware(['role:gestor', 'throttle:30,1'])->name('inventory.move');
+    Route::middleware(['role:gestor', 'throttle:60,1'])->group(function () {
+        Route::post('/inventario/mover', [InventoryController::class, 'move'])->name('inventory.move');
+        Route::post('/inventario/valor', [InventoryController::class, 'setValue'])->name('inventory.value');
+    });
     // Base de Conhecimento (fichas por cliente/filial) — gestor
     Route::middleware('role:gestor')->group(function () {
         Route::get('/base-conhecimento', [KnowledgeController::class, 'index'])->name('modules.kb');
