@@ -47,6 +47,14 @@ class DemandasJulhoSeeder extends Seeder
                 'Impressora da filial 15 que, após a troca do roteador, não conectava de jeito algum na rede interna',
                 'Conversão de um documento para o Halley',
             ],
+            '2026-07-24' => [
+                'Mel do Sol — Resolução do erro 656',
+                'Mel do Sol — Resolução do erro nas notas fiscais',
+                'Mel do Sol — Adição de dois funcionários ao banco de dados',
+                'Mel do Sol — Ajuda para verificar os relatórios',
+                'Posto Jardim Brasília — Colocar o DVR novamente em rede e no computador da conveniência',
+                'A2 — Correção dos erros relacionados ao UltraViewer',
+            ],
         ];
 
         foreach ($demandas as $dia => $itens) {
