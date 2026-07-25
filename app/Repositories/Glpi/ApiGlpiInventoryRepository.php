@@ -90,6 +90,27 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         }
     }
 
+    public function setInfocomValue(string $itemtype, int $id, ?float $value): void
+    {
+        if (! isset(self::TYPES[$itemtype]) || $id <= 0) {
+            throw new RuntimeException('Ativo inválido.');
+        }
+
+        // Procura o Infocom (dados financeiros) existente do item.
+        $resp = $this->client()->get("/{$itemtype}/{$id}/Infocom");
+        $rows = ($resp->successful() && is_array($resp->json())) ? $resp->json() : [];
+        $existing = $rows[0]['id'] ?? null;
+
+        $input = ['itemtype' => $itemtype, 'items_id' => $id, 'value' => $value ?? 0];
+
+        if ($existing) {
+            $input['id'] = (int) $existing;
+            $this->client()->put('/Infocom/'.(int) $existing, ['input' => $input])->throw();
+        } else {
+            $this->client()->post('/Infocom', ['input' => $input])->throw();
+        }
+    }
+
     /** Move os itens conectados a um computador para a mesma entidade. */
     private function moveConnectedItems(int $computerId, int $entityId): void
     {

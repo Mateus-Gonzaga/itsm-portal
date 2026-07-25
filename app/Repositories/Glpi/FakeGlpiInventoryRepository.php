@@ -33,4 +33,9 @@ class FakeGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
     {
         // no-op (demo)
     }
+
+    public function setInfocomValue(string $itemtype, int $id, ?float $value): void
+    {
+        // no-op (demo)
+    }
 }

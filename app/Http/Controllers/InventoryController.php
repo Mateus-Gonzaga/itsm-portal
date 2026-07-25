@@ -48,8 +48,8 @@ class InventoryController extends Controller
         ]);
     }
 
-    /** Define/limpa o valor de um ativo (gestor). */
-    public function setValue(Request $request): RedirectResponse
+    /** Define/limpa o valor de um ativo (gestor) — no portal E no GLPI (Infocom). */
+    public function setValue(Request $request, GlpiInventoryRepositoryInterface $inventory): RedirectResponse
     {
         $data = $request->validate([
             'itemtype' => ['required', 'string', 'max:60'],
@@ -57,18 +57,26 @@ class InventoryController extends Controller
             'value' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        if ($data['value'] === null) {
-            AssetValue::where('itemtype', $data['itemtype'])->where('item_id', (int) $data['id'])->delete();
+        $value = $data['value'] !== null ? (float) $data['value'] : null;
 
-            return back()->with('status', 'Valor do ativo removido.');
+        // 1) Guarda no portal (fonte rápida para exibir/somar).
+        if ($value === null) {
+            AssetValue::where('itemtype', $data['itemtype'])->where('item_id', (int) $data['id'])->delete();
+        } else {
+            AssetValue::updateOrCreate(
+                ['itemtype' => $data['itemtype'], 'item_id' => (int) $data['id']],
+                ['value' => $value],
+            );
         }
 
-        AssetValue::updateOrCreate(
-            ['itemtype' => $data['itemtype'], 'item_id' => (int) $data['id']],
-            ['value' => $data['value']],
-        );
+        // 2) Espelha no GLPI (Infocom/aba Gestão) — best-effort (pode faltar direito).
+        try {
+            $inventory->setInfocomValue($data['itemtype'], (int) $data['id'], $value);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Valor salvo no portal, mas não foi possível gravar no GLPI (verifique o direito de "Informações financeiras" da conta de serviço): '.$e->getMessage());
+        }
 
-        return back()->with('status', 'Valor do ativo salvo.');
+        return back()->with('status', $value === null ? 'Valor do ativo removido.' : 'Valor do ativo salvo (portal + GLPI).');
     }
 
     /** Move um ativo para outra entidade do GLPI (gestor). */

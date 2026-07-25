@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AssetValue;
 use App\Models\KbAttachment;
 use App\Models\KnowledgeArticle;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
+use App\Repositories\Glpi\GlpiInventoryRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -15,7 +17,7 @@ use Illuminate\View\View;
 /** Base de Conhecimento: fichas por cliente/filial (contrato, ativos, etc.). */
 class KnowledgeController extends Controller
 {
-    public function index(Request $request, GlpiDirectoryRepositoryInterface $dir): View
+    public function index(Request $request, GlpiDirectoryRepositoryInterface $dir, GlpiInventoryRepositoryInterface $inventory): View
     {
         $q = trim((string) $request->string('q'));
         $cat = (string) $request->string('categoria');
@@ -36,10 +38,27 @@ class KnowledgeController extends Controller
                 ->pluck('name')
         )->filter()->unique()->sort()->values();
 
+        // Valor dos ativos por entidade (do inventário) — pra auto-preencher a KB.
+        $ativosPorEntidade = collect();
+        try {
+            $valores = AssetValue::get()->keyBy(fn (AssetValue $v) => $v->itemtype.'-'.$v->item_id);
+            $ativosPorEntidade = $inventory->assets()
+                ->map(fn (array $a) => [
+                    'entity' => (string) ($a['entity'] ?? ''),
+                    'v' => (float) optional($valores->get(($a['typeKey'] ?? '').'-'.($a['id'] ?? 0)))->value,
+                ])
+                ->groupBy('entity')
+                ->map(fn ($g) => round($g->sum('v'), 2))
+                ->filter(fn ($v) => $v > 0);
+        } catch (\Throwable) {
+            // sem inventário disponível -> segue sem os totais
+        }
+
         return view('modules.knowledge', [
             'artigos' => $artigos,
             'categorias' => KnowledgeArticle::CATEGORIAS,
             'clientes' => $clientes,
+            'ativosPorEntidade' => $ativosPorEntidade,
             'q' => $q,
             'catSel' => $cat,
             'total' => KnowledgeArticle::count(),

@@ -31,4 +31,7 @@ interface GlpiInventoryRepositoryInterface
      * do tipo (ex.: 'Computer'), $id o ativo e $entityId a entidade de destino.
      */
     public function moveAsset(string $itemtype, int $id, int $entityId): void;
+
+    /** Grava o valor do ativo no GLPI (Infocom / aba Gestão). $value null = zera. */
+    public function setInfocomValue(string $itemtype, int $id, ?float $value): void;
 }

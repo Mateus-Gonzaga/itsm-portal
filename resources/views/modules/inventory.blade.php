@@ -66,7 +66,10 @@
             @endif
         </div>
         <div class="d-flex justify-content-end mb-2">
-            <span class="badge bg-success-subtle text-success-emphasis fs-6"><i class="bi bi-cash-coin me-1"></i>Valor total do inventário: R$ {{ number_format($valorTotal, 2, ',', '.') }}</span>
+            <span class="badge bg-success-subtle text-success-emphasis fs-6">
+                <i class="bi bi-cash-coin me-1"></i><span id="invTotalLabel">Valor total do inventário</span>:
+                R$ <span id="invTotal">{{ number_format($valorTotal, 2, ',', '.') }}</span>
+            </span>
         </div>
         <div class="table-wrap">
             <table class="table table-hover align-middle mb-0">
@@ -75,7 +78,7 @@
                 </thead>
                 <tbody id="invBody">
                     @forelse ($assets as $a)
-                        <tr data-type="{{ $a['type'] }}" data-entity="{{ $a['entity'] }}">
+                        <tr data-type="{{ $a['type'] }}" data-entity="{{ $a['entity'] }}" data-value="{{ $a['value'] ?? 0 }}">
                             <td class="text-nowrap"><i class="bi {{ $a['icon'] }} text-success me-1"></i>{{ $a['type'] }}</td>
                             <td class="fw-semibold">{{ $a['name'] }}</td>
                             <td class="small text-secondary">{{ $a['entity'] }}</td>
@@ -180,14 +183,23 @@
     let typeFilter = '';
     let entityFilter = '';
 
+    const totalEl = document.getElementById('invTotal');
+    const totalLabel = document.getElementById('invTotalLabel');
+    function fmtBRL(n) { return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
     function apply() {
         const q = filterInput.value.toLowerCase();
+        let soma = 0;
         rows.forEach(function (tr) {
             const okType = !typeFilter || tr.dataset.type === typeFilter;
             const okEntity = !entityFilter || tr.dataset.entity === entityFilter;
             const okText = tr.textContent.toLowerCase().includes(q);
-            tr.style.display = (okType && okEntity && okText) ? '' : 'none';
+            const visivel = okType && okEntity && okText;
+            tr.style.display = visivel ? '' : 'none';
+            if (visivel) soma += parseFloat(tr.dataset.value || '0') || 0;
         });
+        if (totalEl) totalEl.textContent = fmtBRL(soma);
+        if (totalLabel) totalLabel.textContent = entityFilter ? 'Valor dos ativos desta entidade' : 'Valor total do inventário';
     }
     filterInput.addEventListener('input', apply);
     if (entitySel) entitySel.addEventListener('change', function () { entityFilter = this.value; apply(); });

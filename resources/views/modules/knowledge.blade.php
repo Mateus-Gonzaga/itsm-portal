@@ -62,6 +62,9 @@
                 @if ($a->cliente)<div class="small text-secondary"><i class="bi bi-building me-1"></i>{{ $a->cliente }}</div>@endif
                 <div class="fw-semibold mt-1">{{ $a->titulo }}</div>
                 @if ($a->valor)<div class="small text-success fw-semibold mt-1"><i class="bi bi-cash me-1"></i>R$ {{ number_format($a->valor, 2, ',', '.') }}</div>@endif
+                @if ($a->cliente && isset($ativosPorEntidade[$a->cliente]))
+                    <div class="small text-secondary mt-1"><i class="bi bi-pc-display me-1"></i>Ativos (inventário): <strong>R$ {{ number_format($ativosPorEntidade[$a->cliente], 2, ',', '.') }}</strong></div>
+                @endif
                 @if ($a->conteudo)<div class="kb-conteudo mt-2">{{ $a->conteudo }}</div>@endif
                 @if ($a->attachments->isNotEmpty())
                     <div class="d-flex flex-wrap gap-2 mt-2">
@@ -133,6 +136,10 @@
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Valor estimado (R$) <span class="text-muted small">— opcional</span></label>
                         <input type="number" step="0.01" min="0" name="valor" id="kb_valor" class="form-control" placeholder="0,00">
+                        <div class="form-text d-none" id="kb_ativos_hint">
+                            Ativos desta loja no inventário: <strong id="kb_ativos_valor"></strong>
+                            <button type="button" class="btn btn-link btn-sm p-0 align-baseline text-decoration-none" id="kb_ativos_usar">usar</button>
+                        </div>
                     </div>
                 </div>
                 <div class="mb-3">
@@ -161,6 +168,21 @@
     const BASE = "{{ url('base-conhecimento') }}"; // + '/' + id (PUT)
     const modal = new bootstrap.Modal(document.getElementById('kbModal'));
     const $ = (id) => document.getElementById(id);
+    const ATIVOS = @json($ativosPorEntidade); // { "entidade": total }
+
+    // Mostra/oculta o valor dos ativos daquela loja conforme o cliente digitado.
+    function atualizarAtivosHint() {
+        const cli = $('kb_cliente').value.trim();
+        const total = ATIVOS[cli];
+        const hint = $('kb_ativos_hint');
+        if (total != null) {
+            $('kb_ativos_valor').textContent = 'R$ ' + Number(total).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            $('kb_ativos_usar').dataset.v = total;
+            hint.classList.remove('d-none');
+        } else {
+            hint.classList.add('d-none');
+        }
+    }
 
     window.openKb = function (el) {
         const form = $('kbForm');
@@ -179,8 +201,14 @@
             $('kb_method').value = 'POST';
             form.reset();
         }
+        atualizarAtivosHint();
         modal.show();
     };
+
+    $('kb_cliente').addEventListener('input', atualizarAtivosHint);
+    $('kb_ativos_usar').addEventListener('click', function () {
+        $('kb_valor').value = this.dataset.v || '';
+    });
 })();
 </script>
 @endpush
