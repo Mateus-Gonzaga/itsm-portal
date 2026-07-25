@@ -59,6 +59,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/base-conhecimento', [KnowledgeController::class, 'store'])->name('kb.store');
         Route::put('/base-conhecimento/{artigo}', [KnowledgeController::class, 'update'])->name('kb.update');
         Route::delete('/base-conhecimento/{artigo}', [KnowledgeController::class, 'destroy'])->name('kb.destroy');
+        Route::get('/base-conhecimento/anexo/{anexo}', [KnowledgeController::class, 'showAttachment'])->name('kb.attachment');
+        Route::delete('/base-conhecimento/anexo/{anexo}', [KnowledgeController::class, 'destroyAttachment'])->name('kb.attachment.destroy');
     });
     Route::get('/monitoramento', fn () => view('modules.placeholder', ['title' => 'Monitoramento', 'icon' => 'bi-activity', 'desc' => 'Status de serviços e alertas em tempo real.']))->name('modules.monitoring');
     Route::get('/automacoes', fn () => view('modules.placeholder', ['title' => 'Automações', 'icon' => 'bi-robot', 'desc' => 'Regras e fluxos automáticos de atendimento.']))->name('modules.automations');

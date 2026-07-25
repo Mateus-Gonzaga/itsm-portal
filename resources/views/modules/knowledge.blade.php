@@ -63,6 +63,28 @@
                 <div class="fw-semibold mt-1">{{ $a->titulo }}</div>
                 @if ($a->valor)<div class="small text-success fw-semibold mt-1"><i class="bi bi-cash me-1"></i>R$ {{ number_format($a->valor, 2, ',', '.') }}</div>@endif
                 @if ($a->conteudo)<div class="kb-conteudo mt-2">{{ $a->conteudo }}</div>@endif
+                @if ($a->attachments->isNotEmpty())
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        @foreach ($a->attachments as $anexo)
+                            @php $url = route('kb.attachment', $anexo); @endphp
+                            <div class="position-relative">
+                                @if ($anexo->isImage())
+                                    <a href="{{ $url }}" target="_blank" title="{{ $anexo->original_name }}" class="d-block border rounded overflow-hidden" style="width:64px;height:64px">
+                                        <img src="{{ $url }}" style="width:100%;height:100%;object-fit:cover" loading="lazy" alt="{{ $anexo->original_name }}">
+                                    </a>
+                                @else
+                                    <a href="{{ $url }}" target="_blank" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" title="{{ $anexo->original_name }}">
+                                        <i class="bi bi-file-earmark-text"></i><span class="small text-truncate" style="max-width:120px">{{ $anexo->original_name }}</span>
+                                    </a>
+                                @endif
+                                <form method="POST" action="{{ route('kb.attachment.destroy', $anexo) }}" class="position-absolute top-0 end-0" onsubmit="return confirm('Remover este anexo?')">
+                                    @csrf @method('DELETE')
+                                    <button class="btn btn-danger p-0 d-flex align-items-center justify-content-center" style="width:18px;height:18px;border-radius:50%;font-size:.7rem" title="Remover"><i class="bi bi-x"></i></button>
+                                </form>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
                 <div class="text-muted mt-2" style="font-size:.72rem">Atualizado em {{ $a->updated_at?->format('d/m/Y H:i') }}</div>
             </div>
         </div>
@@ -83,7 +105,7 @@
 {{-- Modal: novo/editar registro --}}
 <div class="modal fade" id="kbModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form id="kbForm" method="POST" class="modal-content">
+        <form id="kbForm" method="POST" class="modal-content" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="_method" id="kb_method" value="POST">
             <div class="modal-header">
@@ -113,9 +135,14 @@
                         <input type="number" step="0.01" min="0" name="valor" id="kb_valor" class="form-control" placeholder="0,00">
                     </div>
                 </div>
-                <div class="mb-1">
+                <div class="mb-3">
                     <label class="form-label">Conteúdo / observações</label>
                     <textarea name="conteudo" id="kb_conteudo" rows="6" class="form-control" placeholder="Detalhes do contrato, lista de ativos, valores, contatos, particularidades da filial..."></textarea>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label">Anexos <span class="text-muted small">— contrato em PDF, imagem, planilha... (até 15 MB cada)</span></label>
+                    <input type="file" name="files[]" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,image/*">
+                    <div class="form-text" id="kb_anexo_hint">Na edição, os arquivos aqui são <strong>adicionados</strong> aos já existentes (que ficam no card).</div>
                 </div>
             </div>
             <div class="modal-footer">

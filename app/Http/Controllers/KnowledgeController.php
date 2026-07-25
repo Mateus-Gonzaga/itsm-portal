@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KbAttachment;
 use App\Models\KnowledgeArticle;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -17,7 +20,7 @@ class KnowledgeController extends Controller
         $q = trim((string) $request->string('q'));
         $cat = (string) $request->string('categoria');
 
-        $artigos = KnowledgeArticle::query()
+        $artigos = KnowledgeArticle::with('attachments')
             ->when($q !== '', fn ($qb) => $qb->where(fn ($w) => $w
                 ->where('titulo', 'like', "%{$q}%")
                 ->orWhere('cliente', 'like', "%{$q}%")
@@ -46,7 +49,8 @@ class KnowledgeController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        KnowledgeArticle::create($this->validated($request) + ['created_by' => $request->user()->id]);
+        $artigo = KnowledgeArticle::create($this->validated($request) + ['created_by' => $request->user()->id]);
+        $this->saveFiles($request, $artigo);
 
         return back()->with('status', 'Registro salvo na base de conhecimento.');
     }
@@ -54,15 +58,52 @@ class KnowledgeController extends Controller
     public function update(Request $request, KnowledgeArticle $artigo): RedirectResponse
     {
         $artigo->update($this->validated($request));
+        $this->saveFiles($request, $artigo);
 
         return back()->with('status', 'Registro atualizado.');
     }
 
     public function destroy(KnowledgeArticle $artigo): RedirectResponse
     {
-        $artigo->delete();
+        $artigo->delete(); // cascade + boot deleting apaga os arquivos
 
         return back()->with('status', 'Registro excluído.');
+    }
+
+    /** Salva os anexos enviados (contrato em PDF, imagem, etc.). */
+    private function saveFiles(Request $request, KnowledgeArticle $artigo): void
+    {
+        $request->validate([
+            'files' => ['nullable', 'array', 'max:8'],
+            'files.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp,doc,docx,xls,xlsx', 'max:15360'],
+        ]);
+
+        foreach ($request->file('files', []) as $file) {
+            $path = $file->store('kb', 'local');
+            $artigo->attachments()->create([
+                'original_name' => $file->getClientOriginalName(),
+                'path' => $path,
+                'mime' => $file->getMimeType(),
+            ]);
+        }
+    }
+
+    /** Serve o anexo inline (imagens aparecem; PDF/office abre/baixa). */
+    public function showAttachment(KbAttachment $anexo): Response
+    {
+        abort_unless(Storage::disk('local')->exists($anexo->path), 404);
+
+        return response(Storage::disk('local')->get($anexo->path), 200, [
+            'Content-Type' => $anexo->mime ?: 'application/octet-stream',
+            'Content-Disposition' => 'inline; filename="'.addslashes($anexo->original_name).'"',
+        ]);
+    }
+
+    public function destroyAttachment(KbAttachment $anexo): RedirectResponse
+    {
+        $anexo->delete();
+
+        return back()->with('status', 'Anexo removido.');
     }
 
     /** @return array<string, mixed> */
