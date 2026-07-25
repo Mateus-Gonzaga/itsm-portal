@@ -78,6 +78,7 @@ enum UserRole: string
                 ['route' => 'modules.analytics', 'label' => 'Dashboards', 'icon' => 'bi-grid-1x2'],
                 ['route' => 'modules.reports', 'label' => 'Relatórios', 'icon' => 'bi-bar-chart'],
                 ['route' => 'modules.inventory', 'label' => 'Inventário', 'icon' => 'bi-pc-display'],
+                ['route' => 'modules.kb', 'label' => 'Base de conhecimento', 'icon' => 'bi-journal-text'],
                 ['route' => 'modules.clients', 'label' => 'Clientes', 'icon' => 'bi-people'],
                 ['route' => 'modules.technicians', 'label' => 'Técnicos', 'icon' => 'bi-person-badge'],
                 ['route' => 'modules.schedule', 'label' => 'Janela de atendimento', 'icon' => 'bi-clock-history'],

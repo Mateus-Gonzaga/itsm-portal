@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardsController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\KanbanController;
+use App\Http\Controllers\KnowledgeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\TechniciansController;
@@ -52,7 +53,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/inventario', [InventoryController::class, 'index'])->name('modules.inventory');
     Route::post('/inventario/mover', [InventoryController::class, 'move'])
         ->middleware(['role:gestor', 'throttle:30,1'])->name('inventory.move');
-    Route::get('/base-conhecimento', fn () => view('modules.placeholder', ['title' => 'Base de Conhecimento', 'icon' => 'bi-journal-text', 'desc' => 'Artigos e soluções para autoatendimento.']))->name('modules.kb');
+    // Base de Conhecimento (fichas por cliente/filial) — gestor
+    Route::middleware('role:gestor')->group(function () {
+        Route::get('/base-conhecimento', [KnowledgeController::class, 'index'])->name('modules.kb');
+        Route::post('/base-conhecimento', [KnowledgeController::class, 'store'])->name('kb.store');
+        Route::put('/base-conhecimento/{artigo}', [KnowledgeController::class, 'update'])->name('kb.update');
+        Route::delete('/base-conhecimento/{artigo}', [KnowledgeController::class, 'destroy'])->name('kb.destroy');
+    });
     Route::get('/monitoramento', fn () => view('modules.placeholder', ['title' => 'Monitoramento', 'icon' => 'bi-activity', 'desc' => 'Status de serviços e alertas em tempo real.']))->name('modules.monitoring');
     Route::get('/automacoes', fn () => view('modules.placeholder', ['title' => 'Automações', 'icon' => 'bi-robot', 'desc' => 'Regras e fluxos automáticos de atendimento.']))->name('modules.automations');
 
