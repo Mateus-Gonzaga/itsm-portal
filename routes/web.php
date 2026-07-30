@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AgendaController;
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\ClientsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardsController;
@@ -43,6 +44,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/diretorio/usuarios/{id}/isolar', [DirectoryController::class, 'isolateUser'])->name('directory.users.isolate');
     });
     Route::get('/tecnicos', TechniciansController::class)->middleware('role:gestor')->name('modules.technicians');
+    Route::get('/auditoria', [AuditController::class, 'index'])->middleware('role:gestor')->name('modules.audit');
     Route::get('/configuracoes', fn () => view('modules.settings'))->name('modules.settings');
 
     // Janela de atendimento (horários/SLA) — gestor
@@ -56,7 +58,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/inventario/valor', [InventoryController::class, 'setValue'])->name('inventory.value');
     });
     // Base de Conhecimento (fichas por cliente/filial) — gestor
-    Route::middleware('role:gestor')->group(function () {
+    Route::middleware(['role:gestor', 'throttle:60,1'])->group(function () {
         Route::get('/base-conhecimento', [KnowledgeController::class, 'index'])->name('modules.kb');
         Route::post('/base-conhecimento', [KnowledgeController::class, 'store'])->name('kb.store');
         Route::put('/base-conhecimento/{artigo}', [KnowledgeController::class, 'update'])->name('kb.update');
@@ -70,22 +72,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
     Route::get('/meus-chamados', [TicketController::class, 'mine'])->name('tickets.mine');
 
-    // Cliente e técnico podem abrir chamados.
-    Route::middleware('role:cliente,tecnico')->group(function () {
+    // Cliente, técnico e gestor podem abrir chamados (staff abre em nome do cliente).
+    Route::middleware(['role:cliente,tecnico,gestor', 'throttle:30,1'])->group(function () {
         Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
         Route::post('/tickets', [TicketController::class, 'store'])->name('tickets.store');
     });
 
     Route::get('/tickets/{id}', [TicketController::class, 'show'])->name('tickets.show');
-    Route::post('/tickets/{id}/comments', [TicketController::class, 'addComment'])->name('tickets.comments.store');
+    Route::post('/tickets/{id}/comments', [TicketController::class, 'addComment'])->middleware('throttle:30,1')->name('tickets.comments.store');
 
     // Anexos do chamado (upload + exibição inline via proxy do GLPI)
-    Route::post('/tickets/{id}/anexos', [TicketController::class, 'storeAttachment'])->name('tickets.attachments.store');
+    Route::post('/tickets/{id}/anexos', [TicketController::class, 'storeAttachment'])->middleware('throttle:20,1')->name('tickets.attachments.store');
     Route::get('/tickets/{id}/anexos/{docId}', [TicketController::class, 'showAttachment'])
         ->whereNumber('docId')->name('tickets.attachments.show');
 
     // Ações do atendimento (técnico/gestor)
-    Route::middleware('role:tecnico,gestor')->group(function () {
+    Route::middleware(['role:tecnico,gestor', 'throttle:120,1'])->group(function () {
         Route::post('/tickets/{id}/assign', [TicketController::class, 'assign'])->name('tickets.assign');
         Route::post('/tickets/{id}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
         Route::post('/tickets/{id}/sla', [TicketController::class, 'updateSla'])->name('tickets.sla');
@@ -111,7 +113,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Ações do solicitante (cliente)
-    Route::middleware('role:cliente')->group(function () {
+    Route::middleware(['role:cliente', 'throttle:30,1'])->group(function () {
         Route::post('/tickets/{id}/approve', [TicketController::class, 'approve'])->name('tickets.approve');
         Route::post('/tickets/{id}/reopen', [TicketController::class, 'reopen'])->name('tickets.reopen');
     });

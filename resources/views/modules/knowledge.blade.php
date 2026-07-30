@@ -147,8 +147,8 @@
                     <textarea name="conteudo" id="kb_conteudo" rows="6" class="form-control" placeholder="Detalhes do contrato, lista de ativos, valores, contatos, particularidades da filial..."></textarea>
                 </div>
                 <div class="mb-1">
-                    <label class="form-label">Anexos <span class="text-muted small">— contrato em PDF, imagem, planilha... (até 15 MB cada)</span></label>
-                    <input type="file" name="files[]" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,image/*">
+                    <label class="form-label">Anexos <span class="text-muted small">— contrato em PDF ou imagem (até 15 MB cada)</span></label>
+                    <input type="file" name="files[]" class="form-control" multiple accept=".pdf,image/*">
                     <div class="form-text" id="kb_anexo_hint">Na edição, os arquivos aqui são <strong>adicionados</strong> aos já existentes (que ficam no card).</div>
                 </div>
             </div>

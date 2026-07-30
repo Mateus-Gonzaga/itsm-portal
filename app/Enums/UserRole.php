@@ -82,6 +82,7 @@ enum UserRole: string
                 ['route' => 'modules.clients', 'label' => 'Clientes', 'icon' => 'bi-people'],
                 ['route' => 'modules.technicians', 'label' => 'Técnicos', 'icon' => 'bi-person-badge'],
                 ['route' => 'modules.schedule', 'label' => 'Janela de atendimento', 'icon' => 'bi-clock-history'],
+                ['route' => 'modules.audit', 'label' => 'Auditoria', 'icon' => 'bi-shield-lock'],
                 ['route' => 'modules.settings', 'label' => 'Configurações', 'icon' => 'bi-gear'],
             ],
         };

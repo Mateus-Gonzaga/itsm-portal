@@ -125,6 +125,10 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         if (! empty($attributes['requester_glpi_id'])) {
             $input['_users_id_requester'] = (int) $attributes['requester_glpi_id'];
         }
+        // Técnico responsável definido já na abertura (ator de atribuição).
+        if (! empty($attributes['technician_glpi_id'])) {
+            $input['_users_id_assign'] = (int) $attributes['technician_glpi_id'];
+        }
         // Prazo de atendimento (SLA) — data-limite gravada direto no chamado.
         if (! empty($attributes['due_date'])) {
             $input['time_to_resolve'] = CarbonImmutable::parse($attributes['due_date'])->format('Y-m-d H:i:s');

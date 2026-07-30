@@ -68,7 +68,7 @@ class TicketController extends Controller
 
         $request->validate([
             'files' => ['required', 'array', 'max:5'],
-            'files.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,pdf', 'max:8192'],
+            'files.*' => ['file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp,application/pdf', 'max:8192'],
         ]);
 
         try {
@@ -118,12 +118,31 @@ class TicketController extends Controller
             ->unique('id')->sortBy('name')->values();
     }
 
-    public function create(): View
+    /** Clientes (solicitantes possíveis) para o staff abrir chamado em nome deles. */
+    private function clientUsers(GlpiDirectoryRepositoryInterface $dir): Collection
     {
+        return $dir->users()
+            ->reject(fn (array $u) => UserRole::fromGlpiProfile((string) ($u['profile'] ?? ''))->isStaff())
+            ->map(fn (array $u) => [
+                'id' => (int) $u['id'],
+                'name' => $u['name'],
+                'entity' => $u['entity'] ?? null,
+            ])
+            ->unique('id')->sortBy('name')->values();
+    }
+
+    public function create(Request $request, GlpiDirectoryRepositoryInterface $dir): View
+    {
+        $isStaff = $request->user()->role !== UserRole::Cliente;
+
         return view('tickets.create', [
             'priorities' => TicketPriority::cases(),
             'types' => TicketType::cases(),
             'categories' => self::CATEGORIES,
+            'isStaff' => $isStaff,
+            // Só o staff escolhe solicitante/técnico; cliente abre em nome próprio.
+            'clients' => $isStaff ? $this->clientUsers($dir) : collect(),
+            'technicians' => $isStaff ? $this->staffTechnicians($dir) : collect(),
         ]);
     }
 
@@ -136,13 +155,36 @@ class TicketController extends Controller
             'type' => ['required', 'string'],
             'category' => ['nullable', 'string'],
             'due_date' => ['nullable', 'date'],
+            'requester_glpi_id' => ['nullable', 'integer'],
+            'requester_name' => ['nullable', 'string', 'max:150'],
+            'technician_glpi_id' => ['nullable', 'integer'],
+            'technician_name' => ['nullable', 'string', 'max:150'],
             'files' => ['nullable', 'array', 'max:5'],
-            'files.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,pdf', 'max:8192'],
+            'files.*' => ['file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp,application/pdf', 'max:8192'],
         ]);
 
+        $user = $request->user();
+        $isStaff = $user->role !== UserRole::Cliente;
+
+        // Solicitante: staff pode abrir em nome de um cliente; cliente sempre é ele mesmo.
+        $requester = ($isStaff && ! empty($data['requester_glpi_id']))
+            ? ['requester' => $data['requester_name'] ?: 'Cliente', 'requester_glpi_id' => (int) $data['requester_glpi_id']]
+            : $this->requesterFilter($user);
+
+        // Técnico responsável: só o staff atribui (opcional) já na abertura.
+        $technician = ($isStaff && ! empty($data['technician_glpi_id']))
+            ? ['technician' => $data['technician_name'] ?: 'Técnico', 'technician_glpi_id' => (int) $data['technician_glpi_id']]
+            : [];
+
         $ticket = $this->tickets->create([
-            ...$data,
-            ...$this->requesterFilter($request->user()),
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'priority' => $data['priority'],
+            'type' => $data['type'],
+            'category' => $data['category'] ?? null,
+            'due_date' => $data['due_date'] ?? null,
+            ...$requester,
+            ...$technician,
         ]);
 
         // Anexos enviados junto com a abertura (falha num anexo não perde o chamado).

@@ -40,9 +40,7 @@
         <p class="text-muted mb-0">{{ $subtitle }} · {{ now()->locale('pt_BR')->translatedFormat('l, d \d\e F') }}</p>
     </div>
     <div class="d-flex gap-2">
-        @if (in_array($role, [UserRole::Cliente, UserRole::Tecnico], true))
-            <a href="{{ route('tickets.create') }}" class="btn btn-primary btn-cta"><i class="bi bi-plus-circle me-1"></i> Abrir chamado</a>
-        @endif
+        <a href="{{ route('tickets.create') }}" class="btn btn-primary btn-cta"><i class="bi bi-plus-circle me-1"></i> Abrir chamado</a>
         @if ($role === UserRole::Gestor)
             <a href="{{ route('agenda.index') }}" class="btn btn-outline-secondary"><i class="bi bi-calendar3 me-1"></i> Agenda</a>
             <a href="{{ route('modules.reports') }}" class="btn btn-outline-secondary"><i class="bi bi-bar-chart me-1"></i> Relatórios</a>

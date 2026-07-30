@@ -5,11 +5,9 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h1 class="h3 mb-0">{{ $heading }}</h1>
-    @if (in_array(auth()->user()->role, [UserRole::Cliente, UserRole::Tecnico], true))
-        <a href="{{ route('tickets.create') }}" class="btn btn-primary btn-cta">
-            <i class="bi bi-plus-circle me-1"></i> Abrir chamado
-        </a>
-    @endif
+    <a href="{{ route('tickets.create') }}" class="btn btn-primary btn-cta">
+        <i class="bi bi-plus-circle me-1"></i> Abrir chamado
+    </a>
 </div>
 
 <div class="card">

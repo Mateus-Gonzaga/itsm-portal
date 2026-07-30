@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssetValue;
+use App\Models\AuditLog;
 use App\Models\KbAttachment;
 use App\Models\KnowledgeArticle;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
@@ -84,6 +85,7 @@ class KnowledgeController extends Controller
 
     public function destroy(KnowledgeArticle $artigo): RedirectResponse
     {
+        AuditLog::record('kb.destroy', "Excluiu registro KB #{$artigo->id} \"{$artigo->titulo}\" ({$artigo->cliente})");
         $artigo->delete(); // cascade + boot deleting apaga os arquivos
 
         return back()->with('status', 'Registro excluído.');
@@ -92,9 +94,10 @@ class KnowledgeController extends Controller
     /** Salva os anexos enviados (contrato em PDF, imagem, etc.). */
     private function saveFiles(Request $request, KnowledgeArticle $artigo): void
     {
+        // Só PDF e imagens (evita doc/xls com macros). 15 MB por arquivo.
         $request->validate([
             'files' => ['nullable', 'array', 'max:8'],
-            'files.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp,doc,docx,xls,xlsx', 'max:15360'],
+            'files.*' => ['file', 'mimetypes:application/pdf,image/jpeg,image/png,image/webp,image/gif', 'max:15360'],
         ]);
 
         foreach ($request->file('files', []) as $file) {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\AssetValue;
+use App\Models\AuditLog;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiInventoryRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
@@ -76,6 +77,10 @@ class InventoryController extends Controller
             return back()->with('error', 'Valor salvo no portal, mas não foi possível gravar no GLPI (verifique o direito de "Informações financeiras" da conta de serviço): '.$e->getMessage());
         }
 
+        AuditLog::record('inventory.value', $value === null
+            ? "Removeu valor do ativo {$data['itemtype']} #{$data['id']}"
+            : "Definiu valor R$ ".number_format($value, 2, ',', '.')." no ativo {$data['itemtype']} #{$data['id']}");
+
         return back()->with('status', $value === null ? 'Valor do ativo removido.' : 'Valor do ativo salvo (portal + GLPI).');
     }
 
@@ -93,6 +98,8 @@ class InventoryController extends Controller
         } catch (\Throwable $e) {
             return back()->with('error', 'Não foi possível mover o ativo: '.$e->getMessage());
         }
+
+        AuditLog::record('inventory.move', "Moveu ativo {$data['itemtype']} #{$data['id']} para entidade #{$data['entity_id']}");
 
         $msg = $data['itemtype'] === 'Computer'
             ? 'Computador e itens conectados movidos para a nova entidade.'

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class DirectoryController extends Controller
         ]);
 
         $this->dir->createEntity($data['name'], (int) $data['parent_id']);
+        AuditLog::record('directory.entity.create', "Criou entidade \"{$data['name']}\" (pai #{$data['parent_id']})");
 
         return back()->with('status', "Entidade \"{$data['name']}\" criada.");
     }
@@ -53,6 +55,7 @@ class DirectoryController extends Controller
         $data = $request->validate(['name' => ['required', 'string', 'max:255']]);
 
         $this->dir->updateEntity($id, $data['name']);
+        AuditLog::record('directory.entity.update', "Editou entidade #{$id} -> \"{$data['name']}\"");
 
         return back()->with('status', 'Entidade atualizada.');
     }
@@ -78,6 +81,7 @@ class DirectoryController extends Controller
             'recursive' => $request->boolean('recursive'),
             'active' => $request->boolean('active'),
         ]);
+        AuditLog::record('directory.user.create', "Criou usuário \"{$data['login']}\" (perfil #{$data['profile_id']}, entidade #{$data['entity_id']})");
 
         return back()->with('status', "Usuário \"{$data['login']}\" criado.");
     }
@@ -101,6 +105,8 @@ class DirectoryController extends Controller
             'active' => $request->boolean('active'),
             'password' => $data['password'] ?? null,
         ]);
+        $senha = !empty($data['password']) ? ' [senha alterada]' : '';
+        AuditLog::record('directory.user.update', "Editou usuário #{$id} \"{$data['name']}\" (perfil #{$data['profile_id']}, entidade #{$data['entity_id']}){$senha}");
 
         return back()->with('status', 'Usuário atualizado.');
     }
@@ -109,6 +115,7 @@ class DirectoryController extends Controller
     {
         $active = $request->boolean('active');
         $this->dir->setUserActive($id, $active);
+        AuditLog::record('directory.user.toggle', "Usuário #{$id} ".($active ? 'ativado' : 'desativado'));
 
         return back()->with('status', $active ? 'Usuário ativado.' : 'Usuário desativado.');
     }
@@ -151,6 +158,8 @@ class DirectoryController extends Controller
             'active' => true,
             'password' => null,
         ]);
+
+        AuditLog::record('directory.user.isolate', "Isolou usuário #{$id} \"{$data['name']}\" na entidade \"{$data['entity_name']}\" (#{$entityId})");
 
         return back()->with('status', "Cliente isolado na entidade \"{$data['entity_name']}\".");
     }
