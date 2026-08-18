@@ -64,7 +64,7 @@
         <thead>
             <tr>
                 <th style="width:34px">#</th>
-                <th>Etiqueta</th>
+                <th>Pat.</th>
                 <th>Tipo</th>
                 <th>Nome / equipamento</th>
                 @if ($entidade === '')<th>Entidade</th>@endif
@@ -98,7 +98,8 @@
     </table>
 
     <p style="font-size:11px;color:#555;margin-top:18px">
-        Declaramos que os equipamentos relacionados acima conferem com o inventário físico da unidade na data de emissão deste documento.
+        Declaramos que os equipamentos relacionados acima conferem com o inventário físico da unidade na data de emissão deste documento.<br>
+        O valor estimado ao equipamento é considerado a época da aquisição.
     </p>
 
     <div class="sign">
