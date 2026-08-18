@@ -64,6 +64,11 @@
                     </select>
                 </div>
             @endif
+            @if ($isManager)
+                <a href="{{ route('inventory.report') }}" id="invReport" target="_blank" class="btn btn-outline-success btn-sm ms-auto">
+                    <i class="bi bi-file-earmark-arrow-down me-1"></i> Exportar relatório
+                </a>
+            @endif
         </div>
         <div class="d-flex justify-content-end mb-2">
             <span class="badge bg-success-subtle text-success-emphasis fs-6">
@@ -74,11 +79,12 @@
         <div class="table-wrap">
             <table class="table table-hover align-middle mb-0">
                 <thead>
-                    <tr><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Fabricante</th><th>Nº de série</th><th>Status</th><th class="text-end">Valor</th>@if ($isManager)<th class="text-end">Ações</th>@endif</tr>
+                    <tr><th>Etiqueta</th><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Fabricante</th><th>Nº de série</th><th>Status</th><th class="text-end">Valor</th>@if ($isManager)<th class="text-end">Ações</th>@endif</tr>
                 </thead>
                 <tbody id="invBody">
                     @forelse ($assets as $a)
                         <tr data-type="{{ $a['type'] }}" data-entity="{{ $a['entity'] }}" data-value="{{ $a['value'] ?? 0 }}">
+                            <td class="text-nowrap">@if (! empty($a['tag']))<span class="badge bg-dark-subtle text-dark-emphasis font-monospace">{{ $a['tag'] }}</span>@else<span class="text-muted">—</span>@endif</td>
                             <td class="text-nowrap"><i class="bi {{ $a['icon'] }} text-success me-1"></i>{{ $a['type'] }}</td>
                             <td class="fw-semibold">{{ $a['name'] }}</td>
                             <td class="small text-secondary">{{ $a['entity'] }}</td>
@@ -89,8 +95,8 @@
                             <td class="text-end text-nowrap">
                                 @if (! empty($a['value']))<span class="text-success fw-semibold">R$ {{ number_format($a['value'], 2, ',', '.') }}</span>@else<span class="text-muted">—</span>@endif
                                 @if ($isManager)
-                                    <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-decoration-none js-set-value" title="Definir valor"
-                                            data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}" data-name="{{ $a['name'] }}" data-value="{{ $a['value'] }}"><i class="bi bi-pencil"></i></button>
+                                    <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-decoration-none js-set-value" title="Editar etiqueta/valor"
+                                            data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}" data-name="{{ $a['name'] }}" data-value="{{ $a['value'] }}" data-tag="{{ $a['tag'] }}"><i class="bi bi-pencil"></i></button>
                                 @endif
                             </td>
                             @if ($isManager)
@@ -105,7 +111,7 @@
                             @endif
                         </tr>
                     @empty
-                        <tr><td colspan="{{ $isManager ? 9 : 8 }}" class="text-center text-muted py-5">
+                        <tr><td colspan="{{ $isManager ? 10 : 9 }}" class="text-center text-muted py-5">
                             <i class="bi bi-pc-display d-block fs-2 mb-2 opacity-50"></i>
                             Nenhum ativo inventariado ainda.<br><span class="small">Os equipamentos aparecem aqui conforme o GLPI Agent faz o inventário das máquinas.</span>
                         </td></tr>
@@ -155,14 +161,16 @@
             <input type="hidden" name="itemtype" id="vlItemtype">
             <input type="hidden" name="id" id="vlId">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-cash-coin me-2 text-success"></i>Valor do ativo</h5>
+                <h5 class="modal-title"><i class="bi bi-tag me-2 text-success"></i>Editar ativo</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <p class="small text-secondary mb-2">Ativo: <strong id="vlName"></strong></p>
+                <label class="form-label small">Etiqueta / patrimônio</label>
+                <input type="text" name="tag" id="vlTag" class="form-control mb-3" maxlength="60" placeholder="Ex.: FL-0042">
                 <label class="form-label small">Valor (R$)</label>
                 <input type="number" step="0.01" min="0" name="value" id="vlValue" class="form-control" placeholder="0,00">
-                <div class="form-text">Deixe em branco e salve para <strong>remover</strong> o valor.</div>
+                <div class="form-text">Deixe etiqueta e valor em branco e salve para <strong>limpar</strong> ambos.</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -202,7 +210,14 @@
         if (totalLabel) totalLabel.textContent = entityFilter ? 'Valor dos ativos desta entidade' : 'Valor total do inventário';
     }
     filterInput.addEventListener('input', apply);
-    if (entitySel) entitySel.addEventListener('change', function () { entityFilter = this.value; apply(); });
+    // Mantém o link do relatório apontando para a entidade filtrada (ou todas).
+    const reportLink = document.getElementById('invReport');
+    const reportBase = reportLink ? reportLink.getAttribute('href') : '';
+    function syncReport() {
+        if (!reportLink) return;
+        reportLink.href = entityFilter ? reportBase + '?entidade=' + encodeURIComponent(entityFilter) : reportBase;
+    }
+    if (entitySel) entitySel.addEventListener('change', function () { entityFilter = this.value; apply(); syncReport(); });
     document.querySelectorAll('.inv-card').forEach(function (card) {
         card.addEventListener('click', function () {
             document.querySelectorAll('.inv-card').forEach((c) => c.classList.remove('active'));
@@ -221,6 +236,7 @@
                 document.getElementById('vlItemtype').value = btn.dataset.type;
                 document.getElementById('vlId').value = btn.dataset.id;
                 document.getElementById('vlName').textContent = btn.dataset.name;
+                document.getElementById('vlTag').value = btn.dataset.tag || '';
                 document.getElementById('vlValue').value = btn.dataset.value || '';
                 vmodal.show();
             });

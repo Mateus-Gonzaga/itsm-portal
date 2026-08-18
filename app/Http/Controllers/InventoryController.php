@@ -24,7 +24,9 @@ class InventoryController extends Controller
         // Junta os valores (guardados no portal) a cada ativo por itemtype+id.
         $valores = AssetValue::get()->keyBy(fn (AssetValue $v) => $v->itemtype.'-'.$v->item_id);
         $assets = $assets->map(function (array $a) use ($valores) {
-            $a['value'] = optional($valores->get(($a['typeKey'] ?? '').'-'.($a['id'] ?? 0)))->value;
+            $meta = $valores->get(($a['typeKey'] ?? '').'-'.($a['id'] ?? 0));
+            $a['value'] = optional($meta)->value;
+            $a['tag'] = optional($meta)->tag;
 
             return $a;
         });
@@ -49,39 +51,67 @@ class InventoryController extends Controller
         ]);
     }
 
-    /** Define/limpa o valor de um ativo (gestor) — no portal E no GLPI (Infocom). */
+    /** Define/limpa etiqueta e valor de um ativo (gestor) — no portal E o valor no GLPI (Infocom). */
     public function setValue(Request $request, GlpiInventoryRepositoryInterface $inventory): RedirectResponse
     {
         $data = $request->validate([
             'itemtype' => ['required', 'string', 'max:60'],
             'id' => ['required', 'integer', 'min:1'],
+            'tag' => ['nullable', 'string', 'max:60'],
             'value' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $value = $data['value'] !== null ? (float) $data['value'] : null;
+        $tag = ! empty($data['tag']) ? trim($data['tag']) : null;
 
-        // 1) Guarda no portal (fonte rápida para exibir/somar).
-        if ($value === null) {
+        // 1) Guarda no portal (fonte rápida para exibir/somar). Sem valor E sem etiqueta = remove a linha.
+        if ($value === null && $tag === null) {
             AssetValue::where('itemtype', $data['itemtype'])->where('item_id', (int) $data['id'])->delete();
         } else {
             AssetValue::updateOrCreate(
                 ['itemtype' => $data['itemtype'], 'item_id' => (int) $data['id']],
-                ['value' => $value],
+                ['tag' => $tag, 'value' => $value],
             );
         }
 
-        // 2) Espelha no GLPI (Infocom/aba Gestão) — best-effort (pode faltar direito).
+        // 2) Espelha o valor no GLPI (Infocom/aba Gestão) — best-effort (pode faltar direito).
         try {
             $inventory->setInfocomValue($data['itemtype'], (int) $data['id'], $value);
         } catch (\Throwable $e) {
-            return back()->with('error', 'Valor salvo no portal, mas não foi possível gravar no GLPI (verifique o direito de "Informações financeiras" da conta de serviço): '.$e->getMessage());
+            return back()->with('error', 'Dados salvos no portal, mas não foi possível gravar o valor no GLPI (verifique o direito de "Informações financeiras" da conta de serviço): '.$e->getMessage());
         }
 
-        AuditLog::record('inventory.value', $value === null
-            ? "Removeu valor do ativo {$data['itemtype']} #{$data['id']}"
-            : "Definiu valor R$ ".number_format($value, 2, ',', '.')." no ativo {$data['itemtype']} #{$data['id']}");
+        AuditLog::record('inventory.value', "Atualizou ativo {$data['itemtype']} #{$data['id']} — etiqueta: ".($tag ?? '—').', valor: '.($value === null ? '—' : 'R$ '.number_format($value, 2, ',', '.')));
 
-        return back()->with('status', $value === null ? 'Valor do ativo removido.' : 'Valor do ativo salvo (portal + GLPI).');
+        return back()->with('status', 'Ativo atualizado (etiqueta/valor).');
+    }
+
+    /** Relatório de inventário para impressão/PDF (com bloco de assinaturas FL + cliente). */
+    public function report(Request $request, GlpiInventoryRepositoryInterface $inventory): View
+    {
+        $assets = $inventory->assets();
+        $valores = AssetValue::get()->keyBy(fn (AssetValue $v) => $v->itemtype.'-'.$v->item_id);
+        $assets = $assets->map(function (array $a) use ($valores) {
+            $meta = $valores->get(($a['typeKey'] ?? '').'-'.($a['id'] ?? 0));
+            $a['value'] = optional($meta)->value;
+            $a['tag'] = optional($meta)->tag;
+
+            return $a;
+        });
+
+        // Filtro opcional por entidade (uma loja por relatório é o uso típico).
+        $entidade = trim((string) $request->string('entidade'));
+        if ($entidade !== '') {
+            $assets = $assets->where('entity', $entidade)->values();
+        }
+
+        return view('modules.inventory-report', [
+            'assets' => $assets->sortBy([['entity', false], ['type', false], ['name', false]])->values(),
+            'entidade' => $entidade,
+            'valorTotal' => (float) $assets->sum(fn (array $a) => (float) ($a['value'] ?? 0)),
+            'geradoPor' => $request->user()->name,
+            'geradoEm' => now(),
+        ]);
     }
 
     /** Move um ativo para outra entidade do GLPI (gestor). */
