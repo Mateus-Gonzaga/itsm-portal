@@ -36,10 +36,11 @@ interface GlpiInventoryRepositoryInterface
     public function setInfocomValue(string $itemtype, int $id, ?float $value): void;
 
     /**
-     * Detalhes técnicos de um computador (CPU, RAM, disco, SO) e datas do GLPI.
+     * Detalhes técnicos de um ativo (campos rótulo=>valor + datas do GLPI).
+     * Destaques variam por tipo (CPU/RAM/disco no computador, tamanho no monitor…).
      * Escopado por entidade (retorna null se o item não for visível ao usuário).
      *
-     * @return array{name:string,cpu:array<int,string>,ram:string,disks:array<int,string>,os:string,createdAt:?string,updatedAt:?string}|null
+     * @return array{name:string,type:string,fields:array<int,array{label:string,value:string}>,createdAt:?string,updatedAt:?string}|null
      */
-    public function computerDetails(int $id): ?array;
+    public function assetDetails(string $itemtype, int $id): ?array;
 }

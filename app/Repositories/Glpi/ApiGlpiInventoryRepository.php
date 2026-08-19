@@ -112,23 +112,32 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         }
     }
 
-    public function computerDetails(int $id): ?array
+    public function assetDetails(string $itemtype, int $id): ?array
     {
-        if ($id <= 0) {
+        if (! isset(self::TYPES[$itemtype]) || $id <= 0) {
             return null;
         }
 
-        // O próprio computador (nome + datas). Se não vier (fora do escopo da
-        // entidade ou inexistente), devolvemos null — o GLPI já isola por sessão.
-        $resp = $this->client()->get("/Computer/{$id}", ['expand_dropdowns' => 'true']);
+        // O próprio ativo (nome + campos base + datas). Se não vier (fora do escopo
+        // da entidade ou inexistente), devolvemos null — o GLPI já isola por sessão.
+        $resp = $this->client()->get("/{$itemtype}/{$id}", ['expand_dropdowns' => 'true']);
         if (! $resp->successful() || ! is_array($resp->json()) || empty($resp->json()['id'])) {
             return null;
         }
-        $c = $resp->json();
+        $a = $resp->json();
 
-        return [
-            'name' => (string) ($c['name'] ?? '(sem nome)'),
-            'cpu' => $this->deviceList("/Computer/{$id}/Item_DeviceProcessor", function (array $d): string {
+        // Lista de campos (rótulo => valor) montada conforme o tipo. Só entra o que existe.
+        $fields = [];
+        $add = function (string $label, mixed $value) use (&$fields): void {
+            $v = is_array($value) ? implode(' • ', array_filter($value)) : $this->val($value);
+            if ($v !== '' && $v !== '—') {
+                $fields[] = ['label' => $label, 'value' => $v];
+            }
+        };
+
+        // Destaques técnicos por tipo.
+        if ($itemtype === 'Computer') {
+            $add('Processador', $this->deviceList("/Computer/{$id}/Item_DeviceProcessor", function (array $d): string {
                 $name = $this->val($d['deviceprocessors_id'] ?? null);
                 $freq = (int) ($d['frequency'] ?? 0);
                 $cores = (int) ($d['nbcores'] ?? 0);
@@ -138,19 +147,48 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
                 ]);
 
                 return trim(($name !== '—' ? $name : 'Processador').($extra ? ' — '.implode(', ', $extra) : ''));
-            }),
-            'ram' => $this->ramSummary($id),
-            'disks' => $this->deviceList("/Computer/{$id}/Item_DeviceHardDrive", function (array $d): string {
+            }));
+            $add('Memória (RAM)', $this->ramSummary($id));
+            $add('Disco(s)', $this->deviceList("/Computer/{$id}/Item_DeviceHardDrive", function (array $d): string {
                 $cap = (int) ($d['capacity'] ?? 0);
                 $name = $this->val($d['deviceharddrives_id'] ?? null);
 
-                return trim(($cap ? $this->humanMB($cap) : '')
-                    .($name !== '—' ? ' · '.$name : '')) ?: 'Disco';
-            }),
-            'os' => $this->firstDevice("/Computer/{$id}/Item_OperatingSystem",
-                fn (array $d): string => $this->val($d['operatingsystems_id'] ?? null)),
-            'createdAt' => $this->fmtDate($c['date_creation'] ?? null),
-            'updatedAt' => $this->fmtDate($c['date_mod'] ?? null),
+                return trim(($cap ? $this->humanMB($cap) : '').($name !== '—' ? ' · '.$name : '')) ?: 'Disco';
+            }));
+            $add('Sistema operacional', $this->firstDevice("/Computer/{$id}/Item_OperatingSystem",
+                fn (array $d): string => $this->val($d['operatingsystems_id'] ?? null)));
+        } elseif ($itemtype === 'Monitor') {
+            $size = (float) ($a['size'] ?? 0);
+            $add('Tamanho', $size > 0 ? number_format($size, 0, ',', '.').'"' : null);
+        } elseif ($itemtype === 'Printer') {
+            $add('Memória', ! empty($a['memory_size']) ? ((int) $a['memory_size']).' MB' : null);
+            $add('Conexões', array_filter([
+                ! empty($a['have_usb']) ? 'USB' : null,
+                ! empty($a['have_ethernet']) ? 'Ethernet' : null,
+                ! empty($a['have_wifi']) ? 'Wi-Fi' : null,
+                ! empty($a['have_serial']) ? 'Serial' : null,
+            ]));
+        } elseif ($itemtype === 'NetworkEquipment') {
+            $add('Memória', ! empty($a['ram']) ? ((int) $a['ram']).' MB' : null);
+            $add('MAC', $a['mac'] ?? null);
+        }
+
+        // Campos comuns a todos os tipos.
+        $add('Fabricante', $a['manufacturers_id'] ?? null);
+        $add('Modelo', $a[self::TYPES[$itemtype]['model']] ?? null);
+        $add('Nº de série', $a['serial'] ?? null);
+        $add('Nº patrimônio (GLPI)', $a['otherserial'] ?? null);
+        $add('Localização', $a['locations_id'] ?? null);
+        $add('Status', $a['states_id'] ?? null);
+        $add('Contato', $a['contact'] ?? null);
+        $add('Observações', $a['comment'] ?? null);
+
+        return [
+            'name' => (string) ($a['name'] ?? '(sem nome)'),
+            'type' => self::TYPES[$itemtype]['label'],
+            'fields' => $fields,
+            'createdAt' => $this->fmtDate($a['date_creation'] ?? null),
+            'updatedAt' => $this->fmtDate($a['date_mod'] ?? null),
         ];
     }
 

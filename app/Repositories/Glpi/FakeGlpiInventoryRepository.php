@@ -39,14 +39,26 @@ class FakeGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         // no-op (demo)
     }
 
-    public function computerDetails(int $id): ?array
+    public function assetDetails(string $itemtype, int $id): ?array
     {
+        $fields = $itemtype === 'Computer'
+            ? [
+                ['label' => 'Processador', 'value' => 'Intel Core i5-8400 — 2,80 GHz, 6 núcleos'],
+                ['label' => 'Memória (RAM)', 'value' => '16 GB (2 módulos)'],
+                ['label' => 'Disco(s)', 'value' => '240 GB · SSD'],
+                ['label' => 'Sistema operacional', 'value' => 'Windows 10 Pro'],
+                ['label' => 'Fabricante', 'value' => 'Dell'],
+            ]
+            : [
+                ['label' => 'Fabricante', 'value' => 'Genérico'],
+                ['label' => 'Modelo', 'value' => 'Demo '.$itemtype],
+                ['label' => 'Nº de série', 'value' => 'SN-'.$id],
+            ];
+
         return [
-            'name' => 'PC-DEMO-'.$id,
-            'cpu' => ['Intel Core i5-8400 — 2,80 GHz, 6 núcleos'],
-            'ram' => '16 GB (2 módulos)',
-            'disks' => ['240 GB · SSD', '1,00 TB · HDD'],
-            'os' => 'Windows 10 Pro',
+            'name' => 'ATIVO-DEMO-'.$id,
+            'type' => $itemtype,
+            'fields' => $fields,
             'createdAt' => '01/07/2026 09:30',
             'updatedAt' => now()->format('d/m/Y H:i'),
         ];

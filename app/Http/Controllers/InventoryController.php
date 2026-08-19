@@ -86,11 +86,14 @@ class InventoryController extends Controller
         return back()->with('status', 'Ativo atualizado (etiqueta/valor).');
     }
 
-    /** Detalhes técnicos de um computador (CPU/RAM/disco/SO + datas do GLPI) — JSON p/ o modal. */
-    public function computerDetails(int $id, GlpiInventoryRepositoryInterface $inventory): \Illuminate\Http\JsonResponse
+    /** Detalhes técnicos de um ativo (por tipo) + datas do GLPI — JSON p/ o modal. */
+    public function assetDetails(string $itemtype, int $id, GlpiInventoryRepositoryInterface $inventory): \Illuminate\Http\JsonResponse
     {
-        $details = $inventory->computerDetails($id);
-        abort_if($details === null, 404, 'Computador não encontrado ou fora do seu acesso.');
+        // Periféricos não têm detalhamento (a pedido).
+        abort_if($itemtype === 'Peripheral', 404);
+
+        $details = $inventory->assetDetails($itemtype, $id);
+        abort_if($details === null, 404, 'Ativo não encontrado ou fora do seu acesso.');
 
         return response()->json($details);
     }

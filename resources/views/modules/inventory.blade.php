@@ -85,7 +85,7 @@
                     @forelse ($assets as $a)
                         <tr data-type="{{ $a['type'] }}" data-entity="{{ $a['entity'] }}" data-value="{{ $a['value'] ?? 0 }}"
                             data-id="{{ $a['id'] }}" data-typekey="{{ $a['typeKey'] }}"
-                            @if ($a['typeKey'] === 'Computer') class="js-computer-row" style="cursor:pointer" title="Ver detalhes técnicos" @endif>
+                            @if ($a['typeKey'] !== 'Peripheral') class="js-asset-row" style="cursor:pointer" title="Ver detalhes técnicos" @endif>
                             <td class="text-nowrap">@if (! empty($a['tag']))<span class="badge bg-dark-subtle text-dark-emphasis font-monospace">{{ $a['tag'] }}</span>@else<span class="text-muted">—</span>@endif</td>
                             <td class="text-nowrap"><i class="bi {{ $a['icon'] }} text-success me-1"></i>{{ $a['type'] }}</td>
                             <td class="fw-semibold">{{ $a['name'] }}</td>
@@ -188,7 +188,9 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-pc-display me-2 text-success"></i><span id="pcName">Computador</span></h5>
+                <h5 class="modal-title"><i class="bi bi-pc-display me-2 text-success"></i><span id="pcName">Ativo</span>
+                    <span class="badge bg-success-subtle text-success-emphasis ms-1" id="pcType"></span>
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -196,20 +198,7 @@
                     <div class="spinner-border spinner-border-sm me-2"></div> Carregando detalhes…
                 </div>
                 <div id="pcError" class="alert alert-warning py-2 small d-none"></div>
-                <dl id="pcBody" class="row mb-0 d-none">
-                    <dt class="col-sm-3"><i class="bi bi-cpu me-1"></i>Processador</dt>
-                    <dd class="col-sm-9" id="pcCpu">—</dd>
-                    <dt class="col-sm-3"><i class="bi bi-memory me-1"></i>Memória (RAM)</dt>
-                    <dd class="col-sm-9" id="pcRam">—</dd>
-                    <dt class="col-sm-3"><i class="bi bi-device-hdd me-1"></i>Disco(s)</dt>
-                    <dd class="col-sm-9" id="pcDisks">—</dd>
-                    <dt class="col-sm-3"><i class="bi bi-windows me-1"></i>Sistema</dt>
-                    <dd class="col-sm-9" id="pcOs">—</dd>
-                    <dt class="col-sm-3"><i class="bi bi-calendar-plus me-1"></i>Cadastrado no GLPI</dt>
-                    <dd class="col-sm-9" id="pcCreated">—</dd>
-                    <dt class="col-sm-3"><i class="bi bi-arrow-repeat me-1"></i>Último inventário</dt>
-                    <dd class="col-sm-9" id="pcUpdated">—</dd>
-                </dl>
+                <dl id="pcBody" class="row mb-0 d-none"></dl>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -280,35 +269,47 @@
         });
     }
 
-    // Detalhes técnicos do computador: clique na linha abre o modal e busca via AJAX.
+    // Detalhes técnicos do ativo: clique na linha abre o modal e busca via AJAX.
     const pcModalEl = document.getElementById('pcModal');
     if (pcModalEl && window.bootstrap) {
         const pcModal = new bootstrap.Modal(pcModalEl);
-        const PC_URL = "{{ url('inventario/computador') }}";
-        const set = (id, v) => { document.getElementById(id).textContent = (v && v.length) ? v : '—'; };
+        const ASSET_URL = "{{ url('inventario/ativo') }}";
+        const body = document.getElementById('pcBody');
 
-        document.querySelectorAll('.js-computer-row').forEach(function (tr) {
+        function row(label, value) {
+            const dt = document.createElement('dt');
+            dt.className = 'col-sm-4 text-secondary fw-normal';
+            dt.textContent = label;
+            const dd = document.createElement('dd');
+            dd.className = 'col-sm-8 fw-semibold';
+            dd.textContent = value || '—';
+            body.append(dt, dd);
+        }
+
+        document.querySelectorAll('.js-asset-row').forEach(function (tr) {
             tr.addEventListener('click', function (e) {
                 if (e.target.closest('button, a, form')) return; // não abre ao clicar em ações
                 const id = tr.dataset.id;
-                document.getElementById('pcName').textContent = tr.querySelector('td:nth-child(3)')?.textContent.trim() || 'Computador';
-                document.getElementById('pcLoading').classList.remove('d-none');
-                document.getElementById('pcBody').classList.add('d-none');
+                const itemtype = tr.dataset.typekey;
+                document.getElementById('pcName').textContent = tr.querySelector('td:nth-child(3)')?.textContent.trim() || 'Ativo';
+                document.getElementById('pcType').textContent = '';
+                body.innerHTML = '';
+                body.classList.add('d-none');
                 document.getElementById('pcError').classList.add('d-none');
+                document.getElementById('pcLoading').classList.remove('d-none');
                 pcModal.show();
 
-                fetch(PC_URL + '/' + id, { headers: { 'Accept': 'application/json' } })
+                fetch(ASSET_URL + '/' + itemtype + '/' + id, { headers: { 'Accept': 'application/json' } })
                     .then((r) => { if (!r.ok) throw new Error('Não foi possível carregar os detalhes.'); return r.json(); })
                     .then(function (d) {
-                        document.getElementById('pcName').textContent = d.name || 'Computador';
-                        set('pcCpu', (d.cpu || []).join(' • '));
-                        set('pcRam', d.ram);
-                        set('pcDisks', (d.disks || []).join(' • '));
-                        set('pcOs', d.os);
-                        set('pcCreated', d.createdAt);
-                        set('pcUpdated', d.updatedAt);
+                        document.getElementById('pcName').textContent = d.name || 'Ativo';
+                        document.getElementById('pcType').textContent = d.type || '';
+                        body.innerHTML = '';
+                        (d.fields || []).forEach((f) => row(f.label, f.value));
+                        row('Cadastrado no GLPI', d.createdAt);
+                        row('Último inventário', d.updatedAt);
                         document.getElementById('pcLoading').classList.add('d-none');
-                        document.getElementById('pcBody').classList.remove('d-none');
+                        body.classList.remove('d-none');
                     })
                     .catch(function (err) {
                         document.getElementById('pcLoading').classList.add('d-none');
