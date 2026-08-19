@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Glpi;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -108,6 +109,109 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
             $this->client()->put('/Infocom/'.(int) $existing, ['input' => $input])->throw();
         } else {
             $this->client()->post('/Infocom', ['input' => $input])->throw();
+        }
+    }
+
+    public function computerDetails(int $id): ?array
+    {
+        if ($id <= 0) {
+            return null;
+        }
+
+        // O próprio computador (nome + datas). Se não vier (fora do escopo da
+        // entidade ou inexistente), devolvemos null — o GLPI já isola por sessão.
+        $resp = $this->client()->get("/Computer/{$id}", ['expand_dropdowns' => 'true']);
+        if (! $resp->successful() || ! is_array($resp->json()) || empty($resp->json()['id'])) {
+            return null;
+        }
+        $c = $resp->json();
+
+        return [
+            'name' => (string) ($c['name'] ?? '(sem nome)'),
+            'cpu' => $this->deviceList("/Computer/{$id}/Item_DeviceProcessor", function (array $d): string {
+                $name = $this->val($d['deviceprocessors_id'] ?? null);
+                $freq = (int) ($d['frequency'] ?? 0);
+                $cores = (int) ($d['nbcores'] ?? 0);
+                $extra = array_filter([
+                    $freq ? number_format($freq / 1000, 2, ',', '.').' GHz' : null,
+                    $cores ? $cores.' núcleos' : null,
+                ]);
+
+                return trim(($name !== '—' ? $name : 'Processador').($extra ? ' — '.implode(', ', $extra) : ''));
+            }),
+            'ram' => $this->ramSummary($id),
+            'disks' => $this->deviceList("/Computer/{$id}/Item_DeviceHardDrive", function (array $d): string {
+                $cap = (int) ($d['capacity'] ?? 0);
+                $name = $this->val($d['deviceharddrives_id'] ?? null);
+
+                return trim(($cap ? $this->humanMB($cap) : '')
+                    .($name !== '—' ? ' · '.$name : '')) ?: 'Disco';
+            }),
+            'os' => $this->firstDevice("/Computer/{$id}/Item_OperatingSystem",
+                fn (array $d): string => $this->val($d['operatingsystems_id'] ?? null)),
+            'createdAt' => $this->fmtDate($c['date_creation'] ?? null),
+            'updatedAt' => $this->fmtDate($c['date_mod'] ?? null),
+        ];
+    }
+
+    /** Lê um sub-endpoint de dispositivos e mapeia cada linha para uma string. */
+    private function deviceList(string $path, callable $fmt): array
+    {
+        $resp = $this->client()->get($path, ['expand_dropdowns' => 'true']);
+        if (! $resp->successful() || ! is_array($resp->json())) {
+            return [];
+        }
+
+        return collect($resp->json())->map($fmt)->filter()->values()->all();
+    }
+
+    /** Primeiro item de um sub-endpoint (ex.: sistema operacional). */
+    private function firstDevice(string $path, callable $fmt): string
+    {
+        return $this->deviceList($path, $fmt)[0] ?? '—';
+    }
+
+    /** Soma os módulos de memória: "16 GB (2 módulos)". */
+    private function ramSummary(int $id): string
+    {
+        $resp = $this->client()->get("/Computer/{$id}/Item_DeviceMemory", ['expand_dropdowns' => 'true']);
+        if (! $resp->successful() || ! is_array($resp->json()) || $resp->json() === []) {
+            return '—';
+        }
+        $mods = collect($resp->json());
+        $totalMb = (int) $mods->sum(fn ($d) => (int) ($d['size'] ?? 0));
+        $n = $mods->count();
+        if ($totalMb <= 0) {
+            return '—';
+        }
+
+        return $this->humanMB($totalMb).' ('.$n.' '.($n === 1 ? 'módulo' : 'módulos').')';
+    }
+
+    /** Capacidade em MB → "240 GB" / "1,00 TB". */
+    private function humanMB(int $mb): string
+    {
+        if ($mb >= 1024 * 1024) {
+            return number_format($mb / (1024 * 1024), 2, ',', '.').' TB';
+        }
+        if ($mb >= 1024) {
+            return number_format($mb / 1024, ($mb % 1024 === 0 ? 0 : 1), ',', '.').' GB';
+        }
+
+        return $mb.' MB';
+    }
+
+    /** "2026-07-01 12:00:00" → "01/07/2026 12:00" (null se vazio). */
+    private function fmtDate(?string $v): ?string
+    {
+        if (empty($v) || str_starts_with($v, '0000')) {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($v)->format('d/m/Y H:i');
+        } catch (\Throwable) {
+            return null;
         }
     }
 

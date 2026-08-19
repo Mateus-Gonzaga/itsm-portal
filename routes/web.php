@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::get('/inventario', [InventoryController::class, 'index'])->name('modules.inventory');
     Route::get('/inventario/relatorio', [InventoryController::class, 'report'])->middleware('role:gestor')->name('inventory.report');
+    Route::get('/inventario/computador/{id}', [InventoryController::class, 'computerDetails'])->whereNumber('id')->name('inventory.computer');
     Route::middleware(['role:gestor', 'throttle:60,1'])->group(function () {
         Route::post('/inventario/mover', [InventoryController::class, 'move'])->name('inventory.move');
         Route::post('/inventario/valor', [InventoryController::class, 'setValue'])->name('inventory.value');

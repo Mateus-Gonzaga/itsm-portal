@@ -34,4 +34,12 @@ interface GlpiInventoryRepositoryInterface
 
     /** Grava o valor do ativo no GLPI (Infocom / aba Gestão). $value null = zera. */
     public function setInfocomValue(string $itemtype, int $id, ?float $value): void;
+
+    /**
+     * Detalhes técnicos de um computador (CPU, RAM, disco, SO) e datas do GLPI.
+     * Escopado por entidade (retorna null se o item não for visível ao usuário).
+     *
+     * @return array{name:string,cpu:array<int,string>,ram:string,disks:array<int,string>,os:string,createdAt:?string,updatedAt:?string}|null
+     */
+    public function computerDetails(int $id): ?array;
 }

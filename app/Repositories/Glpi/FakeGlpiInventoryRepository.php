@@ -38,4 +38,17 @@ class FakeGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
     {
         // no-op (demo)
     }
+
+    public function computerDetails(int $id): ?array
+    {
+        return [
+            'name' => 'PC-DEMO-'.$id,
+            'cpu' => ['Intel Core i5-8400 — 2,80 GHz, 6 núcleos'],
+            'ram' => '16 GB (2 módulos)',
+            'disks' => ['240 GB · SSD', '1,00 TB · HDD'],
+            'os' => 'Windows 10 Pro',
+            'createdAt' => '01/07/2026 09:30',
+            'updatedAt' => now()->format('d/m/Y H:i'),
+        ];
+    }
 }

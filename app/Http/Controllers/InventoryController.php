@@ -86,6 +86,15 @@ class InventoryController extends Controller
         return back()->with('status', 'Ativo atualizado (etiqueta/valor).');
     }
 
+    /** Detalhes técnicos de um computador (CPU/RAM/disco/SO + datas do GLPI) — JSON p/ o modal. */
+    public function computerDetails(int $id, GlpiInventoryRepositoryInterface $inventory): \Illuminate\Http\JsonResponse
+    {
+        $details = $inventory->computerDetails($id);
+        abort_if($details === null, 404, 'Computador não encontrado ou fora do seu acesso.');
+
+        return response()->json($details);
+    }
+
     /** Relatório de inventário para impressão/PDF (com bloco de assinaturas FL + cliente). */
     public function report(Request $request, GlpiInventoryRepositoryInterface $inventory): View
     {
