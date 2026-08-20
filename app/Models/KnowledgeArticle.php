@@ -15,7 +15,7 @@ class KnowledgeArticle extends Model
 
     protected $table = 'kb_articles';
 
-    public const CATEGORIAS = ['Contrato', 'Internet', 'Ativos / Valores', 'Infraestrutura', 'Contatos', 'Acessos', 'Geral'];
+    public const CATEGORIAS = ['Contrato', 'Internet', 'Documentos / Modelos', 'Ativos / Valores', 'Infraestrutura', 'Contatos', 'Acessos', 'Geral'];
 
     protected $fillable = [
         'cliente',
