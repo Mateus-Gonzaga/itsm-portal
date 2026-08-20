@@ -10,7 +10,7 @@ class KnowledgeArticle extends Model
 {
     public function attachments(): HasMany
     {
-        return $this->hasMany(KbAttachment::class);
+        return $this->hasMany(KbAttachment::class, 'kb_article_id');
     }
 
     protected $table = 'kb_articles';
