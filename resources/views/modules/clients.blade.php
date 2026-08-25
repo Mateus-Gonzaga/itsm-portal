@@ -63,7 +63,12 @@
                                         <span class="fw-semibold">{{ $e['name'] }}</span>
                                     </td>
                                     <td class="text-secondary small">{{ $e['completename'] }}</td>
-                                    <td class="text-end">
+                                    <td class="text-end text-nowrap">
+                                        @if ($e['level'] >= 3)
+                                            <a class="btn btn-sm btn-outline-success" href="{{ route('clients.profile.show', $e['id']) }}" title="Perfil do cliente">
+                                                <i class="bi bi-person-vcard me-1"></i>Perfil
+                                            </a>
+                                        @endif
                                         <button class="btn btn-sm btn-outline-secondary" onclick="editEntity(this)"
                                                 data-id="{{ $e['id'] }}" data-name="{{ $e['name'] }}"><i class="bi bi-pencil"></i></button>
                                     </td>

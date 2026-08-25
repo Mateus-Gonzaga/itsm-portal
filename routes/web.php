@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\ClientProfileController;
 use App\Http\Controllers\ClientsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardsController;
@@ -32,6 +33,25 @@ Route::middleware('auth')->group(function () {
     });
     Route::get('/relatorios', ReportsController::class)->middleware('role:gestor')->name('modules.reports');
     Route::get('/clientes', ClientsController::class)->middleware('role:gestor')->name('modules.clients');
+
+    // Perfil do Cliente (ficha vinculada à entidade do GLPI por glpi_entity_id) — equipe.
+    Route::middleware('role:tecnico,gestor')->group(function () {
+        Route::get('/clientes/{entity}/perfil', [ClientProfileController::class, 'show'])
+            ->whereNumber('entity')->name('clients.profile.show');
+
+        Route::middleware('throttle:60,1')->group(function () {
+            Route::put('/clientes/{entity}/perfil', [ClientProfileController::class, 'update'])->whereNumber('entity')->name('clients.profile.update');
+            Route::post('/clientes/{entity}/perfil/contatos', [ClientProfileController::class, 'storeContact'])->whereNumber('entity')->name('clients.profile.contacts.store');
+            Route::put('/clientes/{entity}/perfil/contatos/{contact}', [ClientProfileController::class, 'updateContact'])->whereNumber('entity')->name('clients.profile.contacts.update');
+            Route::delete('/clientes/{entity}/perfil/contatos/{contact}', [ClientProfileController::class, 'destroyContact'])->whereNumber('entity')->name('clients.profile.contacts.destroy');
+            Route::post('/clientes/{entity}/perfil/internet', [ClientProfileController::class, 'storeInternet'])->whereNumber('entity')->name('clients.profile.internet.store');
+            Route::put('/clientes/{entity}/perfil/internet/{link}', [ClientProfileController::class, 'updateInternet'])->whereNumber('entity')->name('clients.profile.internet.update');
+            Route::delete('/clientes/{entity}/perfil/internet/{link}', [ClientProfileController::class, 'destroyInternet'])->whereNumber('entity')->name('clients.profile.internet.destroy');
+            Route::post('/clientes/{entity}/perfil/contratos', [ClientProfileController::class, 'storeContract'])->whereNumber('entity')->name('clients.profile.contracts.store');
+            Route::put('/clientes/{entity}/perfil/contratos/{contract}', [ClientProfileController::class, 'updateContract'])->whereNumber('entity')->name('clients.profile.contracts.update');
+            Route::delete('/clientes/{entity}/perfil/contratos/{contract}', [ClientProfileController::class, 'destroyContract'])->whereNumber('entity')->name('clients.profile.contracts.destroy');
+        });
+    });
     Route::get('/mapa-clientes', fn () => view('modules.map'))->middleware('role:gestor')->name('modules.map');
 
     // Escrita do diretório (entidades/usuários) — gestor (+ rate limit anti-abuso)
