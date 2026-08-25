@@ -108,4 +108,47 @@ class FakeZabbixRepository implements ZabbixRepositoryInterface
 
         return $out;
     }
+
+    public function diskForecast(?array $groupIds = null, int $days = 7): Collection
+    {
+        if (is_array($groupIds) && $groupIds === []) {
+            return collect();
+        }
+
+        return collect([
+            ['host' => 'srv-empresaB-01', 'current' => 88, 'perDia' => 1.6, 'dias' => 8],
+            ['host' => 'srv-empresaA-01', 'current' => 71, 'perDia' => 0.9, 'dias' => 32],
+        ]);
+    }
+
+    public function problemHeatmap(?array $groupIds = null, int $days = 7): array
+    {
+        $dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        $matrix = array_fill(0, 7, array_fill(0, 24, 0));
+        if (is_array($groupIds) && $groupIds === []) {
+            return ['dias' => $dias, 'matrix' => $matrix, 'max' => 0];
+        }
+        // Concentra "problemas" na abertura (8-10h) e no fim de tarde (17-19h).
+        $max = 0;
+        foreach (range(1, 5) as $w) {
+            foreach ([8, 9, 17, 18] as $h) {
+                $matrix[$w][$h] = ($h < 12 ? 2 : 3) + ($w % 2);
+                $max = max($max, $matrix[$w][$h]);
+            }
+        }
+
+        return ['dias' => $dias, 'matrix' => $matrix, 'max' => $max];
+    }
+
+    public function networkTraffic(?array $groupIds = null): Collection
+    {
+        if (is_array($groupIds) && $groupIds === []) {
+            return collect();
+        }
+
+        return collect([
+            ['host' => 'srv-empresaA-01', 'in' => 45_000_000, 'out' => 12_000_000],
+            ['host' => 'caixa-empresaA-01', 'in' => 8_000_000, 'out' => 3_000_000],
+        ]);
+    }
 }

@@ -51,7 +51,8 @@
         <p class="text-secondary small mb-0">Status dos hosts e alertas em tempo real (Zabbix).</p>
     </div>
     <div class="d-flex gap-2 align-items-center">
-        <a href="{{ route('modules.analytics') }}" class="btn btn-sm {{ $selected ? 'btn-outline-secondary' : 'btn-primary' }}"><i class="bi bi-grid me-1"></i> Visão Geral</a>
+        <a href="{{ route('modules.analytics') }}" class="btn btn-sm {{ ($mode ?? '') === 'geral' ? 'btn-primary' : 'btn-outline-secondary' }}"><i class="bi bi-grid me-1"></i> Visão Geral</a>
+        <a href="{{ route('modules.analytics', ['view' => 'preventivo']) }}" class="btn btn-sm {{ ($mode ?? '') === 'preventivo' ? 'btn-primary' : 'btn-outline-secondary' }}"><i class="bi bi-shield-check me-1"></i> Preventivo</a>
         @if (!empty($clientes))
             <div class="input-group input-group-sm" style="width:auto">
                 <span class="input-group-text"><i class="bi bi-building"></i></span>
@@ -179,6 +180,63 @@
             <div class="card">
                 <div class="card-header bg-transparent fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i> Problemas ativos</div>
                 <div class="card-body">@include('modules.partials.problems', ['problems' => $problems])</div>
+            </div>
+        </div>
+    </div>
+@elseif ($mode === 'preventivo')
+    {{-- ===== PREVENTIVO ===== --}}
+    <div class="row g-4">
+        {{-- Previsão de disco --}}
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-hdd me-1"></i> Previsão de disco <span class="text-secondary small fw-normal">(dias até 100%)</span></div>
+                <div class="card-body">
+                    @forelse ($diskForecast as $d)
+                        @php $urg = $d['dias'] <= 7 ? 'danger' : ($d['dias'] <= 30 ? 'warning' : 'success'); @endphp
+                        <div class="d-flex align-items-center gap-3 py-2 {{ ! $loop->last ? 'border-bottom' : '' }}">
+                            <div class="flex-grow-1" style="min-width:0">
+                                <div class="fw-semibold text-truncate">{{ $d['host'] }}</div>
+                                <div class="progress mt-1" style="height:6px"><div class="progress-bar bg-{{ $urg }}" style="width:{{ $d['current'] }}%"></div></div>
+                                <div class="small text-secondary mt-1">{{ $d['current'] }}% usado · sobe ~{{ $d['perDia'] }}%/dia</div>
+                            </div>
+                            <div class="text-end flex-shrink-0">
+                                <div class="fw-bold text-{{ $urg }}" style="font-family:'Rajdhani',sans-serif;font-size:1.5rem;line-height:1">{{ $d['dias'] }}</div>
+                                <div class="small text-secondary">dias</div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-muted small mb-0 text-center py-4"><i class="bi bi-check-circle text-success me-1"></i>Nenhum disco em tendência de encher.</p>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
+        {{-- Heatmap de problemas --}}
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-calendar-week me-1"></i> Quando os problemas acontecem <span class="text-secondary small fw-normal">(últimos 7 dias)</span></div>
+                <div class="card-body"><div id="heatmap" data-hm='@json($heatmap)' style="min-height:320px"></div></div>
+            </div>
+        </div>
+
+        {{-- Tráfego de rede --}}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-ethernet me-1"></i> Tráfego de rede <span class="text-secondary small fw-normal">(maiores consumidores no momento)</span></div>
+                <div class="card-body">
+                    @forelse ($netTraffic as $n)
+                        <div class="row align-items-center py-2 {{ ! $loop->last ? 'border-bottom' : '' }} g-2">
+                            <div class="col-sm-3 fw-semibold text-truncate">{{ $n['host'] }}</div>
+                            <div class="col-sm-9 small">
+                                <i class="bi bi-arrow-down-short text-success"></i> Download <strong>{{ number_format($n['in'] / 1_000_000, 1, ',', '.') }} Mbps</strong>
+                                <span class="text-secondary mx-2">·</span>
+                                <i class="bi bi-arrow-up-short text-primary"></i> Upload <strong>{{ number_format($n['out'] / 1_000_000, 1, ',', '.') }} Mbps</strong>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-muted small mb-0 text-center py-4">Sem itens de rede (<code>net.if.*</code>) coletados no Zabbix — habilite a coleta de interface nos hosts para este painel funcionar.</p>
+                    @endforelse
+                </div>
             </div>
         </div>
     </div>
@@ -329,6 +387,27 @@
             }).render();
         } else {
             trendEl.innerHTML = '<p class="text-muted small mb-0 text-center py-4"><i class="bi bi-check-circle text-success me-1"></i>Sem novos problemas nas últimas 24h.</p>';
+        }
+    }
+
+    // ---- Heatmap de problemas (hora × dia), aba Preventivo ----
+    var hmEl = document.getElementById('heatmap');
+    if (hmEl) {
+        var hm = {}; try { hm = JSON.parse(hmEl.dataset.hm || '{}'); } catch (e) {}
+        if (hm.matrix && hm.max > 0) {
+            var series = hm.dias.map(function (dia, wi) {
+                return { name: dia, data: hm.matrix[wi].map(function (v, h) { return { x: (h < 10 ? '0' + h : h) + 'h', y: v }; }) };
+            }).reverse(); // Dom no topo, Sáb embaixo
+            new ApexCharts(hmEl, {
+                chart: { type: 'heatmap', height: 320, toolbar: { show: false } },
+                series: series, colors: ['#0a9d5a'], dataLabels: { enabled: false },
+                plotOptions: { heatmap: { radius: 2, enableShades: true, shadeIntensity: 0.5 } },
+                xaxis: { type: 'category', labels: { style: { fontSize: '9px' }, formatter: function (v) { return parseInt(v, 10) % 3 === 0 ? v : ''; } } },
+                legend: { show: false }, grid: { padding: { right: 8 } },
+                tooltip: { y: { formatter: function (v) { return v + ' problema(s)'; } } },
+            }).render();
+        } else {
+            hmEl.innerHTML = '<p class="text-muted small mb-0 text-center py-5"><i class="bi bi-check-circle text-success me-1"></i>Nenhum problema registrado nos últimos 7 dias.</p>';
         }
     }
 

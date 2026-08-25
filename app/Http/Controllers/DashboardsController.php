@@ -50,6 +50,16 @@ class DashboardsController extends Controller
                 $selected = null;
             }
 
+            // Aba "Preventivo" (todos os hosts) — consultas mais caras, sob demanda.
+            if ($selected === null && $request->string('view')->value() === 'preventivo') {
+                return view('modules.dashboards', [
+                    'mode' => 'preventivo', 'clientes' => $clientes, 'selected' => null, 'error' => null,
+                    'diskForecast' => $zabbix->diskForecast(),
+                    'heatmap' => $zabbix->problemHeatmap(),
+                    'netTraffic' => $zabbix->networkTraffic(),
+                ]);
+            }
+
             if ($selected === null) {
                 // Visão Geral (todos).
                 $clientGroups = collect($map)->map(fn (array $m) => $m['all'])->all();

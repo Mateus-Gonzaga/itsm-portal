@@ -57,4 +57,31 @@ interface ZabbixRepositoryInterface
      * @return array<int, array{0:int,1:int}>  cada ponto é [timestamp_ms, contagem]
      */
     public function problemTrend(?array $groupIds = null, int $hours = 24): array;
+
+    /**
+     * PREVENTIVO — Previsão de disco: hosts com disco subindo e estimativa de
+     * dias até 100% (regressão linear sobre a tendência do item de disco).
+     *
+     * @param  array<int,string>|null  $groupIds
+     * @return Collection<int, array{host:string,current:int,perDia:float,dias:?int}>
+     */
+    public function diskForecast(?array $groupIds = null, int $days = 7): Collection;
+
+    /**
+     * PREVENTIVO — Heatmap de problemas: contagem por dia-da-semana × hora nos
+     * últimos $days dias.
+     *
+     * @param  array<int,string>|null  $groupIds
+     * @return array{dias:array<int,string>, matrix:array<int,array<int,int>>, max:int}
+     */
+    public function problemHeatmap(?array $groupIds = null, int $days = 7): array;
+
+    /**
+     * PREVENTIVO — Tráfego de rede: maiores consumidores (in/out em bits/s) pelo
+     * último valor dos itens net.if.*. Vazio se não houver esses itens coletados.
+     *
+     * @param  array<int,string>|null  $groupIds
+     * @return Collection<int, array{host:string,in:float,out:float}>
+     */
+    public function networkTraffic(?array $groupIds = null): Collection;
 }

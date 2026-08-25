@@ -292,6 +292,143 @@ class ApiZabbixRepository implements ZabbixRepositoryInterface
         return $out;
     }
 
+    public function diskForecast(?array $groupIds = null, int $days = 7): Collection
+    {
+        if (is_array($groupIds) && $groupIds === []) {
+            return collect();
+        }
+        $days = max(2, min(30, $days));
+
+        // Itens de disco (% usado) dos hosts do escopo.
+        $params = ['output' => ['itemid', 'key_', 'lastvalue'], 'selectHosts' => ['name'], 'search' => ['key_' => 'vfs.fs']];
+        if ($groupIds !== null) {
+            $params['groupids'] = array_values($groupIds);
+        }
+        $items = $this->call('item.get', $params);
+
+        // Por host, guarda o volume MAIS cheio (o mais crítico).
+        $byHost = [];
+        foreach ($items as $it) {
+            if (! str_contains((string) ($it['key_'] ?? ''), 'pused')) {
+                continue;
+            }
+            $host = (string) ($it['hosts'][0]['name'] ?? '—');
+            $last = (float) ($it['lastvalue'] ?? 0);
+            if (! isset($byHost[$host]) || $last > $byHost[$host]['current']) {
+                $byHost[$host] = ['itemid' => (string) $it['itemid'], 'current' => $last];
+            }
+        }
+        if (empty($byHost)) {
+            return collect();
+        }
+
+        // Tendência (média horária) do período p/ calcular a inclinação.
+        $trends = $this->call('trend.get', [
+            'output' => ['itemid', 'clock', 'value_avg'],
+            'itemids' => array_values(array_map(fn ($h) => $h['itemid'], $byHost)),
+            'time_from' => time() - $days * 86400,
+        ]);
+        $series = [];
+        foreach ($trends as $t) {
+            $series[(string) $t['itemid']][] = [(int) $t['clock'], (float) $t['value_avg']];
+        }
+
+        $out = [];
+        foreach ($byHost as $host => $info) {
+            $perDia = $this->slopePerDay($series[$info['itemid']] ?? []);
+            $current = (int) round($info['current']);
+            if ($perDia > 0.05 && $current < 100) { // só quem está enchendo (preventivo)
+                $out[] = [
+                    'host' => $host,
+                    'current' => $current,
+                    'perDia' => round($perDia, 2),
+                    'dias' => (int) ceil((100 - $current) / $perDia),
+                ];
+            }
+        }
+        usort($out, fn ($a, $b) => $a['dias'] <=> $b['dias']);
+
+        return collect($out);
+    }
+
+    /** Regressão linear simples → inclinação em % por DIA. */
+    private function slopePerDay(array $points): float
+    {
+        $n = count($points);
+        if ($n < 3) {
+            return 0.0;
+        }
+        $sx = $sy = $sxy = $sxx = 0.0;
+        $t0 = $points[0][0];
+        foreach ($points as [$t, $v]) {
+            $x = ($t - $t0) / 86400.0;
+            $sx += $x;
+            $sy += $v;
+            $sxy += $x * $v;
+            $sxx += $x * $x;
+        }
+        $den = $n * $sxx - $sx * $sx;
+
+        return abs($den) < 1e-9 ? 0.0 : ($n * $sxy - $sx * $sy) / $den;
+    }
+
+    public function problemHeatmap(?array $groupIds = null, int $days = 7): array
+    {
+        $dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        $matrix = array_fill(0, 7, array_fill(0, 24, 0));
+        if (is_array($groupIds) && $groupIds === []) {
+            return ['dias' => $dias, 'matrix' => $matrix, 'max' => 0];
+        }
+        $days = max(1, min(31, $days));
+
+        $params = ['output' => ['clock'], 'source' => 0, 'object' => 0, 'value' => 1, 'time_from' => time() - $days * 86400];
+        if ($groupIds !== null) {
+            $params['groupids'] = array_values($groupIds);
+        }
+        $events = $this->call('event.get', $params);
+
+        $max = 0;
+        foreach ($events as $e) {
+            $ts = (int) ($e['clock'] ?? 0);
+            $w = (int) date('w', $ts);
+            $h = (int) date('G', $ts);
+            $matrix[$w][$h]++;
+            $max = max($max, $matrix[$w][$h]);
+        }
+
+        return ['dias' => $dias, 'matrix' => $matrix, 'max' => $max];
+    }
+
+    public function networkTraffic(?array $groupIds = null): Collection
+    {
+        if (is_array($groupIds) && $groupIds === []) {
+            return collect();
+        }
+
+        $params = ['output' => ['key_', 'lastvalue'], 'selectHosts' => ['name'], 'search' => ['key_' => 'net.if']];
+        if ($groupIds !== null) {
+            $params['groupids'] = array_values($groupIds);
+        }
+        $items = $this->call('item.get', $params);
+
+        $byHost = [];
+        foreach ($items as $it) {
+            $key = (string) ($it['key_'] ?? '');
+            $isIn = str_contains($key, 'net.if.in');
+            $isOut = str_contains($key, 'net.if.out');
+            if (! $isIn && ! $isOut) {
+                continue;
+            }
+            $host = (string) ($it['hosts'][0]['name'] ?? '—');
+            $byHost[$host] ??= ['host' => $host, 'in' => 0.0, 'out' => 0.0];
+            $byHost[$host][$isIn ? 'in' : 'out'] += (float) ($it['lastvalue'] ?? 0);
+        }
+        $out = array_values($byHost);
+        usort($out, fn ($a, $b) => max($b['in'], $b['out']) <=> max($a['in'], $a['out']));
+
+        return collect(array_slice($out, 0, 10));
+    }
+
     // ----------------------------------------------------------------
 
     /** @return array<string, array{cpu:?int,ram:?int,disk:?int}> hostid => métricas */
