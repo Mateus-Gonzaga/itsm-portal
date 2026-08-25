@@ -27,6 +27,18 @@
     .ic-red   { background:linear-gradient(135deg,#e35d6a,#dc3545); }
     .dot { display:inline-block; width:.6rem; height:.6rem; border-radius:50%; margin-right:.35rem; }
     .nav-tabs .nav-link.active { font-weight:600; color:#067a45; border-bottom-color:#067a45; }
+
+    /* Saúde por cliente — faixa escaneável (assinatura da visão geral) */
+    .health-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:.75rem; }
+    .health-chip { display:block; text-decoration:none; color:inherit; border:1px solid var(--bs-border-color); border-left:4px solid var(--st,#0a9d5a); border-radius:12px; padding:.7rem .85rem; transition:.12s; background:var(--bs-body-bg); }
+    .health-chip:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(3,61,34,.10); border-color:#A8CF45; }
+    .health-chip .hc-top { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+    .health-chip .hc-name { font-weight:600; font-size:.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .health-chip .hc-ratio { font-family:'Rajdhani',sans-serif; font-weight:700; font-size:1.05rem; line-height:1; color:var(--st,#067a45); }
+    .health-chip .hc-bar { height:6px; border-radius:4px; background:var(--bs-secondary-bg); margin:.55rem 0 .4rem; overflow:hidden; }
+    .health-chip .hc-bar > span { display:block; height:100%; background:var(--st,#0a9d5a); border-radius:4px; }
+    .health-chip .hc-meta { display:flex; justify-content:space-between; align-items:center; font-size:.75rem; color:var(--bs-secondary-color); }
+    .health-chip .hc-alert { font-weight:700; color:#dc3545; }
 </style>
 @endpush
 
@@ -80,6 +92,47 @@
         <div class="col-sm-3 col-6"><div class="mon-card"><div class="ic ic-red"><i class="bi bi-exclamation-triangle"></i></div><div><div class="v">{{ $overview['problemas'] }}</div><div class="l">Problemas ativos</div></div></div></div>
     </div>
 
+    {{-- Saúde por cliente — panorama escaneável de todas as unidades (assinatura) --}}
+    @if ($clientesSaude->isNotEmpty())
+        <div class="mb-4">
+            <div class="d-flex align-items-baseline justify-content-between mb-2">
+                <h2 class="h6 mb-0"><i class="bi bi-heart-pulse text-success me-1"></i>Saúde por cliente</h2>
+                <span class="text-secondary small d-none d-sm-inline">clique num cliente para abrir o painel dele</span>
+            </div>
+            <div class="health-grid">
+                @foreach ($clientesSaude as $c)
+                    @php
+                        $pct = $c['total'] > 0 ? (int) round($c['online'] / $c['total'] * 100) : 0;
+                        $st = $c['offline'] === 0 ? '#0a9d5a' : ($c['offline'] >= (int) ceil($c['total'] * .34) ? '#dc3545' : '#f59e0b');
+                    @endphp
+                    <a class="health-chip" style="--st:{{ $st }}" href="{{ route('modules.analytics') }}?cliente={{ urlencode($c['cliente']) }}">
+                        <div class="hc-top">
+                            <span class="hc-name" title="{{ $c['cliente'] }}">{{ $c['cliente'] }}</span>
+                            <span class="hc-ratio">{{ $c['online'] }}<span class="text-secondary fs-6">/{{ $c['total'] }}</span></span>
+                        </div>
+                        <div class="hc-bar"><span style="width:{{ $pct }}%"></span></div>
+                        <div class="hc-meta">
+                            <span>{{ $pct }}% online</span>
+                            @if ($c['alertas'] > 0)
+                                <span class="hc-alert"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ $c['alertas'] }}</span>
+                            @else
+                                <span class="text-success">sem alertas</span>
+                            @endif
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    {{-- Tendência de problemas (últimas 24h) --}}
+    @if (! empty($trend))
+        <div class="card mb-4">
+            <div class="card-header bg-transparent fw-semibold"><i class="bi bi-graph-up-arrow me-1"></i> Novos problemas por hora <span class="text-secondary small fw-normal">(últimas 24h)</span></div>
+            <div class="card-body"><div id="trendChart" data-trend='@json($trend)' style="min-height:150px"></div></div>
+        </div>
+    @endif
+
     @php
         $topHostsData = $hosts->map(fn ($h) => [
             'name' => $h['name'], 'cpu' => $h['cpu'], 'ram' => $h['ram'], 'disk' => $h['disk'],
@@ -91,11 +144,11 @@
         <div class="col-lg-8">
             <div class="card h-100">
                 <div class="card-header bg-transparent fw-semibold"><i class="bi bi-hdd-stack me-1"></i> Hosts <span class="text-secondary small fw-normal">(clique num host para ver CPU/RAM/Disco e histórico)</span></div>
-                <div class="card-body">@include('modules.partials.hosts', ['hosts' => $hosts, 'metric' => $metric, 'avail' => $avail])</div>
+                <div class="card-body" style="max-height:420px; overflow-y:auto">@include('modules.partials.hosts', ['hosts' => $hosts, 'metric' => $metric, 'avail' => $avail])</div>
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="card h-100">
+            <div class="card">
                 <div class="card-header bg-transparent fw-semibold"><i class="bi bi-reception-4 me-1"></i> Disponibilidade</div>
                 <div class="card-body"><div id="availDonut" data-on="{{ $overview['disponiveis'] }}" data-off="{{ $overview['indisponiveis'] }}" data-unk="{{ max(0, $overview['hosts'] - $overview['disponiveis'] - $overview['indisponiveis']) }}"></div></div>
             </div>
@@ -254,6 +307,28 @@
             }).render();
         } else {
             topEl.innerHTML = '<p class="text-muted small mb-0 text-center py-4">Sem dados de uso ainda.</p>';
+        }
+    }
+
+    // ---- Tendência de problemas (24h) ----
+    var trendEl = document.getElementById('trendChart');
+    if (trendEl) {
+        var tdata = []; try { tdata = JSON.parse(trendEl.dataset.trend || '[]'); } catch (e) {}
+        var soma = tdata.reduce(function (s, p) { return s + (p[1] || 0); }, 0);
+        if (tdata.length && soma > 0) {
+            new ApexCharts(trendEl, {
+                chart: { type: 'area', height: 170, toolbar: { show: false }, animations: { enabled: false } },
+                series: [{ name: 'Novos problemas', data: tdata }],
+                colors: ['#dc3545'], stroke: { curve: 'smooth', width: 2 },
+                fill: { type: 'gradient', gradient: { opacityFrom: .3, opacityTo: .03 } },
+                dataLabels: { enabled: false },
+                xaxis: { type: 'datetime', labels: { datetimeUTC: false, format: 'HH:mm' } },
+                yaxis: { min: 0, forceNiceScale: true, labels: { formatter: function (v) { return Math.round(v); } } },
+                grid: { borderColor: 'rgba(0,0,0,.06)' },
+                tooltip: { x: { format: 'dd/MM HH:mm' }, y: { formatter: function (v) { return Math.round(v) + ' problema(s)'; } } },
+            }).render();
+        } else {
+            trendEl.innerHTML = '<p class="text-muted small mb-0 text-center py-4"><i class="bi bi-check-circle text-success me-1"></i>Sem novos problemas nas últimas 24h.</p>';
         }
     }
 

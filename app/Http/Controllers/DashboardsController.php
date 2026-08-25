@@ -52,11 +52,15 @@ class DashboardsController extends Controller
 
             if ($selected === null) {
                 // Visão Geral (todos).
+                $clientGroups = collect($map)->map(fn (array $m) => $m['all'])->all();
+
                 return view('modules.dashboards', [
                     'mode' => 'geral', 'clientes' => $clientes, 'selected' => null, 'error' => null,
                     'overview' => $zabbix->overview(),
                     'hosts' => $zabbix->hosts(),
                     'problems' => $zabbix->problems(),
+                    'clientesSaude' => $clientGroups ? $zabbix->clientsHealth($clientGroups) : collect(),
+                    'trend' => $zabbix->problemTrend(null, 24),
                 ]);
             }
 
@@ -84,6 +88,7 @@ class DashboardsController extends Controller
                 'error' => 'Não foi possível falar com o Zabbix: '.$e->getMessage(),
                 'overview' => ['hosts' => 0, 'disponiveis' => 0, 'indisponiveis' => 0, 'problemas' => 0, 'porSeveridade' => []],
                 'hosts' => collect(), 'problems' => collect(),
+                'clientesSaude' => collect(), 'trend' => [],
             ]);
         }
     }

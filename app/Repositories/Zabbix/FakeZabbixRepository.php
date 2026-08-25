@@ -70,4 +70,42 @@ class FakeZabbixRepository implements ZabbixRepositoryInterface
             ['severity' => 2, 'severityLabel' => 'Atenção', 'color' => 'warning', 'name' => 'Alto uso de CPU (> 90%)', 'host' => 'srv-empresaA-01', 'since' => CarbonImmutable::now()->subMinutes(25)],
         ]);
     }
+
+    public function clientsHealth(array $clientGroups): Collection
+    {
+        // Dados sintéticos coerentes com os clientes recebidos.
+        $i = 0;
+
+        return collect(array_keys($clientGroups))->map(function (string $cliente) use (&$i) {
+            $total = 3 + ($i % 3);
+            $offline = $i % 2; // 0 ou 1
+            $i++;
+
+            return [
+                'cliente' => $cliente,
+                'total' => $total,
+                'online' => $total - $offline,
+                'offline' => $offline,
+                'alertas' => $offline > 0 ? 1 : 0,
+            ];
+        })->sortBy('cliente')->values();
+    }
+
+    public function problemTrend(?array $groupIds = null, int $hours = 24): array
+    {
+        if (is_array($groupIds) && $groupIds === []) {
+            return [];
+        }
+        $hours = max(1, min(72, $hours));
+        $now = time();
+        $out = [];
+        for ($t = intdiv($now - $hours * 3600, 3600) * 3600; $t <= $now; $t += 3600) {
+            $h = (int) date('G', $t);
+            // "madrugada" mais calma, picos à tarde — só para ilustrar a linha.
+            $base = $h >= 8 && $h <= 20 ? 2 : 0;
+            $out[] = [$t * 1000, max(0, $base + ((int) round(2 * sin($t / 7000)) ))];
+        }
+
+        return $out;
+    }
 }

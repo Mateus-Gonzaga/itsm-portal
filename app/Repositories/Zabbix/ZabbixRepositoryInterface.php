@@ -41,4 +41,20 @@ interface ZabbixRepositoryInterface
      * @return Collection<int, array{severity:int,severityLabel:string,color:string,name:string,host:string,since:\Carbon\CarbonImmutable}>
      */
     public function problems(?array $groupIds = null): Collection;
+
+    /**
+     * Saúde resumida por cliente (leve: usada na Visão Geral).
+     *
+     * @param  array<string, array<int,string>>  $clientGroups  nome do cliente => groupIds
+     * @return Collection<int, array{cliente:string,total:int,online:int,offline:int,alertas:int}>
+     */
+    public function clientsHealth(array $clientGroups): Collection;
+
+    /**
+     * Quantidade de NOVOS problemas por hora nas últimas $hours horas.
+     *
+     * @param  array<int,string>|null  $groupIds
+     * @return array<int, array{0:int,1:int}>  cada ponto é [timestamp_ms, contagem]
+     */
+    public function problemTrend(?array $groupIds = null, int $hours = 24): array;
 }

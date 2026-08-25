@@ -194,6 +194,104 @@ class ApiZabbixRepository implements ZabbixRepositoryInterface
         })->sortByDesc('severity')->values();
     }
 
+    public function clientsHealth(array $clientGroups): Collection
+    {
+        $allIds = collect($clientGroups)->flatten()->unique()->values()->all();
+        if (empty($allIds)) {
+            return collect();
+        }
+
+        // 1 chamada: hosts (só disponibilidade + grupos), sem métricas de CPU/RAM.
+        $rows = $this->call('host.get', [
+            'output' => ['hostid', 'name', 'active_available'],
+            'selectHostGroups' => ['groupid'],
+            'groupids' => $allIds,
+        ]);
+
+        // Índice groupid => cliente (para classificar cada host).
+        $groupToClient = [];
+        foreach ($clientGroups as $cliente => $ids) {
+            foreach ($ids as $gid) {
+                $groupToClient[(string) $gid] = $cliente;
+            }
+        }
+
+        $health = [];
+        $hostClient = []; // nome do host => cliente (p/ contar alertas)
+        foreach ($clientGroups as $cliente => $_) {
+            $health[$cliente] = ['cliente' => $cliente, 'total' => 0, 'online' => 0, 'offline' => 0, 'alertas' => 0];
+        }
+        foreach ($rows as $h) {
+            $cliente = null;
+            foreach (($h['hostgroups'] ?? $h['groups'] ?? []) as $g) {
+                if (isset($groupToClient[(string) ($g['groupid'] ?? '')])) {
+                    $cliente = $groupToClient[(string) $g['groupid']];
+                    break;
+                }
+            }
+            if ($cliente === null) {
+                continue;
+            }
+            $health[$cliente]['total']++;
+            $avail = (int) ($h['active_available'] ?? 0);
+            if ($avail === 1) {
+                $health[$cliente]['online']++;
+            } elseif ($avail === 2) {
+                $health[$cliente]['offline']++;
+            }
+            $hostClient[(string) ($h['name'] ?? '')] = $cliente;
+        }
+
+        // Alertas por cliente: reaproveita problems() (problem.get + trigger.get) e mapeia pelo host.
+        foreach ($this->problems($allIds) as $p) {
+            $cliente = $hostClient[(string) $p['host']] ?? null;
+            if ($cliente !== null) {
+                $health[$cliente]['alertas']++;
+            }
+        }
+
+        return collect(array_values($health))->sortBy('cliente')->values();
+    }
+
+    public function problemTrend(?array $groupIds = null, int $hours = 24): array
+    {
+        if (is_array($groupIds) && $groupIds === []) {
+            return [];
+        }
+        $hours = max(1, min(72, $hours));
+        $from = time() - $hours * 3600;
+
+        $params = [
+            'output' => ['clock'],
+            'source' => 0, 'object' => 0, 'value' => 1, // eventos de PROBLEMA (trigger)
+            'time_from' => $from,
+            'sortfield' => ['clock'], 'sortorder' => 'ASC',
+        ];
+        if ($groupIds !== null) {
+            $params['groupids'] = array_values($groupIds);
+        }
+        $events = $this->call('event.get', $params);
+
+        // Baldes por hora (preenche zeros para uma linha contínua).
+        $buckets = [];
+        for ($t = intdiv($from, 3600) * 3600; $t <= time(); $t += 3600) {
+            $buckets[$t] = 0;
+        }
+        foreach ($events as $e) {
+            $h = intdiv((int) ($e['clock'] ?? 0), 3600) * 3600;
+            if (isset($buckets[$h])) {
+                $buckets[$h]++;
+            }
+        }
+
+        $out = [];
+        foreach ($buckets as $t => $c) {
+            $out[] = [$t * 1000, $c];
+        }
+
+        return $out;
+    }
+
     // ----------------------------------------------------------------
 
     /** @return array<string, array{cpu:?int,ram:?int,disk:?int}> hostid => métricas */
