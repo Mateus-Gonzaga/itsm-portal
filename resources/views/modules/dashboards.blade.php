@@ -85,11 +85,13 @@
             'name' => $h['name'], 'cpu' => $h['cpu'], 'ram' => $h['ram'], 'disk' => $h['disk'],
         ])->values();
     @endphp
+
+    {{-- HOSTS PRIMEIRO (lista clicável) + disponibilidade ao lado --}}
     <div class="row g-4 mb-4">
         <div class="col-lg-8">
             <div class="card h-100">
-                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-bar-chart-steps me-1"></i> Top hosts por uso <span class="text-secondary small fw-normal">(maior recurso)</span></div>
-                <div class="card-body"><div id="topHosts" data-hosts='@json($topHostsData)'></div></div>
+                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-hdd-stack me-1"></i> Hosts <span class="text-secondary small fw-normal">(clique num host para ver CPU/RAM/Disco e histórico)</span></div>
+                <div class="card-body">@include('modules.partials.hosts', ['hosts' => $hosts, 'metric' => $metric, 'avail' => $avail])</div>
             </div>
         </div>
         <div class="col-lg-4">
@@ -100,23 +102,30 @@
         </div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-lg-7">
+    {{-- Uso de recursos + severidade --}}
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
             <div class="card h-100">
-                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i> Problemas ativos</div>
-                <div class="card-body">@include('modules.partials.problems', ['problems' => $problems])</div>
+                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-bar-chart-steps me-1"></i> Top hosts por uso <span class="text-secondary small fw-normal">(maior recurso)</span></div>
+                <div class="card-body"><div id="topHosts" data-hosts='@json($topHostsData)'></div></div>
             </div>
         </div>
-        <div class="col-lg-5">
+        <div class="col-lg-4">
             @if (! empty($overview['porSeveridade']))
-                <div class="card mb-4">
+                <div class="card h-100">
                     <div class="card-header bg-transparent fw-semibold"><i class="bi bi-pie-chart me-1"></i> Problemas por severidade</div>
                     <div class="card-body"><div id="sevDonut" data-sev='@json($overview['porSeveridade'])'></div></div>
                 </div>
             @endif
+        </div>
+    </div>
+
+    {{-- Problemas ativos (largura total, por último) --}}
+    <div class="row g-4">
+        <div class="col-12">
             <div class="card">
-                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-hdd-stack me-1"></i> Hosts <span class="text-secondary small fw-normal">(clique num host)</span></div>
-                <div class="card-body">@include('modules.partials.hosts', ['hosts' => $hosts, 'metric' => $metric, 'avail' => $avail])</div>
+                <div class="card-header bg-transparent fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i> Problemas ativos</div>
+                <div class="card-body">@include('modules.partials.problems', ['problems' => $problems])</div>
             </div>
         </div>
     </div>
@@ -132,15 +141,15 @@
     <div class="card">
         <div class="card-header bg-transparent">
             <ul class="nav nav-tabs card-header-tabs" role="tablist">
-                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-resumo" type="button">Resumo</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-serv" type="button">Servidores <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $servidores->count() }}</span></button></li>
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-serv" type="button">Servidores <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $servidores->count() }}</span></button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-resumo" type="button">Resumo</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-caixas" type="button">Caixas <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $caixas->count() }}</span></button></li>
             </ul>
         </div>
         <div class="card-body">
             <div class="tab-content">
-                <div class="tab-pane fade show active" id="t-resumo">@include('modules.partials.problems', ['problems' => $problems])</div>
-                <div class="tab-pane fade" id="t-serv">@include('modules.partials.hosts', ['hosts' => $servidores, 'metric' => $metric, 'avail' => $avail])</div>
+                <div class="tab-pane fade show active" id="t-serv">@include('modules.partials.hosts', ['hosts' => $servidores, 'metric' => $metric, 'avail' => $avail])</div>
+                <div class="tab-pane fade" id="t-resumo">@include('modules.partials.problems', ['problems' => $problems])</div>
                 <div class="tab-pane fade" id="t-caixas">@include('modules.partials.hosts', ['hosts' => $caixas, 'metric' => $metric, 'avail' => $avail])</div>
             </div>
         </div>
