@@ -27,6 +27,9 @@ class InventoryController extends Controller
             $meta = $valores->get(($a['typeKey'] ?? '').'-'.($a['id'] ?? 0));
             $a['value'] = optional($meta)->value;
             $a['tag'] = optional($meta)->tag;
+            $a['modelo'] = optional($meta)->modelo;
+            // Coluna "Modelo": usa o do GLPI; se vazio, cai no informado no portal.
+            $a['model'] = $a['model'] ?: (string) ($a['modelo'] ?? '');
 
             return $a;
         });
@@ -58,19 +61,21 @@ class InventoryController extends Controller
             'itemtype' => ['required', 'string', 'max:60'],
             'id' => ['required', 'integer', 'min:1'],
             'tag' => ['nullable', 'string', 'max:60'],
+            'modelo' => ['nullable', 'string', 'max:120'],
             'value' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $value = $data['value'] !== null ? (float) $data['value'] : null;
         $tag = ! empty($data['tag']) ? trim($data['tag']) : null;
+        $modelo = ! empty($data['modelo']) ? trim($data['modelo']) : null;
 
-        // 1) Guarda no portal (fonte rápida para exibir/somar). Sem valor E sem etiqueta = remove a linha.
-        if ($value === null && $tag === null) {
+        // 1) Guarda no portal (fonte rápida para exibir/somar). Tudo vazio = remove a linha.
+        if ($value === null && $tag === null && $modelo === null) {
             AssetValue::where('itemtype', $data['itemtype'])->where('item_id', (int) $data['id'])->delete();
         } else {
             AssetValue::updateOrCreate(
                 ['itemtype' => $data['itemtype'], 'item_id' => (int) $data['id']],
-                ['tag' => $tag, 'value' => $value],
+                ['tag' => $tag, 'modelo' => $modelo, 'value' => $value],
             );
         }
 
@@ -95,6 +100,20 @@ class InventoryController extends Controller
         $details = $inventory->assetDetails($itemtype, $id);
         abort_if($details === null, 404, 'Ativo não encontrado ou fora do seu acesso.');
 
+        // Complementa com o que foi informado no portal (etiqueta/modelo), no topo.
+        $meta = AssetValue::where('itemtype', $itemtype)->where('item_id', $id)->first();
+        if ($meta) {
+            $fields = collect($details['fields']);
+            if (! empty($meta->modelo)) {
+                $fields = $fields->reject(fn ($f) => ($f['label'] ?? '') === 'Modelo')->values();
+                $fields->prepend(['label' => 'Modelo', 'value' => $meta->modelo]);
+            }
+            if (! empty($meta->tag)) {
+                $fields->prepend(['label' => 'Etiqueta', 'value' => $meta->tag]);
+            }
+            $details['fields'] = $fields->values()->all();
+        }
+
         return response()->json($details);
     }
 
@@ -107,6 +126,7 @@ class InventoryController extends Controller
             $meta = $valores->get(($a['typeKey'] ?? '').'-'.($a['id'] ?? 0));
             $a['value'] = optional($meta)->value;
             $a['tag'] = optional($meta)->tag;
+            $a['model'] = $a['model'] ?: (string) optional($meta)->modelo;
 
             return $a;
         });

@@ -98,7 +98,7 @@
                                 @if (! empty($a['value']))<span class="text-success fw-semibold">R$ {{ number_format($a['value'], 2, ',', '.') }}</span>@else<span class="text-muted">—</span>@endif
                                 @if ($isManager)
                                     <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-decoration-none js-set-value" title="Editar etiqueta/valor"
-                                            data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}" data-name="{{ $a['name'] }}" data-value="{{ $a['value'] }}" data-tag="{{ $a['tag'] }}"><i class="bi bi-pencil"></i></button>
+                                            data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}" data-name="{{ $a['name'] }}" data-value="{{ $a['value'] }}" data-tag="{{ $a['tag'] }}" data-modelo="{{ $a['modelo'] }}"><i class="bi bi-pencil"></i></button>
                                 @endif
                             </td>
                             @if ($isManager)
@@ -170,9 +170,11 @@
                 <p class="small text-secondary mb-2">Ativo: <strong id="vlName"></strong></p>
                 <label class="form-label small">Etiqueta / patrimônio</label>
                 <input type="text" name="tag" id="vlTag" class="form-control mb-3" maxlength="60" placeholder="Ex.: FL-0042">
+                <label class="form-label small">Modelo</label>
+                <input type="text" name="modelo" id="vlModelo" class="form-control mb-3" maxlength="120" placeholder="Ex.: Brother DCP-1610NW">
                 <label class="form-label small">Valor (R$)</label>
                 <input type="number" step="0.01" min="0" name="value" id="vlValue" class="form-control" placeholder="0,00">
-                <div class="form-text">Deixe etiqueta e valor em branco e salve para <strong>limpar</strong> ambos.</div>
+                <div class="form-text">O modelo do GLPI aparece automático quando existe; aqui você informa/ajusta manualmente. Deixe tudo em branco e salve para <strong>limpar</strong>.</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -217,6 +219,27 @@
     let typeFilter = '';
     let entityFilter = '';
 
+    // Estado inicial dos filtros vindo da URL — preserva a tela/pesquisa ao
+    // voltar de um salvamento (o back() do servidor mantém a query string).
+    const params = new URLSearchParams(location.search);
+    if (filterInput && params.get('q')) filterInput.value = params.get('q');
+    entityFilter = params.get('entidade') || '';
+    typeFilter = params.get('tipo') || '';
+    if (entitySel && entityFilter) entitySel.value = entityFilter;
+    document.querySelectorAll('.inv-card').forEach(function (c) {
+        c.classList.toggle('active', (c.dataset.type || '') === typeFilter);
+    });
+
+    // Mantém a URL em sincronia com os filtros visíveis (via replaceState).
+    function syncUrl() {
+        const p = new URLSearchParams();
+        if (filterInput && filterInput.value) p.set('q', filterInput.value);
+        if (entityFilter) p.set('entidade', entityFilter);
+        if (typeFilter) p.set('tipo', typeFilter);
+        const qs = p.toString();
+        history.replaceState(null, '', qs ? location.pathname + '?' + qs : location.pathname);
+    }
+
     const totalEl = document.getElementById('invTotal');
     const totalLabel = document.getElementById('invTotalLabel');
     function fmtBRL(n) { return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -234,6 +257,7 @@
         });
         if (totalEl) totalEl.textContent = fmtBRL(soma);
         if (totalLabel) totalLabel.textContent = entityFilter ? 'Valor dos ativos desta entidade' : 'Valor total do inventário';
+        syncUrl();
     }
     filterInput.addEventListener('input', apply);
     // Mantém o link do relatório apontando para a entidade filtrada (ou todas).
@@ -253,6 +277,10 @@
         });
     });
 
+    // Aplica os filtros vindos da URL já na abertura (preserva ao voltar de salvar).
+    apply();
+    syncReport();
+
     // Definir valor do ativo (gestor).
     const valueModalEl = document.getElementById('valueModal');
     if (valueModalEl && window.bootstrap) {
@@ -263,6 +291,7 @@
                 document.getElementById('vlId').value = btn.dataset.id;
                 document.getElementById('vlName').textContent = btn.dataset.name;
                 document.getElementById('vlTag').value = btn.dataset.tag || '';
+                document.getElementById('vlModelo').value = btn.dataset.modelo || '';
                 document.getElementById('vlValue').value = btn.dataset.value || '';
                 vmodal.show();
             });
