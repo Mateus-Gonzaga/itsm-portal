@@ -130,6 +130,22 @@
                             </div>
                         </form>
                     @endif
+                    @if ($clients->isNotEmpty())
+                        <form method="POST" action="{{ route('tickets.client', $ticket->id) }}" class="mb-3">
+                            @csrf
+                            <label class="form-label small mb-1">Cliente (solicitante)</label>
+                            <div class="input-group input-group-sm">
+                                <select name="requester_glpi_id" class="form-select" required>
+                                    <option value="">— trocar cliente —</option>
+                                    @foreach ($clients as $c)
+                                        <option value="{{ $c['id'] }}" @selected($ticket->requesterName === $c['name'])>{{ $c['name'] }}@if ($c['entity']) — {{ $c['entity'] }}@endif</option>
+                                    @endforeach
+                                </select>
+                                <button class="btn btn-outline-primary" title="Trocar cliente"><i class="bi bi-building"></i></button>
+                            </div>
+                            <div class="form-text">Move o chamado para a entidade do cliente escolhido.</div>
+                        </form>
+                    @endif
                     <form method="POST" action="{{ route('tickets.status', $ticket->id) }}">
                         @csrf
                         <label class="form-label small mb-1">Mudar status</label>

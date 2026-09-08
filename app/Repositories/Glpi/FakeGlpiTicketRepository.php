@@ -115,6 +115,24 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
         return $updated;
     }
 
+    public function changeRequester(int|string $id, int $userId, ?int $entityId, string $name): void
+    {
+        $t = $this->find($id);
+        if ($t === null) {
+            return;
+        }
+        $updated = new TicketData(
+            id: $t->id, title: $t->title, description: $t->description, status: $t->status,
+            priority: $t->priority, type: $t->type,
+            requesterName: $name, entity: $t->entity, createdAt: $t->createdAt,
+            technicianName: $t->technicianName, requesterGlpiId: $userId,
+            category: $t->category, dueDate: $t->dueDate, updatedAt: CarbonImmutable::now(),
+        );
+        $overrides = cache()->get(self::OVERRIDES_KEY, []);
+        $overrides[$id] = $updated;
+        cache()->forever(self::OVERRIDES_KEY, $overrides);
+    }
+
     public function timeline(int|string $id): Collection
     {
         $seeded = $this->seedComments()[$id] ?? [];

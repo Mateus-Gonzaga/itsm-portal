@@ -30,6 +30,12 @@ interface GlpiTicketRepositoryInterface
     public function update(int|string $id, array $attributes): TicketData;
 
     /**
+     * Troca o solicitante (cliente) do chamado e move para a entidade dele.
+     * Substitui o ator solicitante e ajusta entities_id.
+     */
+    public function changeRequester(int|string $id, int $userId, ?int $entityId, string $name): void;
+
+    /**
      * Linha do tempo do chamado (acompanhamentos/followups).
      *
      * @return Collection<int, TicketComment>

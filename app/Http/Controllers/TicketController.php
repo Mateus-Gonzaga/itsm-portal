@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Data\TicketData;
+use App\Models\AuditLog;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\TicketType;
@@ -53,10 +54,29 @@ class TicketController extends Controller
         return view('tickets.show', [
             'ticket' => $ticket,
             'timeline' => $this->tickets->timeline($id),
-            // Lista de técnicos/gestores para atribuição (só p/ staff).
+            // Listas para o staff: técnicos (atribuir) e clientes (trocar solicitante).
             'technicians' => $request->user()->role === UserRole::Cliente ? collect() : $this->staffTechnicians($dir),
+            'clients' => $request->user()->role === UserRole::Cliente ? collect() : $this->clientUsers($dir),
             'attachments' => $this->tickets->attachments($id),
         ]);
+    }
+
+    /** Troca o cliente (solicitante) do chamado após a abertura — só staff. */
+    public function changeClient(Request $request, int|string $id, GlpiDirectoryRepositoryInterface $dir): RedirectResponse
+    {
+        abort_if($this->tickets->find($id) === null, 404);
+
+        $data = $request->validate(['requester_glpi_id' => ['required', 'integer']]);
+
+        $cliente = $dir->users()->firstWhere('id', (int) $data['requester_glpi_id']);
+        abort_if($cliente === null, 422, 'Cliente não encontrado.');
+
+        $entityId = (int) ($cliente['entity_id'] ?? 0) ?: null;
+        $this->tickets->changeRequester($id, (int) $cliente['id'], $entityId, (string) $cliente['name']);
+        $this->tickets->addFollowup($id, 'Cliente do chamado alterado para '.$cliente['name'].' ('.($cliente['entity'] ?? '—').') por '.$request->user()->name.'.');
+        AuditLog::record('ticket.client.change', "Trocou cliente do chamado #{$id} para {$cliente['name']} (entidade #{$entityId})");
+
+        return back()->with('status', 'Cliente do chamado atualizado para '.$cliente['name'].'.');
     }
 
     /** Anexa arquivos (imagens/PDF) a um chamado existente. */
@@ -146,7 +166,7 @@ class TicketController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, GlpiDirectoryRepositoryInterface $dir): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -171,6 +191,11 @@ class TicketController extends Controller
             ? ['requester' => $data['requester_name'] ?: 'Cliente', 'requester_glpi_id' => (int) $data['requester_glpi_id']]
             : $this->requesterFilter($user);
 
+        // Entidade do chamado = entidade do SOLICITANTE (não a de quem abre).
+        // Resolvida no servidor pelo diretório do GLPI (não confia no formulário).
+        $requesterId = (int) ($requester['requester_glpi_id'] ?? $user->glpi_id);
+        $entityId = optional($dir->users()->firstWhere('id', $requesterId))['entity_id'] ?? null;
+
         // Técnico responsável: só o staff atribui (opcional) já na abertura.
         $technician = ($isStaff && ! empty($data['technician_glpi_id']))
             ? ['technician' => $data['technician_name'] ?: 'Técnico', 'technician_glpi_id' => (int) $data['technician_glpi_id']]
@@ -183,6 +208,7 @@ class TicketController extends Controller
             'type' => $data['type'],
             'category' => $data['category'] ?? null,
             'due_date' => $data['due_date'] ?? null,
+            'entity_id' => $entityId ? (int) $entityId : null,
             ...$requester,
             ...$technician,
         ]);

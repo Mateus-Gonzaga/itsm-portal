@@ -129,6 +129,10 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         if (! empty($attributes['technician_glpi_id'])) {
             $input['_users_id_assign'] = (int) $attributes['technician_glpi_id'];
         }
+        // Entidade do chamado = entidade do cliente/solicitante (coluna "Cliente").
+        if (! empty($attributes['entity_id'])) {
+            $input['entities_id'] = (int) $attributes['entity_id'];
+        }
         // Prazo de atendimento (SLA) — data-limite gravada direto no chamado.
         if (! empty($attributes['due_date'])) {
             $input['time_to_resolve'] = CarbonImmutable::parse($attributes['due_date'])->format('Y-m-d H:i:s');
@@ -168,6 +172,27 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         $this->client()->put("/Ticket/{$id}", ['input' => $input])->throw();
 
         return $this->find($id) ?? throw new RuntimeException("Chamado {$id} não encontrado após update.");
+    }
+
+    public function changeRequester(int|string $id, int $userId, ?int $entityId, string $name): void
+    {
+        // 1) Move o chamado para a entidade do cliente (é o que a coluna "Cliente" mostra).
+        if ($entityId) {
+            $this->client()->put("/Ticket/{$id}", ['input' => ['id' => (int) $id, 'entities_id' => $entityId]])->throw();
+        }
+
+        // 2) Remove o(s) solicitante(s) atual(is) (ator type 1) e define o novo.
+        $resp = $this->client()->get("/Ticket/{$id}/Ticket_User");
+        if ($resp->successful() && is_array($resp->json())) {
+            foreach ($resp->json() as $link) {
+                if ((int) ($link['type'] ?? 0) === 1 && ! empty($link['id'])) {
+                    $this->client()->delete('/Ticket_User/'.(int) $link['id']);
+                }
+            }
+        }
+        $this->client()->post('/Ticket_User', [
+            'input' => ['tickets_id' => (int) $id, 'users_id' => $userId, 'type' => 1],
+        ])->throw();
     }
 
     public function timeline(int|string $id): Collection
