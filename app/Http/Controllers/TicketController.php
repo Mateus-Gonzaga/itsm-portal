@@ -27,7 +27,7 @@ class TicketController extends Controller
     ) {
     }
 
-    public function index(Request $request): View
+    public function index(Request $request, GlpiDirectoryRepositoryInterface $dir): View
     {
         $user = $request->user();
         [$base, $heading] = match ($user->role) {
@@ -36,13 +36,25 @@ class TicketController extends Controller
             UserRole::Gestor => [[], 'Todos os chamados'],
         };
 
-        return $this->listView($request, $base, $heading);
+        return $this->listView($request, $base, $heading, $dir);
     }
 
     /** Chamados abertos pelo próprio usuário (usado pelo técnico). */
-    public function mine(Request $request): View
+    public function mine(Request $request, GlpiDirectoryRepositoryInterface $dir): View
     {
-        return $this->listView($request, $this->requesterFilter($request->user()), 'Meus chamados');
+        return $this->listView($request, $this->requesterFilter($request->user()), 'Meus chamados', $dir);
+    }
+
+    /**
+     * Mapa glpi_user_id => entidade (loja) do solicitante, com cache curto.
+     * A coluna "Cliente" usa isto para refletir a loja do cliente mesmo quando
+     * o chamado (por limitação do GLPI) ficou preso em outra entidade.
+     *
+     * @return array<int, string>
+     */
+    private function requesterEntityMap(GlpiDirectoryRepositoryInterface $dir): array
+    {
+        return cache()->remember('tickets_requester_entities', 60, fn () => $dir->users()->pluck('entity', 'id')->all());
     }
 
     public function show(Request $request, int|string $id, GlpiDirectoryRepositoryInterface $dir): View
@@ -58,6 +70,8 @@ class TicketController extends Controller
             'technicians' => $request->user()->role === UserRole::Cliente ? collect() : $this->staffTechnicians($dir),
             'clients' => $request->user()->role === UserRole::Cliente ? collect() : $this->clientUsers($dir),
             'attachments' => $this->tickets->attachments($id),
+            // "Cliente" = entidade (loja) do solicitante; cai para a entidade do chamado se não achar.
+            'clienteEntity' => $this->requesterEntityMap($dir)[$ticket->requesterGlpiId] ?? $ticket->entity,
         ]);
     }
 
@@ -76,7 +90,15 @@ class TicketController extends Controller
         $this->tickets->addFollowup($id, 'Cliente do chamado alterado para '.$cliente['name'].' ('.($cliente['entity'] ?? '—').') por '.$request->user()->name.'.');
         AuditLog::record('ticket.client.change', "Trocou cliente do chamado #{$id} para {$cliente['name']} (entidade #{$entityId})");
 
-        return back()->with('status', 'Cliente do chamado atualizado para '.$cliente['name'].'.');
+        // Se o cliente não tem loja (entidade) no GLPI, avisa — o chamado não tem para onde ir.
+        if ($entityId === null) {
+            return back()->with('error', 'Cliente "'.$cliente['name'].'" não tem loja (entidade) definida no GLPI. Ajuste a entidade do usuário no GLPI para o chamado ir para a loja.');
+        }
+
+        // Confirma a entidade resultante (diagnóstico: mostra para onde o chamado foi).
+        $depois = $this->tickets->find($id);
+
+        return back()->with('status', 'Cliente atualizado para '.$cliente['name'].'. Entidade do chamado: '.($depois?->entity ?? '—').'.');
     }
 
     /** Anexa arquivos (imagens/PDF) a um chamado existente. */
@@ -292,6 +314,19 @@ class TicketController extends Controller
         return back()->with('status', 'Status atualizado para "'.$label.'".');
     }
 
+    /** Exclui o chamado (move para a lixeira do GLPI) — staff. */
+    public function destroy(Request $request, int|string $id): RedirectResponse
+    {
+        $ticket = $this->tickets->find($id);
+        abort_if($ticket === null, 404);
+
+        $this->tickets->delete($id);
+        AuditLog::record('ticket.delete', "Excluiu (lixeira) o chamado #{$id} \"{$ticket->title}\"");
+
+        return redirect()->route('tickets.index')
+            ->with('status', "Chamado #{$id} excluído (movido para a lixeira do GLPI).");
+    }
+
     public function approve(Request $request, int|string $id): RedirectResponse
     {
         $ticket = $this->tickets->find($id);
@@ -357,7 +392,7 @@ class TicketController extends Controller
         abort_unless($owns, 403, 'Você não tem acesso a este chamado.');
     }
 
-    private function listView(Request $request, array $base, string $heading): View
+    private function listView(Request $request, array $base, string $heading, GlpiDirectoryRepositoryInterface $dir): View
     {
         $filters = $base;
         $status = $request->string('status')->value();
@@ -396,6 +431,7 @@ class TicketController extends Controller
             'currentStatus' => $status,
             'q' => $q,
             'heading' => $heading,
+            'reqEntities' => $this->requesterEntityMap($dir),
         ]);
     }
 }

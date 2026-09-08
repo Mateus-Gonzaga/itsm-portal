@@ -49,12 +49,21 @@
                                 {{ $ticket->title }}
                                 @if ($ticket->isOverdue())<span class="badge bg-danger ms-1">atrasado</span>@endif
                             </td>
-                            <td>{{ $ticket->entity }}</td>
+                            <td>{{ $reqEntities[$ticket->requesterGlpiId] ?? $ticket->entity }}</td>
                             <td>{{ $ticket->technicianName ?? '—' }}</td>
                             <td><span class="badge bg-{{ $ticket->priority->color() }}-subtle text-{{ $ticket->priority->color() }}-emphasis">{{ $ticket->priority->label() }}</span></td>
                             <td><span class="badge bg-{{ $ticket->status->color() }}">{{ $ticket->status->label() }}</span></td>
                             <td class="text-muted small">{{ $ticket->createdAt->format('d/m/Y') }}</td>
-                            <td><a href="{{ route('tickets.show', $ticket->id) }}" class="btn btn-sm btn-outline-secondary">Abrir</a></td>
+                            <td class="text-nowrap">
+                                <a href="{{ route('tickets.show', $ticket->id) }}" class="btn btn-sm btn-outline-secondary">Abrir</a>
+                                @if (auth()->user()->role->value !== 'cliente')
+                                    <form method="POST" action="{{ route('tickets.destroy', $ticket->id) }}" class="d-inline"
+                                          onsubmit="return confirm('Excluir o chamado #{{ $ticket->id }}? Ele vai para a lixeira do GLPI (reversível).')">
+                                        @csrf @method('DELETE')
+                                        <button class="btn btn-sm btn-outline-danger" title="Excluir chamado"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr><td colspan="8" class="text-center text-muted py-4">Nenhum chamado encontrado.</td></tr>

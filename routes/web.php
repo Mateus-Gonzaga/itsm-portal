@@ -113,6 +113,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware(['role:tecnico,gestor', 'throttle:120,1'])->group(function () {
         Route::post('/tickets/{id}/assign', [TicketController::class, 'assign'])->name('tickets.assign');
         Route::post('/tickets/{id}/cliente', [TicketController::class, 'changeClient'])->name('tickets.client');
+        Route::delete('/tickets/{id}', [TicketController::class, 'destroy'])->name('tickets.destroy');
         Route::post('/tickets/{id}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
         Route::post('/tickets/{id}/sla', [TicketController::class, 'updateSla'])->name('tickets.sla');
 

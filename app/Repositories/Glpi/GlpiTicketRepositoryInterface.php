@@ -35,6 +35,9 @@ interface GlpiTicketRepositoryInterface
      */
     public function changeRequester(int|string $id, int $userId, ?int $entityId, string $name): void;
 
+    /** Exclui o chamado (move para a lixeira do GLPI — reversível). */
+    public function delete(int|string $id): void;
+
     /**
      * Linha do tempo do chamado (acompanhamentos/followups).
      *

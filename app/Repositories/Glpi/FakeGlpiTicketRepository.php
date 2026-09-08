@@ -25,12 +25,15 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
     private const TICKETS_KEY = 'fake_glpi_tickets';
     private const TIMELINE_KEY = 'fake_glpi_timeline';
     private const OVERRIDES_KEY = 'fake_glpi_overrides';
+    private const DELETED_KEY = 'fake_glpi_deleted';
 
     public function all(array $filters = []): Collection
     {
         $overrides = cache()->get(self::OVERRIDES_KEY, []);
+        $deleted = cache()->get(self::DELETED_KEY, []);
 
         $tickets = $this->created()->merge($this->seed())
+            ->reject(fn (TicketData $t) => in_array($t->id, $deleted, true))
             ->map(fn (TicketData $t) => $overrides[$t->id] ?? $t);
 
         if (! empty($filters['status'])) {
@@ -131,6 +134,13 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
         $overrides = cache()->get(self::OVERRIDES_KEY, []);
         $overrides[$id] = $updated;
         cache()->forever(self::OVERRIDES_KEY, $overrides);
+    }
+
+    public function delete(int|string $id): void
+    {
+        $deleted = cache()->get(self::DELETED_KEY, []);
+        $deleted[] = (int) $id;
+        cache()->forever(self::DELETED_KEY, array_values(array_unique($deleted)));
     }
 
     public function timeline(int|string $id): Collection

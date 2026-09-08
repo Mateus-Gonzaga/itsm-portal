@@ -166,6 +166,13 @@
                                value="{{ $ticket->dueDate?->format('Y-m-d\TH:i') }}" required>
                         <button class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-clock me-1"></i> Salvar prazo</button>
                     </form>
+
+                    <hr class="my-3">
+                    <form method="POST" action="{{ route('tickets.destroy', $ticket->id) }}"
+                          onsubmit="return confirm('Excluir o chamado #{{ $ticket->id }}? Ele vai para a lixeira do GLPI (reversível).')">
+                        @csrf @method('DELETE')
+                        <button class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-trash me-1"></i> Excluir chamado</button>
+                    </form>
                 </div>
             </div>
         @endif
@@ -192,7 +199,7 @@
             <div class="card-body">
                 <dl class="row mb-0 small">
                     <dt class="col-5">Solicitante</dt><dd class="col-7">{{ $ticket->requesterName }}</dd>
-                    <dt class="col-5">Cliente</dt><dd class="col-7">{{ $ticket->entity }}</dd>
+                    <dt class="col-5">Cliente</dt><dd class="col-7">{{ $clienteEntity ?? $ticket->entity }}</dd>
                     <dt class="col-5">Técnico</dt><dd class="col-7">{{ $ticket->technicianName ?? 'Não atribuído' }}</dd>
                     <dt class="col-5">Categoria</dt><dd class="col-7">{{ $ticket->category ?? '—' }}</dd>
                     <dt class="col-5">Prioridade</dt><dd class="col-7"><span class="badge bg-{{ $ticket->priority->color() }}-subtle text-{{ $ticket->priority->color() }}-emphasis">{{ $ticket->priority->label() }}</span></dd>

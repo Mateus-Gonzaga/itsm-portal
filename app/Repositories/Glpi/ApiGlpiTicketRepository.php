@@ -195,6 +195,12 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         ])->throw();
     }
 
+    public function delete(int|string $id): void
+    {
+        // Sem force_purge => vai para a lixeira do GLPI (reversível).
+        $this->client()->delete("/Ticket/{$id}")->throw();
+    }
+
     public function timeline(int|string $id): Collection
     {
         $resp = $this->client()->get("/Ticket/{$id}/ITILFollowup", ['expand_dropdowns' => 'true']);
