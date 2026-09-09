@@ -263,7 +263,9 @@ class AgendaController extends Controller
             'end' => ['required', 'date', 'after:begin'],
         ]);
 
-        AgendaTask::where('id', (int) $data['event_id'])->update([
+        // find + update (instância) para disparar os eventos do modelo (sync Google).
+        $task = AgendaTask::find((int) $data['event_id']);
+        $task?->update([
             'start_at' => CarbonImmutable::parse($data['begin']),
             'end_at' => CarbonImmutable::parse($data['end']),
         ]);
@@ -279,7 +281,8 @@ class AgendaController extends Controller
             'done' => ['required', 'boolean'],
         ]);
 
-        AgendaTask::where('id', (int) $data['event_id'])->update(['done' => (bool) $data['done']]);
+        $task = AgendaTask::find((int) $data['event_id']);
+        $task?->update(['done' => (bool) $data['done']]);
 
         return response()->json(['ok' => true]);
     }
@@ -287,7 +290,7 @@ class AgendaController extends Controller
     /** Exclui uma tarefa livre (só a ocorrência). */
     public function destroyEvent(int $id): JsonResponse
     {
-        AgendaTask::where('id', $id)->delete();
+        AgendaTask::find($id)?->delete();
 
         return response()->json(['ok' => true]);
     }
@@ -297,7 +300,10 @@ class AgendaController extends Controller
     {
         $task = AgendaTask::find($id);
         if ($task && $task->series_id) {
-            AgendaTask::where('series_id', $task->series_id)->delete();
+            // apaga uma a uma (dispara eventos → remove do Google também)
+            foreach (AgendaTask::where('series_id', $task->series_id)->get() as $t) {
+                $t->delete();
+            }
         } elseif ($task) {
             $task->delete();
         }
