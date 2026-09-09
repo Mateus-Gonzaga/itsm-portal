@@ -159,3 +159,61 @@ a { color:var(--fl-green); } a:hover { color:var(--fl-green-dark); }
     background:#033d22; color:#fff; padding:4px 10px; border-radius:6px; font-size:.8rem; white-space:nowrap; z-index:1050; box-shadow:0 2px 8px rgba(0,0,0,.3);
   }
 }
+
+/* ============================================================
+   Refinamentos visuais (v2) — passe de polimento global
+   Aditivo: eleva todas as telas mantendo a identidade FOURLINE.
+   ============================================================ */
+
+/* Tipografia mais nítida + ritmo */
+body { -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; text-rendering:optimizeLegibility; }
+h1,h2,h3,h4 { letter-spacing:.2px; }
+::selection { background:rgba(168,207,69,.35); color:inherit; }
+
+/* Foco de formulário na cor da marca (antes: azul do Bootstrap) */
+:root { --bs-focus-ring-color:rgba(6,138,79,.25); }
+.form-control:focus, .form-select:focus, .form-check-input:focus {
+  border-color:var(--fl-green);
+  box-shadow:0 0 0 .2rem rgba(6,138,79,.18);
+}
+/* Checkbox/radio/switch marcados = verde da marca (consistência) */
+.form-check-input:checked { background-color:var(--fl-green); border-color:var(--fl-green); }
+
+/* Foco visível para teclado (acessibilidade) */
+.btn:focus-visible, a:focus-visible, .nav-link:focus-visible,
+.dropdown-item:focus-visible, .form-check-input:focus-visible {
+  outline:2px solid var(--fl-green-light); outline-offset:2px;
+}
+
+/* Botões: transição suave + micro "press" */
+.btn { transition:background-color .12s ease, border-color .12s ease, box-shadow .12s ease, transform .04s ease; }
+.btn:active { transform:translateY(1px); }
+
+/* Cabeçalho de tabela mais premium */
+.table thead th { text-transform:uppercase; letter-spacing:.03em; font-size:.75rem; font-weight:700; color:var(--muted-c); }
+
+/* Cards e topbar com profundidade sutil e cabeçalho mais respirado */
+.topbar { box-shadow:var(--shadow-sm); }
+.card-header { padding-top:var(--sp-3); padding-bottom:var(--sp-3); }
+
+/* Alertas: faixa lateral colorida + raio consistente */
+.alert { border:1px solid var(--border-c); border-left-width:4px; border-radius:var(--radius-sm); }
+.alert-success { border-left-color:var(--fl-green); }
+.alert-danger  { border-left-color:#dc3545; }
+.alert-warning { border-left-color:#f59e0b; }
+.alert-info    { border-left-color:#3b82f6; }
+
+/* Barras de rolagem finas e discretas (a sidebar continua sem barra) */
+* { scrollbar-width:thin; scrollbar-color:var(--border-c) transparent; }
+::-webkit-scrollbar { width:10px; height:10px; }
+::-webkit-scrollbar-thumb { background:var(--border-c); border-radius:999px; border:2px solid transparent; background-clip:content-box; }
+::-webkit-scrollbar-thumb:hover { background:var(--muted-c); background-clip:content-box; }
+
+/* Dropdowns e modais um pouco mais suaves */
+.dropdown-menu { border:1px solid var(--border-c); border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); }
+.modal-content { border:1px solid var(--border-c); border-radius:var(--radius); box-shadow:var(--shadow-lg); }
+
+/* Respeita "reduzir movimento" */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { transition-duration:.01ms !important; animation-duration:.01ms !important; scroll-behavior:auto !important; }
+}
