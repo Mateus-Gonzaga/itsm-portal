@@ -12,6 +12,10 @@
     .dot-sla  { background:#f59e0b; }
     .dot-event { background:linear-gradient(135deg,#6366f1,#4338ca); }
 
+    /* Cabeçalho da página */
+    .agenda-hero-ic { width:42px; height:42px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; font-size:1.25rem; color:#fff; background:linear-gradient(135deg,#0a9d5a,#067a45); flex:0 0 auto; box-shadow:0 3px 8px rgba(3,61,34,.25); }
+    .agenda-card { border:1px solid var(--bs-border-color); border-radius:16px; box-shadow:0 2px 10px rgba(3,61,34,.05); }
+
     /* ---- FullCalendar com a cara da marca ---- */
     .fc {
         --fc-border-color: var(--bs-border-color);
@@ -108,9 +112,12 @@
 @endpush
 
 @section('content')
-<div class="mb-3">
-    <h1 class="h4 mb-0">Agenda</h1>
-    <p class="text-secondary small mb-0">Tarefas dos chamados, prazos de atendimento e tarefas livres da equipe. Clique num dia para lançar uma tarefa.</p>
+<div class="d-flex align-items-center gap-2 mb-3">
+    <span class="agenda-hero-ic"><i class="bi bi-calendar-week"></i></span>
+    <div>
+        <h1 class="h4 mb-0">Agenda</h1>
+        <p class="text-secondary small mb-0">Chamados, prazos (SLA) e tarefas da equipe num só lugar. Clique num dia para lançar uma tarefa.</p>
+    </div>
 </div>
 
 {{-- ===================== QUADRO KANBAN DA EQUIPE ===================== --}}
@@ -153,11 +160,7 @@
     }
 </style>
 
-<p class="text-secondary small mb-0 mt-4"><i class="bi bi-info-circle me-1"></i>Clique em <strong>+ Adicionar cartão</strong> numa coluna. Arraste os cartões entre as colunas — salva sozinho.</p>
-@include('partials.kanban-board', ['board' => 'equipe', 'title' => 'Quadro da equipe', 'icon' => 'bi-kanban', 'headClass' => 'text-success', 'btnClass' => 'btn-success', 'cards' => $kanban])
-@include('partials.kanban-board', ['board' => 'urgente', 'title' => 'Atenção / Urgente', 'icon' => 'bi-exclamation-triangle-fill', 'headClass' => 'text-danger', 'btnClass' => 'btn-danger', 'cards' => $kanbanUrgente])
-
-<div class="card agenda-card mt-4">
+<div class="card agenda-card">
     <div class="card-header d-flex flex-wrap gap-3 align-items-center justify-content-between py-3">
         <div class="agenda-toolbar">
             @if ($canFilter && $technicians->isNotEmpty())
@@ -193,6 +196,14 @@
         <div id="calendar"></div>
     </div>
 </div>
+
+{{-- ===================== QUADROS DA EQUIPE (abaixo do calendário) ===================== --}}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4 mb-2">
+    <h2 class="h5 mb-0"><i class="bi bi-kanban text-success me-1"></i>Quadros da equipe</h2>
+    <span class="text-secondary small"><i class="bi bi-info-circle me-1"></i>Clique em <strong>+ Adicionar cartão</strong> numa coluna e arraste entre elas — salva sozinho.</span>
+</div>
+@include('partials.kanban-board', ['board' => 'equipe', 'title' => 'Quadro da equipe', 'icon' => 'bi-kanban', 'headClass' => 'text-success', 'btnClass' => 'btn-success', 'cards' => $kanban])
+@include('partials.kanban-board', ['board' => 'urgente', 'title' => 'Atenção / Urgente', 'icon' => 'bi-exclamation-triangle-fill', 'headClass' => 'text-danger', 'btnClass' => 'btn-danger', 'cards' => $kanbanUrgente])
 
 {{-- Modal: cartão do Kanban --}}
 <div class="modal fade" id="cardModal" tabindex="-1" aria-hidden="true">

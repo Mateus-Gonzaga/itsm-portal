@@ -3,6 +3,7 @@
 Histórico cronológico (nunca apagar).
 
 ## 2026-09-09
+- **Agenda — calendário em cima, quadros embaixo + design.** Invertida a ordem: o **calendário** agora abre no topo e os **quadros Kanban** (equipe + Atenção/Urgente) vão para baixo, sob a seção "Quadros da equipe". Cabeçalho da página com ícone/hierarquia, card do calendário com borda/sombra suaves. Arquivo: `resources/views/agenda/index.blade.php`.
 - **Base de conhecimento — preview ao clicar no card.** Clicar num registro abre um modal com o **conteúdo completo** (sem truncar), metadados (cliente/valor/ativos/atualização) e os **anexos pré-visualizados**: imagens inline e **PDF/documento embutido em iframe** (com link "abrir em nova aba"). Cliques em editar/excluir/anexo não disparam o preview (guard por `closest('button,a,form,...')`). Dados dos anexos embutidos por card via `<script type="application/json">` (evita quebra de aspas). Arquivo: `resources/views/modules/knowledge.blade.php`.
 
 ## 2026-09-08 (2)
