@@ -2,6 +2,9 @@
 
 Histórico cronológico (nunca apagar).
 
+## 2026-09-09
+- **Base de conhecimento — preview ao clicar no card.** Clicar num registro abre um modal com o **conteúdo completo** (sem truncar), metadados (cliente/valor/ativos/atualização) e os **anexos pré-visualizados**: imagens inline e **PDF/documento embutido em iframe** (com link "abrir em nova aba"). Cliques em editar/excluir/anexo não disparam o preview (guard por `closest('button,a,form,...')`). Dados dos anexos embutidos por card via `<script type="application/json">` (evita quebra de aspas). Arquivo: `resources/views/modules/knowledge.blade.php`.
+
 ## 2026-09-08 (2)
 - **Excluir chamado + "Cliente" reflete a loja do solicitante.** (1) **Exclusão** de chamado (staff): botão na lista (por linha) e na tela do chamado, com confirmação; move para a **lixeira do GLPI** (reversível, `DELETE /Ticket/{id}` sem force_purge). Método `delete()` na interface + Api + Fake; rota `tickets.destroy` (role:tecnico,gestor); auditoria. (2) A coluna/detalhe **"Cliente"** passou a mostrar a **entidade (loja) do solicitante** (mapa `glpi_user_id → entidade`, cache 60s), e não mais a entidade "presa" do chamado — assim a troca de cliente reflete na hora mesmo quando o GLPI não move a entidade do chamado antigo. `changeClient` agora avisa se o cliente não tem loja no GLPI e mostra a entidade resultante. Arquivos: `app/Http/Controllers/TicketController.php`, `app/Repositories/Glpi/{GlpiTicketRepositoryInterface,ApiGlpiTicketRepository,FakeGlpiTicketRepository}.php`, `resources/views/tickets/{index,show}.blade.php`, `routes/web.php`.
 

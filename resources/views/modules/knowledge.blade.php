@@ -46,7 +46,14 @@
 <div class="row g-3">
     @forelse ($artigos as $a)
         <div class="col-md-6 col-xl-4">
-            <div class="kb-card">
+            <div class="kb-card" role="button" tabindex="0" style="cursor:pointer" title="Clique para ver o registro completo"
+                 onclick="openKbPreview(this, event)"
+                 data-titulo="{{ $a->titulo }}" data-cliente="{{ $a->cliente }}" data-categoria="{{ $a->categoria }}"
+                 data-valor="{{ $a->valor ? 'R$ '.number_format($a->valor, 2, ',', '.') : '' }}"
+                 data-conteudo="{{ $a->conteudo }}"
+                 data-ativos="{{ ($a->cliente && isset($ativosPorEntidade[$a->cliente])) ? 'R$ '.number_format($ativosPorEntidade[$a->cliente], 2, ',', '.') : '' }}"
+                 data-atualizado="{{ $a->updated_at?->format('d/m/Y H:i') }}">
+                <script type="application/json" class="js-kb-anexos-data">@json($a->attachments->map(fn ($x) => ['url' => route('kb.attachment', $x), 'name' => $x->original_name, 'image' => $x->isImage()])->values())</script>
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                     <span class="badge bg-success-subtle text-success-emphasis">{{ $a->categoria }}</span>
                     <div class="text-nowrap">
@@ -104,6 +111,33 @@
 <datalist id="kbClientes">
     @foreach ($clientes as $c)<option value="{{ $c }}">@endforeach
 </datalist>
+
+{{-- Modal: preview (visualização) do registro --}}
+<div class="modal fade" id="kbPreview" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <span class="badge bg-success-subtle text-success-emphasis" id="kbp_categoria"></span>
+                    <h5 class="modal-title mt-1 mb-0" id="kbp_titulo"></h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="small text-secondary mb-2" id="kbp_meta"></div>
+                <div id="kbp_conteudo" class="mb-3" style="white-space:pre-line"></div>
+                <div id="kbp_anexos_wrap" class="d-none">
+                    <hr>
+                    <div class="fw-semibold small mb-2"><i class="bi bi-paperclip me-1"></i>Anexos</div>
+                    <div id="kbp_anexos" class="d-flex flex-column gap-3"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {{-- Modal: novo/editar registro --}}
 <div class="modal fade" id="kbModal" tabindex="-1" aria-hidden="true">
@@ -209,6 +243,61 @@
     $('kb_ativos_usar').addEventListener('click', function () {
         $('kb_valor').value = this.dataset.v || '';
     });
+
+    // ---- Preview (visualização) do registro ao clicar no card ----
+    const preview = new bootstrap.Modal(document.getElementById('kbPreview'));
+    window.openKbPreview = function (el, event) {
+        // Não abre o preview quando o clique foi num botão/link/form (editar, excluir, anexo).
+        if (event && event.target.closest('button, a, form, input, textarea')) return;
+
+        $('kbp_categoria').textContent = el.dataset.categoria || '';
+        $('kbp_titulo').textContent = el.dataset.titulo || '(sem título)';
+        $('kbp_conteudo').textContent = el.dataset.conteudo || 'Sem conteúdo.';
+
+        const meta = [];
+        if (el.dataset.cliente) meta.push('Cliente: ' + el.dataset.cliente);
+        if (el.dataset.valor) meta.push('Valor: ' + el.dataset.valor);
+        if (el.dataset.ativos) meta.push('Ativos (inventário): ' + el.dataset.ativos);
+        if (el.dataset.atualizado) meta.push('Atualizado em ' + el.dataset.atualizado);
+        $('kbp_meta').textContent = meta.join('  ·  ');
+
+        // Anexos: imagens inline; PDF/documento embutido (iframe) para pré-visualizar.
+        const wrap = $('kbp_anexos_wrap'), box = $('kbp_anexos');
+        box.innerHTML = '';
+        let anexos = [];
+        try { anexos = JSON.parse(el.querySelector('.js-kb-anexos-data')?.textContent || '[]'); } catch (e) {}
+
+        anexos.forEach(function (a) {
+            const item = document.createElement('div');
+            const head = document.createElement('div');
+            head.className = 'd-flex justify-content-between align-items-center mb-1 gap-2';
+            const nome = document.createElement('span');
+            nome.className = 'small text-truncate';
+            nome.textContent = a.name || 'anexo';
+            const link = document.createElement('a');
+            link.href = a.url; link.target = '_blank'; link.rel = 'noopener';
+            link.className = 'small text-nowrap text-decoration-none';
+            link.textContent = 'Abrir em nova aba ↗';
+            head.append(nome, link);
+            item.appendChild(head);
+
+            if (a.image) {
+                const img = document.createElement('img');
+                img.src = a.url; img.loading = 'lazy';
+                img.className = 'img-fluid rounded border';
+                item.appendChild(img);
+            } else {
+                const frame = document.createElement('iframe');
+                frame.src = a.url; frame.title = a.name || 'documento';
+                frame.setAttribute('style', 'width:100%;height:65vh;border:1px solid var(--bs-border-color);border-radius:8px');
+                item.appendChild(frame);
+            }
+            box.appendChild(item);
+        });
+
+        wrap.classList.toggle('d-none', anexos.length === 0);
+        preview.show();
+    };
 })();
 </script>
 @endpush
