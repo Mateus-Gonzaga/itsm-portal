@@ -53,7 +53,14 @@
                  data-conteudo="{{ $a->conteudo }}"
                  data-ativos="{{ ($a->cliente && isset($ativosPorEntidade[$a->cliente])) ? 'R$ '.number_format($ativosPorEntidade[$a->cliente], 2, ',', '.') : '' }}"
                  data-atualizado="{{ $a->updated_at?->format('d/m/Y H:i') }}">
-                <script type="application/json" class="js-kb-anexos-data">@json($a->attachments->map(fn ($x) => ['url' => route('kb.attachment', $x), 'name' => $x->original_name, 'image' => $x->isImage()])->values())</script>
+                @php
+                    $kbAnexos = $a->attachments->map(fn ($x) => [
+                        'url' => route('kb.attachment', $x),
+                        'name' => $x->original_name,
+                        'image' => $x->isImage(),
+                    ])->values();
+                @endphp
+                <script type="application/json" class="js-kb-anexos-data">@json($kbAnexos)</script>
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                     <span class="badge bg-success-subtle text-success-emphasis">{{ $a->categoria }}</span>
                     <div class="text-nowrap">
