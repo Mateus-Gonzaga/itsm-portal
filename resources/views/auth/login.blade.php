@@ -17,7 +17,7 @@
             <div class="mb-3">
                 <label class="form-label">Usuário</label>
                 <input type="text" name="login" value="{{ old('login') }}" class="form-control" required autofocus
-                       autocapitalize="none" autocomplete="username" placeholder="seu usuário do GLPI">
+                       autocapitalize="none" autocomplete="username" placeholder="seu usuário FOURLINE">
             </div>
             <div class="mb-3">
                 <label class="form-label">Senha</label>
@@ -34,6 +34,6 @@
     </div>
 </div>
 <p class="text-center text-muted small mt-3 mb-0">
-    Entre com seu <strong>usuário do GLPI</strong>.
+    Entre com seu <strong>usuário FOURLINE</strong>.
 </p>
 @endsection
