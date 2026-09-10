@@ -32,7 +32,8 @@ class FakeGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
             ['id' => 21, 'login' => 'drogacei01', 'name' => 'drogacei01', 'active' => true, 'profile_id' => 1, 'profile' => 'Self-Service', 'entity_id' => 3, 'entity' => 'Entidade raiz > CLIENTES > Drogacei > FL 01 - Setor O', 'recursive' => false],
             ['id' => 18, 'login' => 'meldosol', 'name' => 'meldosol', 'active' => true, 'profile_id' => 1, 'profile' => 'Self-Service', 'entity_id' => 4, 'entity' => 'Entidade raiz > CLIENTES > Mel do Sol', 'recursive' => false],
             ['id' => 45, 'login' => 'joao.fourline', 'name' => 'joao.fourline', 'active' => true, 'profile_id' => 9, 'profile' => 'Técnico FL', 'entity_id' => 1, 'entity' => 'Entidade raiz > CLIENTES', 'recursive' => true],
-            ['id' => 44, 'login' => 'mateus.fourline', 'name' => 'mateus.fourline', 'active' => true, 'profile_id' => 10, 'profile' => 'Gestor', 'entity_id' => 1, 'entity' => 'Entidade raiz > CLIENTES', 'recursive' => true],
+            ['id' => 44, 'login' => 'mateus.fourline', 'name' => 'mateus.fourline', 'active' => true, 'profile_id' => 9, 'profile' => 'Técnico FL', 'entity_id' => 1, 'entity' => 'Entidade raiz > CLIENTES', 'recursive' => true],
+            ['id' => 46, 'login' => 'halley.fourline', 'name' => 'Halley Santos', 'active' => true, 'profile_id' => 10, 'profile' => 'Gestor', 'entity_id' => 1, 'entity' => 'Entidade raiz > CLIENTES', 'recursive' => true],
         ]);
     }
 

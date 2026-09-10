@@ -22,14 +22,18 @@
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-sm-3 col-6"><div class="stat-card"><div class="ic"><i class="bi bi-person-badge"></i></div><div><div class="v">{{ $stats['tecnicos'] }}</div><div class="l">Técnicos</div></div></div></div>
-    <div class="col-sm-3 col-6"><div class="stat-card"><div class="ic"><i class="bi bi-ticket-detailed"></i></div><div><div class="v">{{ $stats['atribuidos'] }}</div><div class="l">Chamados atribuídos</div></div></div></div>
-    <div class="col-sm-3 col-6"><div class="stat-card"><div class="ic"><i class="bi bi-hourglass-split"></i></div><div><div class="v">{{ $stats['abertos'] }}</div><div class="l">Em atendimento</div></div></div></div>
-    <div class="col-sm-3 col-6"><div class="stat-card"><div class="ic"><i class="bi bi-calendar-check"></i></div><div><div class="v">{{ $stats['agendados'] }}</div><div class="l">Agendamentos futuros</div></div></div></div>
+    <div class="col-sm col-6"><div class="stat-card"><div class="ic"><i class="bi bi-person-badge"></i></div><div><div class="v">{{ $stats['tecnicos'] }}</div><div class="l">Técnicos</div></div></div></div>
+    <div class="col-sm col-6"><div class="stat-card"><div class="ic" style="background:linear-gradient(135deg,#045c34,#033d22)"><i class="bi bi-person-gear"></i></div><div><div class="v">{{ $stats['gestores'] }}</div><div class="l">Gestores</div></div></div></div>
+    <div class="col-sm col-6"><div class="stat-card"><div class="ic"><i class="bi bi-ticket-detailed"></i></div><div><div class="v">{{ $stats['atribuidos'] }}</div><div class="l">Chamados atribuídos</div></div></div></div>
+    <div class="col-sm col-6"><div class="stat-card"><div class="ic"><i class="bi bi-hourglass-split"></i></div><div><div class="v">{{ $stats['abertos'] }}</div><div class="l">Em atendimento</div></div></div></div>
+    <div class="col-sm col-6"><div class="stat-card"><div class="ic"><i class="bi bi-calendar-check"></i></div><div><div class="v">{{ $stats['agendados'] }}</div><div class="l">Agendamentos futuros</div></div></div></div>
 </div>
 
-<div class="card">
-    <div class="card-header bg-transparent fw-semibold"><i class="bi bi-people me-1"></i> Equipe</div>
+<div class="card mb-4">
+    <div class="card-header bg-transparent fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-person-badge me-1"></i> Técnicos</span>
+        <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $rowsTecnicos->count() }}</span>
+    </div>
     <div class="card-body">
         <div class="table-wrap">
             <table class="table table-hover align-middle mb-0">
@@ -42,7 +46,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($rows as $r)
+                    @forelse ($rowsTecnicos as $r)
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
@@ -64,11 +68,69 @@
                                 </form>
                                 <button class="btn btn-sm btn-outline-secondary" onclick="editTech(this)"
                                         data-id="{{ $r['id'] }}" data-login="{{ $r['login'] }}" data-name="{{ $r['name'] }}"
-                                        data-entity="{{ $r['entity_id'] }}" data-recursive="{{ $r['recursive'] ? 1 : 0 }}" data-active="{{ $r['active'] ? 1 : 0 }}"><i class="bi bi-pencil"></i></button>
+                                        data-entity="{{ $r['entity_id'] }}" data-recursive="{{ $r['recursive'] ? 1 : 0 }}" data-active="{{ $r['active'] ? 1 : 0 }}"
+                                        data-profile="{{ $r['profile_id'] }}" data-role-title="Editar técnico"><i class="bi bi-pencil"></i></button>
                             </td>
                         </tr>
                     @empty
                         <tr><td colspan="8" class="text-center text-muted py-4">Nenhum técnico (perfil "Técnico FL"). Use "Adicionar técnico".</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-transparent fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-person-gear me-1"></i> Gestores</span>
+        <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $rowsGestores->count() }}</span>
+    </div>
+    <div class="card-body">
+        <div class="table-wrap">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Gestor</th><th>Escopo</th>
+                        <th class="text-center">Atribuídos</th><th class="text-center">Em aberto</th>
+                        <th class="text-center">Resolvidos</th><th class="text-center">Agenda</th>
+                        <th class="text-center">Status</th><th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($rowsGestores as $r)
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="tech-avatar" style="background:#068A4F; color:#fff">{{ mb_strtoupper(mb_substr($r['name'], 0, 1)) }}</span>
+                                    <div>
+                                        <span class="fw-semibold">{{ $r['name'] }}</span>
+                                        @if (! empty($r['profile']) && $r['profile'] !== 'Gestor')
+                                            <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1" style="font-size: .75rem">{{ $r['profile'] }}</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="small text-secondary">{{ $r['entity'] }} @if ($r['recursive'])<span class="badge bg-success-subtle text-success-emphasis ms-1">+ sub</span>@endif</td>
+                            <td class="text-center">{{ $r['atribuidos'] }}</td>
+                            <td class="text-center">@if ($r['abertos'] > 0)<span class="badge bg-warning-subtle text-warning-emphasis">{{ $r['abertos'] }}</span>@else<span class="text-muted">0</span>@endif</td>
+                            <td class="text-center">@if ($r['resolvidos'] > 0)<span class="badge bg-success-subtle text-success-emphasis">{{ $r['resolvidos'] }}</span>@else<span class="text-muted">0</span>@endif</td>
+                            <td class="text-center">@if ($r['agendados'] > 0)<span class="badge bg-primary-subtle text-primary-emphasis"><i class="bi bi-calendar-event me-1"></i>{{ $r['agendados'] }}</span>@else<span class="text-muted">—</span>@endif</td>
+                            <td class="text-center">@if ($r['active'])<span class="badge bg-success-subtle text-success-emphasis">Ativo</span>@else<span class="badge bg-secondary-subtle text-secondary-emphasis">Inativo</span>@endif</td>
+                            <td class="text-end text-nowrap">
+                                <form method="POST" action="{{ route('directory.users.toggle', $r['id']) }}" class="d-inline">
+                                    @csrf @method('PUT')
+                                    <input type="hidden" name="active" value="{{ $r['active'] ? 0 : 1 }}">
+                                    <button class="btn btn-sm btn-outline-{{ $r['active'] ? 'warning' : 'success' }}" title="{{ $r['active'] ? 'Desativar' : 'Ativar' }}"><i class="bi bi-{{ $r['active'] ? 'pause-fill' : 'play-fill' }}"></i></button>
+                                </form>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="editTech(this)"
+                                        data-id="{{ $r['id'] }}" data-login="{{ $r['login'] }}" data-name="{{ $r['name'] }}"
+                                        data-entity="{{ $r['entity_id'] }}" data-recursive="{{ $r['recursive'] ? 1 : 0 }}" data-active="{{ $r['active'] ? 1 : 0 }}"
+                                        data-profile="{{ $r['profile_id'] }}" data-role-title="Editar gestor"><i class="bi bi-pencil"></i></button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="8" class="text-center text-muted py-4">Nenhum gestor encontrado.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -83,7 +145,7 @@
             <form id="techForm" method="POST">
                 @csrf
                 <input type="hidden" name="_method" id="t_method" value="POST">
-                <input type="hidden" name="profile_id" value="{{ $tecnicoProfileId }}">
+                <input type="hidden" name="profile_id" id="t_profile_id" value="{{ $tecnicoProfileId }}">
                 <div class="modal-header"><h5 class="modal-title" id="t_title">Adicionar técnico</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <div class="row">
@@ -120,14 +182,16 @@
     window.openTech = function () {
         $('t_title').textContent = 'Adicionar técnico';
         $('techForm').action = STORE; $('t_method').value = 'POST';
+        $('t_profile_id').value = '{{ $tecnicoProfileId }}';
         $('t_login').value = ''; $('t_login').readOnly = false; $('t_name').value = '';
         $('t_password').required = true; $('t_pwhint').textContent = '(mínimo 6 caracteres)';
         $('t_recursive').checked = true; $('t_active').checked = true;
         modal.show();
     };
     window.editTech = function (btn) {
-        $('t_title').textContent = 'Editar técnico';
+        $('t_title').textContent = btn.dataset.roleTitle || 'Editar técnico';
         $('techForm').action = UPD + '/' + btn.dataset.id; $('t_method').value = 'PUT';
+        $('t_profile_id').value = btn.dataset.profile || '{{ $tecnicoProfileId }}';
         $('t_login').value = btn.dataset.login; $('t_login').readOnly = true;
         $('t_name').value = btn.dataset.name; $('t_entity').value = btn.dataset.entity;
         $('t_recursive').checked = btn.dataset.recursive === '1'; $('t_active').checked = btn.dataset.active === '1';
