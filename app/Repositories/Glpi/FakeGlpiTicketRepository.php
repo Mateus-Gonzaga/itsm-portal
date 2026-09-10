@@ -49,7 +49,8 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
             $tickets = $tickets->filter(fn (TicketData $t) => $t->entity === $filters['entity']);
         }
 
-        return $tickets->values();
+        // Mais recente primeiro (ID decrescente: 321 em vez de 123)
+        return $tickets->sortByDesc(fn (TicketData $t) => (int) $t->id)->values();
     }
 
     public function find(int|string $id): ?TicketData

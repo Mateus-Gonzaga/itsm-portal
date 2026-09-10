@@ -70,20 +70,22 @@
                 </a>
             @endif
         </div>
-        <div class="d-flex justify-content-end mb-2">
-            <span class="badge bg-success-subtle text-success-emphasis fs-6">
-                <i class="bi bi-cash-coin me-1"></i><span id="invTotalLabel">Valor total do inventário</span>:
-                R$ <span id="invTotal">{{ number_format($valorTotal, 2, ',', '.') }}</span>
-            </span>
-        </div>
+        @if ($canSeeValues)
+            <div class="d-flex justify-content-end mb-2">
+                <span class="badge bg-success-subtle text-success-emphasis fs-6">
+                    <i class="bi bi-cash-coin me-1"></i><span id="invTotalLabel">Valor total do inventário</span>:
+                    R$ <span id="invTotal">{{ number_format($valorTotal, 2, ',', '.') }}</span>
+                </span>
+            </div>
+        @endif
         <div class="table-wrap">
             <table class="table table-hover align-middle mb-0">
                 <thead>
-                    <tr><th>Etiqueta</th><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Fabricante</th><th>Nº de série</th><th>Status</th><th class="text-end">Valor</th>@if ($isManager)<th class="text-end">Ações</th>@endif</tr>
+                    <tr><th>Etiqueta</th><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Fabricante</th><th>Nº de série</th><th>Status</th>@if ($canSeeValues)<th class="text-end">Valor</th>@endif @if ($isManager)<th class="text-end">Ações</th>@endif</tr>
                 </thead>
                 <tbody id="invBody">
                     @forelse ($assets as $a)
-                        <tr data-type="{{ $a['type'] }}" data-entity="{{ $a['entity'] }}" data-value="{{ $a['value'] ?? 0 }}"
+                        <tr data-type="{{ $a['type'] }}" data-entity="{{ $a['entity'] }}" @if ($canSeeValues) data-value="{{ $a['value'] ?? 0 }}" @endif
                             data-id="{{ $a['id'] }}" data-typekey="{{ $a['typeKey'] }}"
                             @if ($a['typeKey'] !== 'Peripheral') class="js-asset-row" style="cursor:pointer" title="Ver detalhes técnicos" @endif>
                             <td class="text-nowrap">@if (! empty($a['tag']))<span class="badge bg-dark-subtle text-dark-emphasis font-monospace">{{ $a['tag'] }}</span>@else<span class="text-muted">—</span>@endif</td>
@@ -94,13 +96,15 @@
                             <td>{{ $a['manufacturer'] }}</td>
                             <td class="small">{{ $a['serial'] }}</td>
                             <td>@if ($a['status'] !== '—')<span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $a['status'] }}</span>@else<span class="text-muted">—</span>@endif</td>
-                            <td class="text-end text-nowrap">
-                                @if (! empty($a['value']))<span class="text-success fw-semibold">R$ {{ number_format($a['value'], 2, ',', '.') }}</span>@else<span class="text-muted">—</span>@endif
-                                @if ($isManager)
-                                    <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-decoration-none js-set-value" title="Editar etiqueta/valor"
-                                            data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}" data-name="{{ $a['name'] }}" data-value="{{ $a['value'] }}" data-tag="{{ $a['tag'] }}" data-modelo="{{ $a['modelo'] }}"><i class="bi bi-pencil"></i></button>
-                                @endif
-                            </td>
+                            @if ($canSeeValues)
+                                <td class="text-end text-nowrap">
+                                    @if (! empty($a['value']))<span class="text-success fw-semibold">R$ {{ number_format($a['value'], 2, ',', '.') }}</span>@else<span class="text-muted">—</span>@endif
+                                    @if ($isManager)
+                                        <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-decoration-none js-set-value" title="Editar etiqueta/valor"
+                                                data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}" data-name="{{ $a['name'] }}" data-value="{{ $a['value'] }}" data-tag="{{ $a['tag'] }}" data-modelo="{{ $a['modelo'] }}"><i class="bi bi-pencil"></i></button>
+                                    @endif
+                                </td>
+                            @endif
                             @if ($isManager)
                                 <td class="text-end">
                                     <button type="button" class="btn btn-sm btn-outline-secondary js-move-asset"
@@ -113,7 +117,7 @@
                             @endif
                         </tr>
                     @empty
-                        <tr><td colspan="{{ $isManager ? 10 : 9 }}" class="text-center text-muted py-5">
+                        <tr><td colspan="{{ 8 + ($canSeeValues ? 1 : 0) + ($isManager ? 1 : 0) }}" class="text-center text-muted py-5">
                             <i class="bi bi-pc-display d-block fs-2 mb-2 opacity-50"></i>
                             Nenhum ativo inventariado ainda.<br><span class="small">Os equipamentos aparecem aqui conforme o GLPI Agent faz o inventário das máquinas.</span>
                         </td></tr>

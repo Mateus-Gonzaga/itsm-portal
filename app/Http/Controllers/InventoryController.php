@@ -20,12 +20,13 @@ class InventoryController extends Controller
     ): View {
         $assets = $inventory->assets();
         $isManager = $request->user()->role === UserRole::Gestor;
+        $canSeeValues = in_array($request->user()->role, [UserRole::Gestor, UserRole::Tecnico], true);
 
-        // Junta os valores (guardados no portal) a cada ativo por itemtype+id.
-        $valores = AssetValue::get()->keyBy(fn (AssetValue $v) => $v->itemtype.'-'.$v->item_id);
-        $assets = $assets->map(function (array $a) use ($valores) {
+        // Junta os valores (guardados no portal) a cada ativo por itemtype+id (apenas staff vê valores).
+        $valores = $canSeeValues ? AssetValue::get()->keyBy(fn (AssetValue $v) => $v->itemtype.'-'.$v->item_id) : collect();
+        $assets = $assets->map(function (array $a) use ($valores, $canSeeValues) {
             $meta = $valores->get(($a['typeKey'] ?? '').'-'.($a['id'] ?? 0));
-            $a['value'] = optional($meta)->value;
+            $a['value'] = $canSeeValues ? optional($meta)->value : null;
             $a['tag'] = optional($meta)->tag;
             $a['modelo'] = optional($meta)->modelo;
             // Coluna "Modelo": usa o do GLPI; se vazio, cai no informado no portal.
@@ -48,9 +49,10 @@ class InventoryController extends Controller
             'counts' => $counts,
             'total' => $assets->count(),
             'isManager' => $isManager,
+            'canSeeValues' => $canSeeValues,
             // Só o gestor edita a entidade do ativo; lista para o seletor.
             'entities' => $isManager ? $directory->entities() : collect(),
-            'valorTotal' => (float) $assets->sum(fn (array $a) => (float) ($a['value'] ?? 0)),
+            'valorTotal' => $canSeeValues ? (float) $assets->sum(fn (array $a) => (float) ($a['value'] ?? 0)) : 0,
         ]);
     }
 

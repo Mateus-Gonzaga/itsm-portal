@@ -13,7 +13,6 @@ use App\Http\Controllers\KnowledgeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\TechniciansController;
-use App\Http\Controllers\ServiceWindowController;
 use App\Http\Controllers\TicketController;
 use Illuminate\Support\Facades\Route;
 
@@ -67,11 +66,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/auditoria', [AuditController::class, 'index'])->middleware('role:gestor')->name('modules.audit');
     Route::get('/configuracoes', fn () => view('modules.settings'))->name('modules.settings');
 
-    // Janela de atendimento (horários/SLA) — gestor
-    Route::middleware('role:gestor')->group(function () {
-        Route::get('/janela-atendimento', [ServiceWindowController::class, 'index'])->name('modules.schedule');
-        Route::post('/janela-atendimento', [ServiceWindowController::class, 'update'])->name('modules.schedule.update');
-    });
     Route::get('/inventario', [InventoryController::class, 'index'])->name('modules.inventory');
     Route::get('/inventario/relatorio', [InventoryController::class, 'report'])->middleware('role:gestor')->name('inventory.report');
     Route::get('/inventario/ativo/{itemtype}/{id}', [InventoryController::class, 'assetDetails'])

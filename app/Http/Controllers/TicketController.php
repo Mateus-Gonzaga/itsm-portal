@@ -415,6 +415,9 @@ class TicketController extends Controller
                 || str_contains((string) $t->id, $needle))->values();
         }
 
+        // Mais recente primeiro (ID decrescente: 321 em vez de 123)
+        $all = $all->sortByDesc(fn (TicketData $t) => (int) $t->id)->values();
+
         $perPage = 10;
         $page = max(1, (int) $request->integer('page', 1));
         $tickets = new LengthAwarePaginator(

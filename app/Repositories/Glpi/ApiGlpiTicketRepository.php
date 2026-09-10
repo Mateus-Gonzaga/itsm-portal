@@ -58,7 +58,8 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             $tickets = $tickets->filter(fn (TicketData $t) => $t->technicianName === $filters['technician']);
         }
 
-        return $tickets->values();
+        // Mais recente primeiro (ID decrescente: 321 em vez de 123)
+        return $tickets->sortByDesc(fn (TicketData $t) => (int) $t->id)->values();
     }
 
     /** Lista todos os chamados (visão do gestor) via getAllItems. */
