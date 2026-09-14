@@ -15,12 +15,12 @@
         {{-- Busca + filtros rápidos --}}
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
             <div class="d-flex align-items-center gap-2 flex-wrap" style="flex: 1 1 340px">
-                <form method="GET" class="d-flex gap-2" style="max-width: 320px; flex: 1 1 220px">
+                <form method="GET" class="d-flex gap-2" style="max-width: 360px; flex: 1 1 250px">
                     @if ($currentStatus)<input type="hidden" name="status" value="{{ $currentStatus }}">@endif
                     @if ($perPage !== 10)<input type="hidden" name="per_page" value="{{ $perPage }}">@endif
                     <div class="input-group input-group-sm">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Buscar por título ou nº...">
+                        <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Buscar por título, entidade ou nº...">
                     </div>
                     <button class="btn btn-sm btn-outline-secondary">Buscar</button>
                 </form>

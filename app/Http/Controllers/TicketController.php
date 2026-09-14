@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -408,11 +409,32 @@ class TicketController extends Controller
             $all = $all->reject(fn (TicketData $t) => $t->status === TicketStatus::Closed)->values();
         }
 
+        $reqEntities = $this->requesterEntityMap($dir);
+
         $q = trim((string) $request->string('q'));
         if ($q !== '') {
             $needle = mb_strtolower($q);
-            $all = $all->filter(fn ($t) => str_contains(mb_strtolower($t->title), $needle)
-                || str_contains((string) $t->id, $needle))->values();
+            $needleAscii = Str::ascii($needle);
+
+            $all = $all->filter(function (TicketData $t) use ($needle, $needleAscii, $reqEntities) {
+                $clientEntity = (string) ($reqEntities[$t->requesterGlpiId] ?? $t->entity);
+                $searchable = [
+                    $t->title,
+                    (string) $t->id,
+                    $t->entity,
+                    $clientEntity,
+                    $t->requesterName,
+                ];
+
+                foreach ($searchable as $field) {
+                    $lower = mb_strtolower((string) $field);
+                    if (str_contains($lower, $needle) || str_contains(Str::ascii($lower), $needleAscii)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })->values();
         }
 
         // Mais recente primeiro (ID decrescente: 321 em vez de 123)
@@ -446,7 +468,7 @@ class TicketController extends Controller
             'perPage' => $perPage,
             'perPageOptions' => $perPageOptions,
             'heading' => $heading,
-            'reqEntities' => $this->requesterEntityMap($dir),
+            'reqEntities' => $reqEntities,
         ]);
     }
 }
