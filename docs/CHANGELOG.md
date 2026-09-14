@@ -2,6 +2,9 @@
 
 Histórico cronológico (nunca apagar).
 
+## 2026-09-14
+- **Comando Artisan para importação em lote das demandas em chamados (`tickets:criar-demandas`).** Mapeamento e criação estruturada de todas as **47 demandas** distribuídas entre os **25 clientes** listados no Relatório de Pendências da Equipe (09/09/2026), incluindo a demanda especial do Mel do Sol (BI Sistema Digisat) e priorização máxima/urgente da Transportadora Fórmula 1. O comando localiza dinamicamente o usuário solicitante e a entidade correspondente no GLPI via `GlpiDirectoryRepositoryInterface`, valida duplicidades de chamados (idempotente) e suporta execução simulada (`--dry-run`) e forçada (`--force`). Arquivo: `app/Console/Commands/CriarDemandasChamados.php`.
+
 ## 2026-09-10
 - **Ordem dos chamados invertida (mais recente primeiro: 321 em vez de 123).** Listagens de chamados passam a ser exibidas em ordem decrescente por ID (`sortByDesc(fn (TicketData $t) => (int) $t->id)`), garantindo que os chamados mais recentes apareçam no topo tanto na lista de chamados (`/tickets`) quanto nos repositórios (`ApiGlpiTicketRepository`, `FakeGlpiTicketRepository`). Arquivos: `app/Http/Controllers/TicketController.php`, `app/Repositories/Glpi/{ApiGlpiTicketRepository,FakeGlpiTicketRepository}.php`.
 - **Inventário — visibilidade do valor dos ativos restrita a Gestor e Técnico.** Clientes não visualizam mais o valor estimado de nenhum ativo nem o badge "Valor total do inventário" (ocultados na interface e não expostos no payload/dataset para o perfil Cliente). Coluna e totais continuam visíveis normalmente para Gestor e Técnico. Arquivos: `app/Http/Controllers/InventoryController.php`, `resources/views/modules/inventory.blade.php`.
