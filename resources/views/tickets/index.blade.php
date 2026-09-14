@@ -14,14 +14,30 @@
     <div class="card-body">
         {{-- Busca + filtros rápidos --}}
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-            <form method="GET" class="d-flex gap-2" style="max-width: 380px; flex: 1 1 280px">
-                @if ($currentStatus)<input type="hidden" name="status" value="{{ $currentStatus }}">@endif
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Buscar por título ou nº...">
+            <div class="d-flex align-items-center gap-2 flex-wrap" style="flex: 1 1 340px">
+                <form method="GET" class="d-flex gap-2" style="max-width: 320px; flex: 1 1 220px">
+                    @if ($currentStatus)<input type="hidden" name="status" value="{{ $currentStatus }}">@endif
+                    @if ($perPage !== 10)<input type="hidden" name="per_page" value="{{ $perPage }}">@endif
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Buscar por título ou nº...">
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary">Buscar</button>
+                </form>
+
+                <div class="d-flex align-items-center gap-1 text-muted small">
+                    <span class="text-nowrap"><i class="bi bi-list-ul me-1"></i>Exibir:</span>
+                    <select class="form-select form-select-sm" style="width: auto;" onchange="location.href=this.value" title="Quantidade de chamados por página">
+                        @foreach ($perPageOptions as $size)
+                            <option value="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => 1]) }}"
+                                {{ $perPage === $size ? 'selected' : '' }}>
+                                {{ $size }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
-                <button class="btn btn-sm btn-outline-secondary">Buscar</button>
-            </form>
+            </div>
+
             <div class="d-flex gap-2 flex-wrap">
                 <a href="{{ request()->fullUrlWithoutQuery(['status', 'page']) }}" class="filter-chip {{ $currentStatus === '' ? 'active' : '' }}">Ativos</a>
                 <a href="{{ request()->fullUrlWithQuery(['status' => 'all', 'page' => 1]) }}" class="filter-chip {{ $currentStatus === 'all' ? 'active' : '' }}">Todos</a>
@@ -72,9 +88,40 @@
             </table>
         </div>
 
-        @if ($tickets->hasPages())
-            <div class="mt-3 d-flex justify-content-end">{{ $tickets->links() }}</div>
-        @endif
+        <div class="mt-3 pt-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 text-muted small">
+                <span>
+                    @if ($tickets->total() > 0)
+                        Mostrando <strong>{{ $tickets->firstItem() }}</strong> a <strong>{{ $tickets->lastItem() }}</strong> de <strong>{{ $tickets->total() }}</strong> chamados
+                    @else
+                        Nenhum chamado encontrado
+                    @endif
+                </span>
+                <span class="mx-1 text-secondary">•</span>
+                <div class="d-inline-flex align-items-center gap-1">
+                    <span>Exibir:</span>
+                    <select class="form-select form-select-sm py-0 ps-2 pe-4" style="height: 30px; width: auto;" onchange="location.href=this.value" title="Quantidade de chamados por página">
+                        @foreach ($perPageOptions as $size)
+                            <option value="{{ request()->fullUrlWithQuery(['per_page' => $size, 'page' => 1]) }}"
+                                {{ $perPage === $size ? 'selected' : '' }}>
+                                {{ $size }} por pág.
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            @if ($tickets->hasPages())
+                <div class="tickets-pagination">
+                    {{ $tickets->links() }}
+                </div>
+            @endif
+        </div>
     </div>
 </div>
+
+<style>
+    .tickets-pagination nav > div.d-none.d-sm-flex > div:first-child { display: none !important; }
+    .tickets-pagination .pagination { margin-bottom: 0; }
+</style>
 @endsection

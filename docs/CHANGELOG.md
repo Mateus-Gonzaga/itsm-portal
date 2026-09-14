@@ -3,6 +3,7 @@
 Histórico cronológico (nunca apagar).
 
 ## 2026-09-14
+- **Visualização configurável de chamados por página (10, 25, 50 até 100 chamados).** Adicionado seletor de quantidade de itens por página tanto na barra de controle superior quanto no rodapé da tabela de chamados (`/tickets`), possibilitando exibir 10, 25, 50 ou até 100 chamados de uma só vez. A paginação mantém a quantidade escolhida de forma consistente durante as buscas e filtros de status. O range do repositório GLPI foi expandido para até 1.000 registros (`0-999`), evitando truncamento ao exibir listas extensas. Arquivos: `app/Http/Controllers/TicketController.php`, `resources/views/tickets/index.blade.php`, `app/Repositories/Glpi/ApiGlpiTicketRepository.php`.
 - **Comando Artisan para importação em lote das demandas em chamados (`tickets:criar-demandas`).** Mapeamento e criação estruturada de todas as **47 demandas** distribuídas entre os **25 clientes** listados no Relatório de Pendências da Equipe (09/09/2026), incluindo a demanda especial do Mel do Sol (BI Sistema Digisat) e priorização máxima/urgente da Transportadora Fórmula 1. O comando localiza dinamicamente o usuário solicitante e a entidade correspondente no GLPI via `GlpiDirectoryRepositoryInterface`, valida duplicidades de chamados (idempotente) e suporta execução simulada (`--dry-run`) e forçada (`--force`). Arquivo: `app/Console/Commands/CriarDemandasChamados.php`.
 
 ## 2026-09-10

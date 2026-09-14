@@ -418,7 +418,17 @@ class TicketController extends Controller
         // Mais recente primeiro (ID decrescente: 321 em vez de 123)
         $all = $all->sortByDesc(fn (TicketData $t) => (int) $t->id)->values();
 
-        $perPage = 10;
+        $perPageOptions = [10, 25, 50, 100];
+        $perPage = (int) $request->integer('per_page', 10);
+        if (! in_array($perPage, $perPageOptions, true)) {
+            if ($perPage >= 5 && $perPage <= 100) {
+                $perPageOptions[] = $perPage;
+                sort($perPageOptions);
+            } else {
+                $perPage = 10;
+            }
+        }
+
         $page = max(1, (int) $request->integer('page', 1));
         $tickets = new LengthAwarePaginator(
             $all->forPage($page, $perPage)->values(),
@@ -433,6 +443,8 @@ class TicketController extends Controller
             'statuses' => TicketStatus::cases(),
             'currentStatus' => $status,
             'q' => $q,
+            'perPage' => $perPage,
+            'perPageOptions' => $perPageOptions,
             'heading' => $heading,
             'reqEntities' => $this->requesterEntityMap($dir),
         ]);

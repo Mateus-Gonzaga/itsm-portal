@@ -67,7 +67,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
     {
         $resp = $this->client()->get('/Ticket', [
             'expand_dropdowns' => 'true',
-            'range' => '0-199',
+            'range' => '0-999',
         ]);
 
         if (! $resp->successful() || ! is_array($resp->json())) {
@@ -88,7 +88,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             'criteria[0][searchtype]' => 'equals',
             'criteria[0][value]' => $glpiUserId,
             'forcedisplay[0]' => 2, // 2 = id
-            'range' => '0-199',
+            'range' => '0-999',
         ]);
 
         if (! $resp->successful()) {
