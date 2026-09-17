@@ -8,11 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('ticket_task_google_events', function (Blueprint ) {
-            ->unsignedBigInteger('ticket_task_id')->primary();
-            ->unsignedBigInteger('ticket_id')->nullable()->index();
-            ->string('google_event_id', 1024)->index();
-            ->timestamps();
+        Schema::create('ticket_task_google_events', function (Blueprint $table) {
+            $table->unsignedBigInteger('ticket_task_id')->primary();
+            $table->unsignedBigInteger('ticket_id')->nullable()->index();
+            $table->string('google_event_id', 1024)->index();
+            $table->timestamps();
         });
     }
 
