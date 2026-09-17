@@ -57,4 +57,4 @@ echo ">> Testando sincronização da Google Agenda..."
 $COMPOSE exec -T app php artisan agenda:google-sync || true
 
 echo ""
-echo ">> Deploy concluído. Acesse:  http://<IP-da-VM>:8088"
+echo ">> Deploy concluído. Acesse:  http://<IP-da-VM>:8083"

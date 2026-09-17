@@ -1,4 +1,4 @@
-# Stack de PRODUÇÃO do portal. Web em :8088 (não conflita com Zabbix/Grafana).
+# Stack de PRODUÇÃO do portal. Web em :8083 (não conflita com Zabbix/Grafana).
 # Banco PostgreSQL próprio (isolado). Use com: bash deploy.sh
 services:
   app:
@@ -16,7 +16,7 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      - "8088:80"
+      - "8083:80"
     volumes:
       - .:/var/www/html
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
