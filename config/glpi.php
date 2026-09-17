@@ -30,4 +30,11 @@ return [
         'password' => env('GLPI_API_PASSWORD'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Fuso horário do banco do GLPI (o Docker/MariaDB opera em UTC por padrão)
+    |--------------------------------------------------------------------------
+    */
+    'timezone' => env('GLPI_TIMEZONE', 'UTC'),
+
 ];

@@ -78,11 +78,12 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
 
     public function createEvent(string $title, CarbonImmutable $begin, CarbonImmutable $end, ?int $ownerGlpiId = null, ?string $content = null): void
     {
+        $glpiTz = config('glpi.timezone', 'UTC');
         $input = [
             'name' => $title,
             'text' => $content !== null && $content !== '' ? $content : $title,
-            'begin' => $begin->format('Y-m-d H:i:s'),
-            'end' => $end->format('Y-m-d H:i:s'),
+            'begin' => $begin->setTimezone($glpiTz)->format('Y-m-d H:i:s'),
+            'end' => $end->setTimezone($glpiTz)->format('Y-m-d H:i:s'),
             'state' => 1, // 1 = a fazer
         ];
         if ($ownerGlpiId !== null && $ownerGlpiId > 0) {
@@ -94,10 +95,11 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
 
     public function rescheduleEvent(int $eventId, CarbonImmutable $begin, CarbonImmutable $end): void
     {
+        $glpiTz = config('glpi.timezone', 'UTC');
         $this->client()->put("/PlanningExternalEvent/{$eventId}", [
             'input' => [
-                'begin' => $begin->format('Y-m-d H:i:s'),
-                'end' => $end->format('Y-m-d H:i:s'),
+                'begin' => $begin->setTimezone($glpiTz)->format('Y-m-d H:i:s'),
+                'end' => $end->setTimezone($glpiTz)->format('Y-m-d H:i:s'),
             ],
         ])->throw();
     }
@@ -116,22 +118,24 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
 
     public function reschedule(int $taskId, CarbonImmutable $begin, CarbonImmutable $end): void
     {
+        $glpiTz = config('glpi.timezone', 'UTC');
         $this->client()->put("/TicketTask/{$taskId}", [
             'input' => [
-                'begin' => $begin->format('Y-m-d H:i:s'),
-                'end' => $end->format('Y-m-d H:i:s'),
+                'begin' => $begin->setTimezone($glpiTz)->format('Y-m-d H:i:s'),
+                'end' => $end->setTimezone($glpiTz)->format('Y-m-d H:i:s'),
             ],
         ])->throw();
     }
 
     public function schedule(int $ticketId, int $technicianGlpiId, CarbonImmutable $begin, CarbonImmutable $end, ?string $content = null): void
     {
+        $glpiTz = config('glpi.timezone', 'UTC');
         $this->client()->post('/TicketTask', [
             'input' => [
                 'tickets_id' => $ticketId,
                 'users_id_tech' => $technicianGlpiId,
-                'begin' => $begin->format('Y-m-d H:i:s'),
-                'end' => $end->format('Y-m-d H:i:s'),
+                'begin' => $begin->setTimezone($glpiTz)->format('Y-m-d H:i:s'),
+                'end' => $end->setTimezone($glpiTz)->format('Y-m-d H:i:s'),
                 'state' => 1, // 1 = a fazer
                 'content' => $content !== null && $content !== '' ? $content : 'Atendimento agendado.',
             ],
@@ -295,6 +299,9 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
 
     private function date(?string $d): CarbonImmutable
     {
-        return CarbonImmutable::parse($d);
+        $glpiTz = config('glpi.timezone', 'UTC');
+        $appTz = config('app.timezone', 'America/Sao_Paulo');
+
+        return CarbonImmutable::parse($d, $glpiTz)->setTimezone($appTz);
     }
 }

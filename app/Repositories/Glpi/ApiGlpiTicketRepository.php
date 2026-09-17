@@ -74,7 +74,19 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             return collect();
         }
 
-        return collect($resp->json())->map(fn (array $t) => $this->toTicketData($t))->values();
+        $allActors = $this->allTicketActors();
+
+        return collect($resp->json())->map(function (array $t) use ($allActors) {
+            $id = (int) ($t['id'] ?? 0);
+            $actors = $allActors[$id] ?? null;
+
+            // Se o bulk /Ticket_User falhou ou não trouxe o chamado, busca pontual
+            if ($actors === null && empty($allActors)) {
+                $actors = $this->ticketActors($id);
+            }
+
+            return $this->toTicketData($t, $actors);
+        })->values();
     }
 
     /**
@@ -136,7 +148,9 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         }
         // Prazo de atendimento (SLA) — data-limite gravada direto no chamado.
         if (! empty($attributes['due_date'])) {
-            $input['time_to_resolve'] = CarbonImmutable::parse($attributes['due_date'])->format('Y-m-d H:i:s');
+            $input['time_to_resolve'] = CarbonImmutable::parse($attributes['due_date'], config('app.timezone', 'America/Sao_Paulo'))
+                ->setTimezone(config('glpi.timezone', 'UTC'))
+                ->format('Y-m-d H:i:s');
         }
 
         $resp = $this->client()->post('/Ticket', ['input' => $input]);
@@ -167,7 +181,9 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             $input['_users_id_assign'] = (int) $attributes['technician_glpi_id'];
         }
         if (! empty($attributes['due_date'])) {
-            $input['time_to_resolve'] = CarbonImmutable::parse($attributes['due_date'])->format('Y-m-d H:i:s');
+            $input['time_to_resolve'] = CarbonImmutable::parse($attributes['due_date'], config('app.timezone', 'America/Sao_Paulo'))
+                ->setTimezone(config('glpi.timezone', 'UTC'))
+                ->format('Y-m-d H:i:s');
         }
 
         $this->client()->put("/Ticket/{$id}", ['input' => $input])->throw();
@@ -210,26 +226,45 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             return collect();
         }
 
+        $userMap = $this->userMap();
+
         return collect($resp->json())
-            ->map(fn (array $f) => new TicketComment(
-                author: (string) ($f['users_id'] ?? 'GLPI'),
-                authorRole: 'GLPI',
-                content: trim(strip_tags((string) ($f['content'] ?? ''))),
-                createdAt: $this->date($f['date'] ?? null),
-            ))
+            ->map(function (array $f) use ($userMap) {
+                $rawUser = $f['users_id'] ?? null;
+                $authorName = is_numeric($rawUser)
+                    ? ($userMap[(int) $rawUser] ?? "Usuário #{$rawUser}")
+                    : ($this->dropdownName($rawUser) ?? 'GLPI');
+
+                $role = match (strtolower($authorName)) {
+                    'glpi' => 'Sistema',
+                    default => 'Equipe',
+                };
+
+                return new TicketComment(
+                    author: $authorName,
+                    authorRole: $role,
+                    content: trim(strip_tags((string) ($f['content'] ?? ''))),
+                    createdAt: $this->date($f['date'] ?? null),
+                );
+            })
             ->sortBy(fn (TicketComment $c) => $c->createdAt->getTimestamp())
             ->values();
     }
 
     public function addFollowup(int|string $id, string $content): void
     {
-        $this->client()->post('/ITILFollowup', [
-            'input' => [
-                'itemtype' => 'Ticket',
-                'items_id' => (int) $id,
-                'content' => $content,
-            ],
-        ])->throw();
+        $input = [
+            'itemtype' => 'Ticket',
+            'items_id' => (int) $id,
+            'content' => $content,
+        ];
+
+        // Se há um usuário logado com glpi_id, vincula o comentário diretamente a ele no GLPI
+        if ($uid = auth()->user()?->glpi_id) {
+            $input['users_id'] = (int) $uid;
+        }
+
+        $this->client()->post('/ITILFollowup', ['input' => $input])->throw();
     }
 
     public function attachments(int|string $ticketId): Collection
@@ -366,21 +401,65 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             status: $this->mapStatus((int) ($t['status'] ?? 1)),
             priority: $this->mapPriority((int) ($t['priority'] ?? 3)),
             type: ((int) ($t['type'] ?? 1)) === 2 ? TicketType::Request : TicketType::Incident,
-            // Solicitante/técnico vêm dos atores (Ticket_User). Quando os atores
-            // não foram carregados (ex.: lista do gestor, $actors === null) cai no
-            // campo bruto; já com atores carregados, ausência = sem técnico (null).
+            // Solicitante/técnico vêm dos atores (Ticket_User). Ausência = sem técnico (null).
             requesterName: ($actors['requester'] ?? null)
                 ?? $this->dropdownName($t['users_id_recipient'] ?? null) ?? '—',
             entity: $this->entityName($t['entities_id'] ?? null),
             createdAt: $this->date($t['date'] ?? null),
-            technicianName: $actors !== null
-                ? ($actors['technician'] ?? null)
-                : $this->dropdownName($t['users_id_lastupdater'] ?? null),
+            technicianName: $actors['technician'] ?? null,
             category: $this->dropdownName($t['itilcategories_id'] ?? null),
             dueDate: ! empty($t['time_to_resolve']) ? $this->date($t['time_to_resolve']) : null,
             updatedAt: ! empty($t['date_mod']) ? $this->date($t['date_mod']) : null,
             requesterGlpiId: $actors['requester_id'] ?? null,
         );
+    }
+
+    /**
+     * Resolve os atores (solicitante e técnico) de todos os chamados em lote.
+     * Retorna mapa: ticket_id => ['requester' => name, 'technician' => name, 'requester_id' => id]
+     */
+    private function allTicketActors(): array
+    {
+        $resp = $this->client()->get('/Ticket_User', ['range' => '0-999']);
+        if (! $resp->successful() || ! is_array($resp->json())) {
+            return [];
+        }
+
+        $userMap = $this->userMap();
+        $actorsByTicket = [];
+
+        foreach ($resp->json() as $link) {
+            $ticketId = (int) ($link['tickets_id'] ?? 0);
+            $uid = (int) ($link['users_id'] ?? 0);
+            $type = (int) ($link['type'] ?? 0);
+
+            if ($ticketId <= 0) {
+                continue;
+            }
+
+            if ($type === 1 && $uid > 0) {
+                $actorsByTicket[$ticketId]['requester_id'] = $uid;
+            }
+
+            $name = null;
+            if (is_numeric($link['users_id'] ?? null)) {
+                $name = $userMap[(int) $link['users_id']] ?? null;
+            } elseif (! empty($link['users_id'])) {
+                $name = $this->dropdownName($link['users_id']);
+            }
+
+            if ($name === null) {
+                continue;
+            }
+
+            if ($type === 1) {
+                $actorsByTicket[$ticketId]['requester'] = $name;
+            } elseif ($type === 2) {
+                $actorsByTicket[$ticketId]['technician'] = $name;
+            }
+        }
+
+        return $actorsByTicket;
     }
 
     /**
@@ -531,7 +610,10 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         }
 
         try {
-            return CarbonImmutable::parse($d);
+            $glpiTz = config('glpi.timezone', 'UTC');
+            $appTz = config('app.timezone', 'America/Sao_Paulo');
+
+            return CarbonImmutable::parse($d, $glpiTz)->setTimezone($appTz);
         } catch (\Throwable) {
             return CarbonImmutable::now();
         }

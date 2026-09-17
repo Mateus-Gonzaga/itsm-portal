@@ -310,7 +310,9 @@ class TicketController extends Controller
 
         $this->tickets->update($id, ['status' => $data['status']]);
         $label = TicketStatus::from($data['status'])->label();
-        $this->tickets->addFollowup($id, 'Status alterado para "'.$label.'".'.(! empty($data['note']) ? ' '.$data['note'] : ''));
+        $by = $request->user()->name;
+        $note = ! empty($data['note']) ? ' '.$data['note'] : '';
+        $this->tickets->addFollowup($id, 'Status alterado para "'.$label.'" por '.$by.'.'.$note);
 
         return back()->with('status', 'Status atualizado para "'.$label.'".');
     }
