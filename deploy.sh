@@ -21,6 +21,18 @@ if [ -f storage/app/google-service-account.enc ] && [ ! -f storage/app/google-se
     chmod 644 storage/app/google-service-account.json 2>/dev/null || true
 fi
 
+# Garante a ativação e o ID da Google Agenda no .env
+if [ -f storage/app/google-service-account.json ]; then
+    sed -i 's/^GOOGLE_CALENDAR_SYNC=.*/GOOGLE_CALENDAR_SYNC=true/' .env 2>/dev/null || true
+    sed -i 's/^GOOGLE_CALENDAR_ID=.*/GOOGLE_CALENDAR_ID=fourline.servicos@gmail.com/' .env 2>/dev/null || true
+    if ! grep -q "^GOOGLE_CALENDAR_SYNC=" .env; then
+        echo "GOOGLE_CALENDAR_SYNC=true" >> .env
+    fi
+    if ! grep -q "^GOOGLE_CALENDAR_ID=" .env; then
+        echo "GOOGLE_CALENDAR_ID=fourline.servicos@gmail.com" >> .env
+    fi
+fi
+
 echo ">> Subindo containers (build se necessário)..."
 $COMPOSE up -d --build
 
@@ -40,6 +52,9 @@ echo ">> Atualizando caches..."
 $COMPOSE exec -T app php artisan config:cache
 $COMPOSE exec -T app php artisan route:cache
 $COMPOSE exec -T app php artisan view:cache
+
+echo ">> Testando sincronização da Google Agenda..."
+$COMPOSE exec -T app php artisan agenda:google-sync || true
 
 echo ""
 echo ">> Deploy concluído. Acesse:  http://<IP-da-VM>:8088"

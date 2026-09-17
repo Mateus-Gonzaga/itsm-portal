@@ -5,10 +5,10 @@ return [
     | Sincronização com o Google Calendar (calendário único da equipe via conta
     | de serviço). Desligado por padrão — só liga quando configurado no .env.
     */
-    'enabled' => (bool) env('GOOGLE_CALENDAR_SYNC', true),
+    'enabled' => filter_var(env('GOOGLE_CALENDAR_SYNC', true), FILTER_VALIDATE_BOOLEAN),
 
     // ID do calendário da equipe (Configurações do calendário → "ID do calendário").
-    'calendar_id' => env('GOOGLE_CALENDAR_ID', 'fourline.servicos@gmail.com'),
+    'calendar_id' => filled(env('GOOGLE_CALENDAR_ID')) ? env('GOOGLE_CALENDAR_ID') : 'fourline.servicos@gmail.com',
 
     // Caminho do arquivo JSON da chave da conta de serviço (fora da raiz web).
     'key_path' => env('GOOGLE_CALENDAR_KEY_PATH', storage_path('app/google-service-account.json')),
