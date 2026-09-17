@@ -33,5 +33,18 @@ services:
     volumes:
       - itsm-db:/var/lib/postgresql/data
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - app
+      - db
+    command: ["php", "artisan", "schedule:work"]
+
 volumes:
   itsm-db:

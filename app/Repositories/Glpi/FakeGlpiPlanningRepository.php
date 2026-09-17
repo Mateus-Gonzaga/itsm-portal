@@ -58,7 +58,7 @@ class FakeGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
         cache()->forever(self::OVERRIDES_KEY, $overrides);
     }
 
-    public function schedule(int $ticketId, int $technicianGlpiId, CarbonImmutable $begin, CarbonImmutable $end, ?string $content = null): void
+    public function schedule(int $ticketId, int $technicianGlpiId, CarbonImmutable $begin, CarbonImmutable $end, ?string $content = null): int
     {
         $created = cache()->get(self::CREATED_KEY, []);
         $taskId = 900 + count($created) + 1;
@@ -70,6 +70,8 @@ class FakeGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
             'end' => $end->toIso8601String(),
         ];
         cache()->forever(self::CREATED_KEY, $created);
+
+        return $taskId;
     }
 
     public function createEvent(string $title, CarbonImmutable $begin, CarbonImmutable $end, ?int $ownerGlpiId = null, ?string $content = null): void

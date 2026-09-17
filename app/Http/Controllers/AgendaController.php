@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiPlanningRepositoryInterface;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
+use App\Services\GoogleCalendarService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -124,11 +125,16 @@ class AgendaController extends Controller
             'end' => ['required', 'date', 'after:begin'],
         ]);
 
+        $begin = CarbonImmutable::parse($data['begin']);
+        $end = CarbonImmutable::parse($data['end']);
+
         $this->planning->reschedule(
             (int) $data['task_id'],
-            CarbonImmutable::parse($data['begin']),
-            CarbonImmutable::parse($data['end']),
+            $begin,
+            $end,
         );
+
+        app(GoogleCalendarService::class)->pushRescheduleTicketTask((int) $data['task_id'], $begin, $end);
 
         return response()->json(['ok' => true]);
     }
@@ -143,13 +149,39 @@ class AgendaController extends Controller
             'content' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $this->planning->schedule(
+        $begin = CarbonImmutable::parse($data['begin']);
+        $end = CarbonImmutable::parse($data['end']);
+
+        $taskId = $this->planning->schedule(
             (int) $data['ticket_id'],
             (int) $data['technician_glpi_id'],
-            CarbonImmutable::parse($data['begin']),
-            CarbonImmutable::parse($data['end']),
+            $begin,
+            $end,
             $data['content'] ?? null,
         );
+
+        if ($taskId > 0) {
+            try {
+                $ticket = $this->tickets->find((int) $data['ticket_id']);
+                $ticketTitle = $ticket ? $ticket->title : "Chamado #{$data['ticket_id']}";
+                $clientName = $ticket ? ($ticket->client ?? $ticket->entity) : null;
+                $userMap = cache()->remember('tickets_user_map', 60, fn () => $this->directory->users()->pluck('name', 'id')->all());
+                $techName = $userMap[(int) $data['technician_glpi_id']] ?? null;
+
+                app(GoogleCalendarService::class)->pushCreateTicketTask(
+                    taskId: $taskId,
+                    ticketId: (int) $data['ticket_id'],
+                    ticketTitle: $ticketTitle,
+                    clientName: $clientName,
+                    techName: $techName,
+                    content: $data['content'] ?? null,
+                    begin: $begin,
+                    end: $end,
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('GCal sync do chamado falhou: '.$e->getMessage());
+            }
+        }
 
         return response()->json(['ok' => true]);
     }

@@ -127,10 +127,10 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
         ])->throw();
     }
 
-    public function schedule(int $ticketId, int $technicianGlpiId, CarbonImmutable $begin, CarbonImmutable $end, ?string $content = null): void
+    public function schedule(int $ticketId, int $technicianGlpiId, CarbonImmutable $begin, CarbonImmutable $end, ?string $content = null): int
     {
         $glpiTz = config('glpi.timezone', 'UTC');
-        $this->client()->post('/TicketTask', [
+        $resp = $this->client()->post('/TicketTask', [
             'input' => [
                 'tickets_id' => $ticketId,
                 'users_id_tech' => $technicianGlpiId,
@@ -140,6 +140,8 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
                 'content' => $content !== null && $content !== '' ? $content : 'Atendimento agendado.',
             ],
         ])->throw();
+
+        return (int) ($resp->json('id') ?? 0);
     }
 
     // ----------------------------------------------------------------

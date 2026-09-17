@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\AgendaTask;
+use App\Models\TicketTaskGoogleEvent;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -75,6 +77,98 @@ class GoogleCalendarService
         }
     }
 
+    public function pushCreateTicketTask(
+        int $taskId,
+        int $ticketId,
+        string $ticketTitle,
+        ?string $clientName,
+        ?string $techName,
+        ?string $content,
+        CarbonInterface $begin,
+        CarbonInterface $end,
+    ): ?string {
+        if (! $this->enabled() || self::$syncing) {
+            return null;
+        }
+
+        try {
+            $tz = (string) config('googlecal.timezone', 'America/Sao_Paulo');
+            $summary = "[#{$ticketId}] {$ticketTitle}".($clientName ? " — {$clientName}" : '');
+            $descLines = [
+                "Chamado: #{$ticketId} - {$ticketTitle}",
+                $clientName ? "Cliente: {$clientName}" : null,
+                $techName ? "Técnico: {$techName}" : null,
+                $content ? "Detalhes: {$content}" : null,
+            ];
+            $description = implode("\n", array_filter($descLines));
+
+            $payload = [
+                'summary' => $summary,
+                'description' => $description,
+                'start' => ['dateTime' => $begin->toRfc3339String(), 'timeZone' => $tz],
+                'end' => ['dateTime' => $end->toRfc3339String(), 'timeZone' => $tz],
+            ];
+
+            $resp = $this->api()->post($this->cal().'/events', $payload);
+            $id = $resp->json('id');
+            if ($id) {
+                TicketTaskGoogleEvent::updateOrCreate(
+                    ['ticket_task_id' => $taskId],
+                    ['ticket_id' => $ticketId, 'google_event_id' => $id]
+                );
+            }
+
+            return $id;
+        } catch (\Throwable $e) {
+            Log::warning("GCal pushCreateTicketTask falhou para tarefa {$taskId}: ".$e->getMessage());
+
+            return null;
+        }
+    }
+
+    public function pushRescheduleTicketTask(int $taskId, CarbonInterface $begin, CarbonInterface $end): void
+    {
+        if (! $this->enabled() || self::$syncing) {
+            return;
+        }
+
+        $link = TicketTaskGoogleEvent::where('ticket_task_id', $taskId)->first();
+        if (! $link || empty($link->google_event_id)) {
+            return;
+        }
+
+        try {
+            $tz = (string) config('googlecal.timezone', 'America/Sao_Paulo');
+            $payload = [
+                'start' => ['dateTime' => $begin->toRfc3339String(), 'timeZone' => $tz],
+                'end' => ['dateTime' => $end->toRfc3339String(), 'timeZone' => $tz],
+            ];
+
+            $this->api()->patch($this->cal().'/events/'.rawurlencode($link->google_event_id), $payload);
+        } catch (\Throwable $e) {
+            Log::warning("GCal pushRescheduleTicketTask falhou para tarefa {$taskId}: ".$e->getMessage());
+        }
+    }
+
+    public function pushDeleteTicketTask(int $taskId): void
+    {
+        if (! $this->enabled() || self::$syncing) {
+            return;
+        }
+
+        $link = TicketTaskGoogleEvent::where('ticket_task_id', $taskId)->first();
+        if (! $link || empty($link->google_event_id)) {
+            return;
+        }
+
+        try {
+            $this->api()->delete($this->cal().'/events/'.rawurlencode($link->google_event_id));
+            $link->delete();
+        } catch (\Throwable $e) {
+            Log::warning("GCal pushDeleteTicketTask falhou para tarefa {$taskId}: ".$e->getMessage());
+        }
+    }
+
     // ---------------------------------------------------------------- Pull (Google → portal)
 
     /** Puxa mudanças feitas direto no Google e reflete nas tarefas do portal. */
@@ -136,6 +230,12 @@ class GoogleCalendarService
     {
         $gid = $ev['id'] ?? null;
         if (! $gid) {
+            return 0;
+        }
+
+        // Se o evento é de um atendimento de chamado (TicketTask), não cria
+        // como tarefa avulsa da agenda (evita duplicar eventos de chamados).
+        if (TicketTaskGoogleEvent::where('google_event_id', $gid)->exists()) {
             return 0;
         }
 

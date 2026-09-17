@@ -27,14 +27,14 @@ interface GlpiPlanningRepositoryInterface
     /** Remarca uma tarefa (TicketTask) — usado pelo arrastar/editar. */
     public function reschedule(int $taskId, CarbonImmutable $begin, CarbonImmutable $end): void;
 
-    /** Agenda uma nova tarefa (TicketTask) em um chamado. */
+    /** Agenda uma nova tarefa (TicketTask) em um chamado. Retorna o ID da tarefa criada. */
     public function schedule(
         int $ticketId,
         int $technicianGlpiId,
         CarbonImmutable $begin,
         CarbonImmutable $end,
         ?string $content = null,
-    ): void;
+    ): int;
 
     /**
      * Cria uma TAREFA LIVRE da equipe (PlanningExternalEvent) — demanda sem
