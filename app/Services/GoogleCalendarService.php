@@ -169,6 +169,62 @@ class GoogleCalendarService
         }
     }
 
+    /** Envia todas as tarefas do portal (livres e de chamados) que ainda não estão no Google Calendar. */
+    public function pushAllPending(): int
+    {
+        if (! $this->enabled() || self::$syncing) {
+            return 0;
+        }
+
+        $pushed = 0;
+
+        // 1. Tarefas livres locais sem google_event_id
+        $tasks = AgendaTask::whereNull('google_event_id')->get();
+        foreach ($tasks as $task) {
+            $this->pushCreate($task);
+            if (! empty($task->google_event_id)) {
+                $pushed++;
+            }
+        }
+
+        // 2. Tarefas de chamados do GLPI ainda não vinculadas ao Google
+        try {
+            $planning = app(\App\Repositories\Glpi\GlpiPlanningRepositoryInterface::class);
+            $events = $planning->events();
+            $linkedTaskIds = TicketTaskGoogleEvent::pluck('ticket_task_id')->all();
+
+            foreach ($events as $e) {
+                if ($e->type !== 'task' || ! $e->taskId || in_array($e->taskId, $linkedTaskIds, true)) {
+                    continue;
+                }
+                if (! $e->start) {
+                    continue;
+                }
+
+                $end = $e->end ?? $e->start->addHour();
+                $id = $this->pushCreateTicketTask(
+                    taskId: $e->taskId,
+                    ticketId: $e->ticketId,
+                    ticketTitle: $e->title,
+                    clientName: null,
+                    techName: $e->technicianName,
+                    content: $e->description,
+                    begin: $e->start,
+                    end: $end,
+                );
+
+                if ($id) {
+                    $pushed++;
+                    $linkedTaskIds[] = $e->taskId;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('GCal pushAllPending tarefas de chamados falhou: '.$e->getMessage());
+        }
+
+        return $pushed;
+    }
+
     // ---------------------------------------------------------------- Pull (Google → portal)
 
     /** Puxa mudanças feitas direto no Google e reflete nas tarefas do portal. */
