@@ -108,6 +108,28 @@
     .agenda-tip .tip-desc { padding:.6rem .8rem; white-space:pre-line; line-height:1.55; max-height:240px; overflow-y:auto; }
     .agenda-tip .tip-empty { padding:.55rem .8rem; font-size:.78rem; color:var(--bs-secondary-color); font-style:italic; }
     .agenda-tip .tip-bar { height:4px; }
+
+    /* Busca de chamados no modal de agendamento */
+    .ticket-search-results {
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        background: var(--bs-body-bg, #fff);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    }
+    .ticket-search-item {
+        cursor: pointer;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--bs-border-color-translucent, #f1f3f5);
+        transition: background-color 0.15s ease-in-out;
+    }
+    .ticket-search-item:last-child {
+        border-bottom: none;
+    }
+    .ticket-search-item:hover, .ticket-search-item.active {
+        background-color: rgba(6, 138, 79, 0.08);
+    }
 </style>
 @endpush
 
@@ -279,15 +301,46 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Chamado</label>
-                        <select name="ticket_id" class="form-select" required>
-                            <option value="">— selecione —</option>
-                            @foreach ($openTickets as $t)
-                                <option value="{{ $t['id'] }}">{{ $t['label'] }}</option>
-                            @endforeach
-                        </select>
+                        <label class="form-label d-flex justify-content-between align-items-center mb-1">
+                            <span>Chamado</span>
+                            <span class="text-muted small">({{ count($openTickets) }} em aberto)</span>
+                        </label>
+                        <input type="hidden" name="ticket_id" id="schedTicketId" required>
+
+                        {{-- Card do chamado selecionado --}}
+                        <div id="selectedTicketBox" class="p-2 border rounded bg-light d-none align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                <span class="badge bg-primary fs-6" id="selTicketId">#</span>
+                                <div class="text-truncate">
+                                    <div class="fw-semibold text-truncate small text-dark" id="selTicketTitle"></div>
+                                    <div class="text-muted text-truncate" style="font-size: 0.78rem;">
+                                        <i class="bi bi-building me-1"></i><span id="selTicketClient"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2 flex-shrink-0" id="btnChangeTicket" title="Trocar chamado">
+                                <i class="bi bi-arrow-repeat me-1"></i>Trocar
+                            </button>
+                        </div>
+
+                        {{-- Campo de busca dinâmica por número ou cliente --}}
+                        <div id="ticketSearchBox">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" id="ticketSearchInput" class="form-control"
+                                       placeholder="Digite o nº do chamado ou nome do cliente..." autocomplete="off">
+                                <button type="button" class="btn btn-outline-secondary d-none" id="btnClearTicketSearch" title="Limpar busca">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                            <div class="ticket-search-results mt-1 d-none" id="ticketSearchResults"></div>
+                            <div class="form-text text-muted small mt-1">
+                                Digite o <strong>número</strong> (ex.: <code>106</code>) ou <strong>cliente</strong> (ex.: <code>Drogacei</code>, <code>Mel do Sol</code>).
+                            </div>
+                        </div>
+
                         @if ($openTickets->isEmpty())
-                            <div class="form-text text-warning">Nenhum chamado aberto para agendar.</div>
+                            <div class="form-text text-warning mt-1">Nenhum chamado aberto para agendar.</div>
                         @endif
                     </div>
                     <div class="mb-3">
@@ -434,6 +487,7 @@
 @endsection
 
 @push('scripts')
+<script id="openTicketsData" type="application/json">@json($openTickets)</script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script>
 (function () {
@@ -599,11 +653,141 @@
     if (sel) sel.addEventListener('change', function () { filterTech = this.value; refresh(); });
     document.getElementById('toggleSla').addEventListener('change', function () { showSla = this.checked; refresh(); });
 
-    // ---- Modal de novo agendamento ----
+    // ---- Modal de novo agendamento (busca dinâmica e seleção de chamado) ----
     const modalEl = document.getElementById('schedModal');
     const modal = new bootstrap.Modal(modalEl);
     const form = document.getElementById('schedForm');
     const errBox = document.getElementById('schedError');
+
+    const openTickets = JSON.parse(document.getElementById('openTicketsData')?.textContent || '[]');
+    const schedTicketId = document.getElementById('schedTicketId');
+    const selectedTicketBox = document.getElementById('selectedTicketBox');
+    const selTicketId = document.getElementById('selTicketId');
+    const selTicketTitle = document.getElementById('selTicketTitle');
+    const selTicketClient = document.getElementById('selTicketClient');
+    const btnChangeTicket = document.getElementById('btnChangeTicket');
+    const ticketSearchBox = document.getElementById('ticketSearchBox');
+    const ticketSearchInput = document.getElementById('ticketSearchInput');
+    const btnClearTicketSearch = document.getElementById('btnClearTicketSearch');
+    const ticketSearchResults = document.getElementById('ticketSearchResults');
+
+    function normalizeStr(str) {
+        return (str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function selectTicket(ticket) {
+        if (!ticket) return;
+        schedTicketId.value = ticket.id;
+        selTicketId.textContent = '#' + ticket.id;
+        selTicketTitle.textContent = ticket.title;
+        selTicketClient.textContent = ticket.client;
+
+        ticketSearchBox.classList.add('d-none');
+        selectedTicketBox.classList.remove('d-none');
+        selectedTicketBox.classList.add('d-flex');
+        ticketSearchResults.classList.add('d-none');
+        errBox.classList.add('d-none');
+    }
+
+    function clearTicketSelection() {
+        schedTicketId.value = '';
+        selectedTicketBox.classList.add('d-none');
+        selectedTicketBox.classList.remove('d-flex');
+        ticketSearchBox.classList.remove('d-none');
+        ticketSearchInput.value = '';
+        btnClearTicketSearch.classList.add('d-none');
+        ticketSearchResults.classList.add('d-none');
+    }
+
+    if (btnChangeTicket) {
+        btnChangeTicket.addEventListener('click', function () {
+            clearTicketSelection();
+            setTimeout(() => ticketSearchInput.focus(), 50);
+        });
+    }
+
+    if (btnClearTicketSearch) {
+        btnClearTicketSearch.addEventListener('click', function () {
+            ticketSearchInput.value = '';
+            btnClearTicketSearch.classList.add('d-none');
+            renderTicketResults('');
+            ticketSearchInput.focus();
+        });
+    }
+
+    function renderTicketResults(query) {
+        const q = normalizeStr(query.trim()).replace(/^#/, '');
+        let filtered = [];
+
+        if (q === '') {
+            filtered = openTickets.slice(0, 12);
+        } else {
+            filtered = openTickets.filter(function (t) {
+                const idStr = String(t.id);
+                const titleStr = normalizeStr(t.title);
+                const clientStr = normalizeStr(t.client);
+                return idStr.includes(q) || titleStr.includes(q) || clientStr.includes(q);
+            });
+        }
+
+        if (filtered.length === 0) {
+            ticketSearchResults.innerHTML = '<div class="p-3 text-center text-muted small"><i class="bi bi-search me-1"></i>Nenhum chamado encontrado com "<strong>' + esc(query) + '</strong>"</div>';
+            ticketSearchResults.classList.remove('d-none');
+            return;
+        }
+
+        let html = '';
+        if (q === '') {
+            html += '<div class="px-2 py-1 bg-light text-muted small border-bottom" style="font-size:0.75rem;"><i class="bi bi-clock-history me-1"></i>Últimos chamados abertos (ou digite acima para filtrar):</div>';
+        }
+        filtered.forEach(function (t) {
+            html += '<div class="ticket-search-item" data-id="' + t.id + '">' +
+                '<div class="d-flex justify-content-between align-items-center mb-1 gap-2">' +
+                    '<span class="badge bg-primary-subtle text-primary fw-bold flex-shrink-0">#' + t.id + '</span>' +
+                    '<span class="badge bg-light text-dark border text-truncate" style="max-width: 220px;" title="' + esc(t.client) + '">' +
+                        '<i class="bi bi-building me-1 text-muted"></i>' + esc(t.client) +
+                    '</span>' +
+                '</div>' +
+                '<div class="small fw-semibold text-dark text-truncate">' + esc(t.title) + '</div>' +
+            '</div>';
+        });
+
+        ticketSearchResults.innerHTML = html;
+        ticketSearchResults.classList.remove('d-none');
+
+        ticketSearchResults.querySelectorAll('.ticket-search-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                const id = parseInt(this.getAttribute('data-id'), 10);
+                const ticket = openTickets.find(t => t.id === id);
+                if (ticket) selectTicket(ticket);
+            });
+        });
+    }
+
+    if (ticketSearchInput) {
+        ticketSearchInput.addEventListener('input', function () {
+            const val = this.value;
+            if (val.trim() !== '') {
+                btnClearTicketSearch.classList.remove('d-none');
+            } else {
+                btnClearTicketSearch.classList.add('d-none');
+            }
+            renderTicketResults(val);
+        });
+
+        ticketSearchInput.addEventListener('focus', function () {
+            renderTicketResults(this.value);
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        if (ticketSearchBox && !ticketSearchBox.contains(e.target)) {
+            ticketSearchResults.classList.add('d-none');
+        }
+    });
 
     function fmt(d) { // Date -> value de datetime-local (hora local)
         const p = n => String(n).padStart(2, '0');
@@ -615,12 +799,19 @@
         const end = new Date(begin.getTime() + 3600000);
         form.begin.value = fmt(begin);
         form.end.value = fmt(end);
+        clearTicketSelection();
         errBox.classList.add('d-none');
         modal.show();
     }
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         errBox.classList.add('d-none');
+        if (!form.ticket_id.value) {
+            errBox.textContent = 'Por favor, busque e selecione o chamado para agendar.';
+            errBox.classList.remove('d-none');
+            ticketSearchInput.focus();
+            return;
+        }
         const payload = {
             ticket_id: form.ticket_id.value,
             technician_glpi_id: form.technician_glpi_id.value,

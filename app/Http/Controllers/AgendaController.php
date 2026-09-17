@@ -46,10 +46,23 @@ class AgendaController extends Controller
             ->map(fn (PlanningEvent $e) => ['id' => $e->technicianId, 'name' => $e->technicianName])
             ->unique('id')->sortBy('name')->values();
 
-        // Dados do modal "Novo agendamento": chamados abertos + técnicos do portal.
+        // Mapa glpi_user_id => entidade do solicitante para exibir o cliente real
+        $reqEntities = cache()->remember('tickets_requester_entities', 60, fn () => $this->directory->users()->pluck('entity', 'id')->all());
+
+        // Dados do modal "Novo agendamento": chamados abertos + cliente/entidade.
         $openTickets = $this->tickets->all()
             ->reject(fn (TicketData $t) => in_array($t->status, [TicketStatus::Solved, TicketStatus::Closed], true))
-            ->map(fn (TicketData $t) => ['id' => $t->id, 'label' => "#{$t->id} — {$t->title}"])
+            ->map(function (TicketData $t) use ($reqEntities) {
+                $client = $reqEntities[$t->requesterGlpiId] ?? $t->entity;
+                $clientName = ($client && $client !== '—') ? $client : 'Entidade raiz';
+
+                return [
+                    'id' => (int) $t->id,
+                    'title' => $t->title,
+                    'client' => $clientName,
+                    'label' => "#{$t->id} — {$t->title}" . ($clientName !== '—' ? " ({$clientName})" : ''),
+                ];
+            })
             ->values();
 
         // Responsáveis = qualquer usuário do GLPI cujo perfil vira técnico/gestor
