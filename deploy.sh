@@ -14,6 +14,13 @@ fi
 echo ">> Baixando atualizações do Git..."
 git pull --ff-only
 
+# Descriptografa a chave da Google Agenda (se ainda não existir)
+if [ -f storage/app/google-service-account.enc ] && [ ! -f storage/app/google-service-account.json ]; then
+    echo ">> Configurando chave da Google Agenda..."
+    openssl enc -d -aes-256-cbc -pbkdf2 -in storage/app/google-service-account.enc -out storage/app/google-service-account.json -k "fourline2026"
+    chmod 644 storage/app/google-service-account.json 2>/dev/null || true
+fi
+
 echo ">> Subindo containers (build se necessário)..."
 $COMPOSE up -d --build
 
