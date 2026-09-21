@@ -27,6 +27,10 @@ class TicketCreatedMail extends Mailable
             : "[Chamado #{$this->ticket->id}] Confirmação de Abertura: {$this->ticket->title}";
 
         return new Envelope(
+            from: new \Illuminate\Mail\Mailables\Address(
+                config('mail.from.address', 'contato@fourline.com.br'),
+                config('mail.from.name', 'Suporte TI - Fourline'),
+            ),
             subject: $subject,
         );
     }
