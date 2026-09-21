@@ -253,10 +253,10 @@ class TicketController extends Controller
         try {
             $ticketUrl = route('tickets.show', $ticket->id);
 
-            // Determina o e-mail do cliente
+            // Determina o e-mail do cliente / solicitante
             $clientEmail = $data['contact_email'] ?? null;
             if (! $clientEmail) {
-                if ($user->role === UserRole::Cliente && ! empty($user->email) && ! str_ends_with($user->email, '@glpi.local')) {
+                if (! empty($user->email) && ! str_ends_with($user->email, '@glpi.local')) {
                     $clientEmail = $user->email;
                 } elseif (! empty($requester['requester_glpi_id'])) {
                     $clientEmail = User::where('glpi_id', (int) $requester['requester_glpi_id'])->value('email');
@@ -267,22 +267,35 @@ class TicketController extends Controller
             }
 
             // Se o usuário logado informou um e-mail novo e ainda usava @glpi.local, atualiza
-            if (! empty($data['contact_email']) && $user->role === UserRole::Cliente && str_ends_with($user->email, '@glpi.local')) {
+            if (! empty($data['contact_email']) && str_ends_with($user->email, '@glpi.local')) {
                 $user->update(['email' => $data['contact_email']]);
             }
+
+            $supportEmail = config('mail.support_address', config('mail.from.address'));
+
+            Log::info('Preparando disparo de e-mail para o chamado #'.$ticket->id, [
+                'mailer' => config('mail.default'),
+                'host' => config('mail.mailers.smtp.host'),
+                'from' => config('mail.from.address'),
+                'client_email' => $clientEmail,
+                'support_email' => $supportEmail,
+            ]);
 
             // Envia e-mail de confirmação ao cliente
             if ($clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
                 Mail::to($clientEmail)->send(new TicketCreatedMail($ticket, $ticketUrl, isStaffNotification: false));
+                Log::info('E-mail de confirmação enviado ao cliente: '.$clientEmail);
             }
 
             // Envia alerta para a equipe de suporte Fourline
-            $supportEmail = config('mail.support_address', config('mail.from.address'));
             if ($supportEmail && filter_var($supportEmail, FILTER_VALIDATE_EMAIL) && $supportEmail !== $clientEmail) {
                 Mail::to($supportEmail)->send(new TicketCreatedMail($ticket, $ticketUrl, isStaffNotification: true));
+                Log::info('E-mail de alerta enviado ao suporte: '.$supportEmail);
             }
         } catch (\Throwable $e) {
-            Log::warning('Falha ao enviar e-mail do chamado #'.$ticket->id.': '.$e->getMessage());
+            Log::error('Falha ao enviar e-mail do chamado #'.$ticket->id.': '.$e->getMessage(), [
+                'exception' => $e,
+            ]);
         }
 
         return redirect()->route('tickets.show', $ticket->id)
