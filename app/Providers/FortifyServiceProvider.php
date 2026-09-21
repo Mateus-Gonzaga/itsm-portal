@@ -69,11 +69,36 @@ class FortifyServiceProvider extends ServiceProvider
             $profile = (string) ($s['glpiactiveprofile']['name'] ?? '');
             $name = (string) ($s['glpifriendlyname'] ?? ($s['glpiname'] ?? $login));
 
+            // Tenta obter o e-mail real do usuário:
+            $email = filter_var($login, FILTER_VALIDATE_EMAIL) ? $login : null;
+            if (! $email) {
+                try {
+                    $emailResp = Http::baseUrl($base)->acceptJson()
+                        ->withHeaders(array_filter(['Session-Token' => $token, 'App-Token' => $appToken ?: null]))
+                        ->get("/User/{$glpiId}/UserEmail");
+                    if ($emailResp->successful() && is_array($emailResp->json())) {
+                        $emails = collect($emailResp->json());
+                        $primary = $emails->firstWhere('is_default', 1) ?? $emails->first();
+                        if ($primary && ! empty($primary['email']) && filter_var($primary['email'], FILTER_VALIDATE_EMAIL)) {
+                            $email = (string) $primary['email'];
+                        }
+                    }
+                } catch (\Throwable) {
+                }
+            }
+
+            $existing = User::where('glpi_id', $glpiId)->first();
+            if (! $email && $existing && ! str_ends_with($existing->email, '@glpi.local')) {
+                $email = $existing->email;
+            }
+
+            $email = $email ?: Str::lower($login).'@glpi.local';
+
             $user = User::updateOrCreate(
                 ['glpi_id' => $glpiId],
                 [
                     'name' => $name,
-                    'email' => Str::lower($login).'@glpi.local',
+                    'email' => $email,
                     'role' => self::mapRole($profile),
                     'password' => Hash::make(Str::random(40)),
                 ],

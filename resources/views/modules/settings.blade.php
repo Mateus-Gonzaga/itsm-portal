@@ -65,15 +65,15 @@
             <div class="card-body">
                 <div class="form-check form-switch mb-2">
                     <input class="form-check-input" type="checkbox" id="n1" checked disabled>
-                    <label class="form-check-label" for="n1">Avisar por e-mail sobre atualizações dos chamados</label>
+                    <label class="form-check-label" for="n1">Notificação imediata por e-mail na abertura de chamados (ativo)</label>
                 </div>
-                <div class="form-check form-switch">
+                <div class="form-check form-switch mb-2">
                     <input class="form-check-input" type="checkbox" id="n2" checked disabled>
-                    <label class="form-check-label" for="n2">Notificações no portal</label>
+                    <label class="form-check-label" for="n2">Notificações no sino do portal (ativo)</label>
                 </div>
                 <p class="text-muted small mt-3 mb-0">
-                    Preferências de notificação:
-                    <span class="badge rounded-pill" style="background:var(--fl-green-light);color:var(--fl-green-xdark)">em breve</span>
+                    <i class="bi bi-check-circle-fill text-success me-1"></i>
+                    E-mails enviados via SMTP da Fourline para o cliente e suporte técnico.
                 </p>
             </div>
         </div>

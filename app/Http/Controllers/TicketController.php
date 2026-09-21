@@ -8,12 +8,16 @@ use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\TicketType;
 use App\Enums\UserRole;
+use App\Mail\TicketCreatedMail;
+use App\Models\User;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -195,6 +199,7 @@ class TicketController extends Controller
             'type' => ['required', 'string'],
             'category_id' => ['nullable', 'integer'],
             'category' => ['nullable', 'string'],
+            'contact_email' => ['nullable', 'email', 'max:255'],
             'due_date' => ['nullable', 'date'],
             'requester_glpi_id' => ['nullable', 'integer'],
             'requester_name' => ['nullable', 'string', 'max:150'],
@@ -242,6 +247,42 @@ class TicketController extends Controller
             } catch (\Throwable) {
                 // segue: o chamado já foi criado
             }
+        }
+
+        // Disparo de e-mail via SMTP do Portal (imediato e confiável)
+        try {
+            $ticketUrl = route('tickets.show', $ticket->id);
+
+            // Determina o e-mail do cliente
+            $clientEmail = $data['contact_email'] ?? null;
+            if (! $clientEmail) {
+                if ($user->role === UserRole::Cliente && ! empty($user->email) && ! str_ends_with($user->email, '@glpi.local')) {
+                    $clientEmail = $user->email;
+                } elseif (! empty($requester['requester_glpi_id'])) {
+                    $clientEmail = User::where('glpi_id', (int) $requester['requester_glpi_id'])->value('email');
+                    if ($clientEmail && str_ends_with($clientEmail, '@glpi.local')) {
+                        $clientEmail = null;
+                    }
+                }
+            }
+
+            // Se o usuário logado informou um e-mail novo e ainda usava @glpi.local, atualiza
+            if (! empty($data['contact_email']) && $user->role === UserRole::Cliente && str_ends_with($user->email, '@glpi.local')) {
+                $user->update(['email' => $data['contact_email']]);
+            }
+
+            // Envia e-mail de confirmação ao cliente
+            if ($clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
+                Mail::to($clientEmail)->send(new TicketCreatedMail($ticket, $ticketUrl, isStaffNotification: false));
+            }
+
+            // Envia alerta para a equipe de suporte Fourline
+            $supportEmail = config('mail.support_address', config('mail.from.address'));
+            if ($supportEmail && filter_var($supportEmail, FILTER_VALIDATE_EMAIL) && $supportEmail !== $clientEmail) {
+                Mail::to($supportEmail)->send(new TicketCreatedMail($ticket, $ticketUrl, isStaffNotification: true));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Falha ao enviar e-mail do chamado #'.$ticket->id.': '.$e->getMessage());
         }
 
         return redirect()->route('tickets.show', $ticket->id)

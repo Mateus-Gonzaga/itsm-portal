@@ -88,6 +88,14 @@
                     @endif
                     <div class="row">
                         <div class="col-md-6 mb-3">
+                            <label class="form-label">E-mail para notificações <span class="text-muted small">— para confirmação e atualizações</span></label>
+                            <input type="email" name="contact_email" value="{{ old('contact_email', (!str_ends_with(auth()->user()->email ?? '', '@glpi.local') ? auth()->user()->email : '')) }}"
+                                   placeholder="nome@empresa.com.br"
+                                   class="form-control @error('contact_email') is-invalid @enderror">
+                            <div class="form-text">Enviaremos a confirmação e atualizações deste chamado.</div>
+                            @error('contact_email') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">Prazo (SLA) <span class="text-muted small">— opcional</span></label>
                             <input type="datetime-local" name="due_date" value="{{ old('due_date') }}"
                                    class="form-control @error('due_date') is-invalid @enderror">
