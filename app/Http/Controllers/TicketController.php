@@ -20,9 +20,6 @@ use Illuminate\View\View;
 
 class TicketController extends Controller
 {
-    /** Categorias de demonstração (na Fase 2 virão do ITILCategory do GLPI). */
-    private const CATEGORIES = ['Hardware', 'Sistemas', 'Acessos', 'Redes', 'Outros'];
-
     public function __construct(
         private readonly GlpiTicketRepositoryInterface $tickets,
     ) {
@@ -181,7 +178,7 @@ class TicketController extends Controller
         return view('tickets.create', [
             'priorities' => TicketPriority::cases(),
             'types' => TicketType::cases(),
-            'categories' => self::CATEGORIES,
+            'categories' => $this->tickets->categories(),
             'isStaff' => $isStaff,
             // Só o staff escolhe solicitante/técnico; cliente abre em nome próprio.
             'clients' => $isStaff ? $this->clientUsers($dir) : collect(),
@@ -196,6 +193,7 @@ class TicketController extends Controller
             'description' => ['required', 'string'],
             'priority' => ['required', 'string'],
             'type' => ['required', 'string'],
+            'category_id' => ['nullable', 'integer'],
             'category' => ['nullable', 'string'],
             'due_date' => ['nullable', 'date'],
             'requester_glpi_id' => ['nullable', 'integer'],
@@ -229,6 +227,7 @@ class TicketController extends Controller
             'description' => $data['description'],
             'priority' => $data['priority'],
             'type' => $data['type'],
+            'category_id' => $data['category_id'] ?? null,
             'category' => $data['category'] ?? null,
             'due_date' => $data['due_date'] ?? null,
             'entity_id' => $entityId ? (int) $entityId : null,

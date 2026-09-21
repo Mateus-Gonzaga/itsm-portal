@@ -62,6 +62,12 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
     {
         $priority = TicketPriority::tryFrom($attributes['priority'] ?? '') ?? TicketPriority::Medium;
 
+        $categoryName = $attributes['category'] ?? null;
+        if (! empty($attributes['category_id'])) {
+            $cat = $this->categories()->firstWhere('id', (int) $attributes['category_id']);
+            $categoryName = $cat['completename'] ?? $cat['name'] ?? null;
+        }
+
         $ticket = new TicketData(
             id: random_int(1000, 9999),
             title: $attributes['title'] ?? 'Sem título',
@@ -74,7 +80,7 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
             createdAt: CarbonImmutable::now(),
             technicianName: $attributes['technician'] ?? null,
             requesterGlpiId: isset($attributes['requester_glpi_id']) ? (int) $attributes['requester_glpi_id'] : null,
-            category: $attributes['category'] ?? null,
+            category: $categoryName,
             dueDate: ! empty($attributes['due_date'])
                 ? CarbonImmutable::parse($attributes['due_date'])
                 : CarbonImmutable::now()->addHours($this->slaHours($priority)),
@@ -94,6 +100,12 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
             throw new RuntimeException("Chamado {$id} não encontrado (mock).");
         }
 
+        $categoryName = $attributes['category'] ?? $t->category;
+        if (! empty($attributes['category_id'])) {
+            $cat = $this->categories()->firstWhere('id', (int) $attributes['category_id']);
+            $categoryName = $cat['completename'] ?? $cat['name'] ?? $categoryName;
+        }
+
         $updated = new TicketData(
             id: $t->id,
             title: $attributes['title'] ?? $t->title,
@@ -105,7 +117,7 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
             entity: $t->entity,
             createdAt: $t->createdAt,
             technicianName: $attributes['technician'] ?? $t->technicianName,
-            category: $attributes['category'] ?? $t->category,
+            category: $categoryName,
             dueDate: ! empty($attributes['due_date'])
                 ? CarbonImmutable::parse($attributes['due_date'])
                 : $t->dueDate,
@@ -183,6 +195,17 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
     public function downloadAttachment(int $documentId): array
     {
         return ['content' => '', 'mime' => 'application/octet-stream', 'filename' => 'anexo'];
+    }
+
+    public function categories(): Collection
+    {
+        return collect([
+            ['id' => 1, 'name' => 'Hardware', 'completename' => 'Hardware'],
+            ['id' => 2, 'name' => 'Sistemas', 'completename' => 'Sistemas'],
+            ['id' => 3, 'name' => 'Acessos', 'completename' => 'Acessos'],
+            ['id' => 4, 'name' => 'Redes', 'completename' => 'Redes'],
+            ['id' => 5, 'name' => 'Outros', 'completename' => 'Outros'],
+        ]);
     }
 
     /** Prazo de SLA (horas) por prioridade — só ilustrativo no mock. */

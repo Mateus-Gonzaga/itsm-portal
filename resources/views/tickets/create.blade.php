@@ -26,12 +26,17 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Categoria</label>
-                            <select name="category" class="form-select">
+                            <select name="category_id" class="form-select @error('category_id') is-invalid @enderror">
                                 <option value="">— selecione —</option>
                                 @foreach ($categories as $cat)
-                                    <option value="{{ $cat }}" @selected(old('category') === $cat)>{{ $cat }}</option>
+                                    @php
+                                        $catId = is_array($cat) ? $cat['id'] : (is_object($cat) ? $cat->id : $cat);
+                                        $catLabel = is_array($cat) ? ($cat['completename'] ?? $cat['name']) : (is_object($cat) ? ($cat->completename ?? $cat->name) : $cat);
+                                    @endphp
+                                    <option value="{{ $catId }}" @selected(old('category_id') == $catId)>{{ $catLabel }}</option>
                                 @endforeach
                             </select>
+                            @error('category_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Prioridade</label>

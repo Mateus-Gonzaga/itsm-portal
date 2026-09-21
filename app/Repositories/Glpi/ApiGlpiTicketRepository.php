@@ -152,6 +152,10 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
                 ->setTimezone(config('glpi.timezone', 'UTC'))
                 ->format('Y-m-d H:i:s');
         }
+        // Categoria do chamado (ITILCategory no GLPI).
+        if (! empty($attributes['category_id']) || ! empty($attributes['itilcategories_id'])) {
+            $input['itilcategories_id'] = (int) ($attributes['category_id'] ?? $attributes['itilcategories_id']);
+        }
 
         $resp = $this->client()->post('/Ticket', ['input' => $input]);
         $resp->throw();
@@ -184,6 +188,9 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             $input['time_to_resolve'] = CarbonImmutable::parse($attributes['due_date'], config('app.timezone', 'America/Sao_Paulo'))
                 ->setTimezone(config('glpi.timezone', 'UTC'))
                 ->format('Y-m-d H:i:s');
+        }
+        if (! empty($attributes['category_id']) || ! empty($attributes['itilcategories_id'])) {
+            $input['itilcategories_id'] = (int) ($attributes['category_id'] ?? $attributes['itilcategories_id']);
         }
 
         $this->client()->put("/Ticket/{$id}", ['input' => $input])->throw();
@@ -345,6 +352,32 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             'mime' => (string) ($j['mime'] ?? ($resp->header('Content-Type') ?: 'application/octet-stream')),
             'filename' => (string) ($j['filename'] ?? 'anexo'),
         ];
+    }
+
+    public function categories(): Collection
+    {
+        return cache()->remember('glpi_itil_categories', 300, function () {
+            try {
+                $resp = $this->client()->get('/ITILCategory', ['range' => '0-999']);
+                if (! $resp->successful() || ! is_array($resp->json())) {
+                    return collect();
+                }
+
+                return collect($resp->json())
+                    ->map(fn (array $c) => [
+                        'id' => (int) ($c['id'] ?? 0),
+                        'name' => $this->dropdownName($c['name'] ?? ''),
+                        'completename' => $this->dropdownName($c['completename'] ?? ($c['name'] ?? '')),
+                    ])
+                    ->filter(fn (array $c) => $c['id'] > 0 && ! empty($c['completename']))
+                    ->sortBy('completename', SORT_NATURAL | SORT_FLAG_CASE)
+                    ->values();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Erro ao buscar categorias do GLPI: '.$e->getMessage());
+
+                return collect();
+            }
+        });
     }
 
     // ----------------------------------------------------------------

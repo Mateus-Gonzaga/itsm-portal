@@ -24,8 +24,13 @@ class RepositoryContractTest extends TestCase
         $this->assertTrue($daAna->every(fn ($t) => $t->requesterName === 'Ana Cliente'));
 
         // Criar persiste e é recuperável por find().
-        $novo = $r->create(['title' => 'Teste contrato', 'description' => 'x', 'priority' => 'high', 'type' => 'incident', 'requester' => 'Zé Teste']);
+        $novo = $r->create(['title' => 'Teste contrato', 'description' => 'x', 'priority' => 'high', 'type' => 'incident', 'requester' => 'Zé Teste', 'category_id' => 1]);
         $this->assertSame('Teste contrato', $r->find($novo->id)?->title);
+        $this->assertSame('Hardware', $r->find($novo->id)?->category);
+
+        // Categorias retornam coleção válida.
+        $this->assertGreaterThan(0, $r->categories()->count());
+        $this->assertTrue($r->categories()->contains(fn ($c) => $c['name'] === 'Hardware'));
     }
 
     public function test_agenda_agenda_e_remarca(): void

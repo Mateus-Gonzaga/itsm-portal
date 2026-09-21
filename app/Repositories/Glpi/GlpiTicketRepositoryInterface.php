@@ -63,4 +63,11 @@ interface GlpiTicketRepositoryInterface
      * @return array{content:string,mime:string,filename:string}
      */
     public function downloadAttachment(int $documentId): array;
+
+    /**
+     * Categorias de chamados (ITILCategory do GLPI).
+     *
+     * @return Collection<int, array{id:int,name:string,completename:string}>
+     */
+    public function categories(): Collection;
 }
