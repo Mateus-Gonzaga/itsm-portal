@@ -2,6 +2,9 @@
 
 Histórico cronológico (nunca apagar).
 
+## 2026-09-28
+- **Inventário — cadastro manual de ativo (todas as categorias).** Botão **"Novo ativo"** (gestor) abre um modal para criar um item **no GLPI** em qualquer tipo suportado (Computador, Monitor, Impressora, Rede, Periférico, DVR, Alarme): escolhe **tipo** e **entidade (filial)**, nome, nº de série, nº patrimônio (otherserial) e observações; etiqueta/modelo/valor são guardados no portal (`asset_values`) e o valor também vai ao GLPI (Infocom, best-effort). Método `createAsset()` na interface + Api (`POST /{itemtype}`) + Fake; `InventoryController::store` (rota `inventory.store`, `role:gestor`+throttle) com auditoria `inventory.create`. Arquivos: `app/Repositories/Glpi/{GlpiInventoryRepositoryInterface,ApiGlpiInventoryRepository,FakeGlpiInventoryRepository}.php`, `app/Http/Controllers/InventoryController.php`, `resources/views/modules/inventory.blade.php`, `routes/web.php`.
+
 ## 2026-09-17
 - **Agenda — Campo de busca dinâmica por número ou cliente no modal "Novo agendamento".** Em vez de exibir uma lista estática e longa com dezenas de chamados em um `<select>`, o modal agora possui um campo de pesquisa dinâmica e autocomplete. Permite filtrar instantaneamente pelo **número do chamado** (ex: `106` ou `#106`), **nome do cliente/loja** (ex: `Drogacei`, `Mel do Sol`) ou **título**, exibindo os dados de forma estruturada. Ao selecionar, exibe um card com os detalhes do chamado e opção rápida de "Trocar". Arquivos: `app/Http/Controllers/AgendaController.php`, `resources/views/agenda/index.blade.php`.
 

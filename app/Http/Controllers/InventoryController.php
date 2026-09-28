@@ -52,8 +52,63 @@ class InventoryController extends Controller
             'canSeeValues' => $canSeeValues,
             // Só o gestor edita a entidade do ativo; lista para o seletor.
             'entities' => $isManager ? $directory->entities() : collect(),
+            // Tipos (chave => rótulo) para o formulário "Novo ativo".
+            'types' => $isManager ? collect($inventory->types())->map(fn ($c) => $c['label']) : collect(),
             'valorTotal' => $canSeeValues ? (float) $assets->sum(fn (array $a) => (float) ($a['value'] ?? 0)) : 0,
         ]);
+    }
+
+    /** Cria um ativo manualmente no GLPI (gestor) + metadados locais (etiqueta/modelo/valor). */
+    public function store(Request $request, GlpiInventoryRepositoryInterface $inventory): RedirectResponse
+    {
+        $data = $request->validate([
+            'itemtype' => ['required', 'string', 'max:60'],
+            'entity_id' => ['required', 'integer', 'min:0'],
+            'name' => ['required', 'string', 'max:255'],
+            'serial' => ['nullable', 'string', 'max:120'],
+            'otherserial' => ['nullable', 'string', 'max:120'], // nº patrimônio (GLPI)
+            'comment' => ['nullable', 'string', 'max:2000'],
+            'tag' => ['nullable', 'string', 'max:60'],           // etiqueta local
+            'modelo' => ['nullable', 'string', 'max:120'],       // modelo local
+            'value' => ['nullable', 'numeric', 'min:0'],         // valor local
+        ]);
+
+        // Só permite tipos suportados.
+        abort_unless(array_key_exists($data['itemtype'], $inventory->types()), 422, 'Tipo de ativo inválido.');
+
+        try {
+            $newId = $inventory->createAsset($data['itemtype'], [
+                'name' => $data['name'],
+                'entities_id' => (int) $data['entity_id'],
+                'serial' => $data['serial'] ?? null,
+                'otherserial' => $data['otherserial'] ?? null,
+                'comment' => $data['comment'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            return back()->withInput()->with('error', 'Não foi possível criar o ativo no GLPI: '.$e->getMessage());
+        }
+
+        // Metadados locais (etiqueta/modelo/valor) — se informados.
+        $tag = ! empty($data['tag']) ? trim($data['tag']) : null;
+        $modelo = ! empty($data['modelo']) ? trim($data['modelo']) : null;
+        $value = $data['value'] !== null ? (float) $data['value'] : null;
+        if ($tag !== null || $modelo !== null || $value !== null) {
+            AssetValue::updateOrCreate(
+                ['itemtype' => $data['itemtype'], 'item_id' => $newId],
+                ['tag' => $tag, 'modelo' => $modelo, 'value' => $value],
+            );
+            if ($value !== null) {
+                try {
+                    $inventory->setInfocomValue($data['itemtype'], $newId, $value);
+                } catch (\Throwable) {
+                    // best-effort; valor já ficou no portal
+                }
+            }
+        }
+
+        AuditLog::record('inventory.create', "Criou ativo {$data['itemtype']} #{$newId} \"{$data['name']}\" (entidade #{$data['entity_id']})");
+
+        return back()->with('status', "Ativo \"{$data['name']}\" criado no inventário.");
     }
 
     /** Define/limpa etiqueta e valor de um ativo (gestor) — no portal E o valor no GLPI (Infocom). */

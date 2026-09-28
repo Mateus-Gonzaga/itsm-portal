@@ -29,6 +29,11 @@ class FakeGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         ]);
     }
 
+    public function createAsset(string $itemtype, array $data): int
+    {
+        return random_int(9000, 9999); // demo
+    }
+
     public function moveAsset(string $itemtype, int $id, int $entityId): void
     {
         // no-op (demo)

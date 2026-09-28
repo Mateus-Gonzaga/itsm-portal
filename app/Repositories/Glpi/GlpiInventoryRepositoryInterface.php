@@ -27,6 +27,14 @@ interface GlpiInventoryRepositoryInterface
     public function assets(): Collection;
 
     /**
+     * Cria um ativo manualmente no GLPI e retorna o ID novo.
+     * $itemtype é a chave do tipo (ex.: 'Computer', 'Monitor', 'PluginGenericobjectDvr').
+     *
+     * @param  array{name:string,entities_id:int,serial?:?string,otherserial?:?string,comment?:?string}  $data
+     */
+    public function createAsset(string $itemtype, array $data): int;
+
+    /**
      * Move um ativo para outra entidade do GLPI (gestor). $itemtype é a chave
      * do tipo (ex.: 'Computer'), $id o ativo e $entityId a entidade de destino.
      */

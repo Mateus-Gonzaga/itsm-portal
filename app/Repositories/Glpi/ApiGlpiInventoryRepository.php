@@ -71,6 +71,30 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         return $out->sortBy([['type', 'asc'], ['name', 'asc']])->values();
     }
 
+    public function createAsset(string $itemtype, array $data): int
+    {
+        if (! isset(self::TYPES[$itemtype])) {
+            throw new RuntimeException('Tipo de ativo inválido.');
+        }
+
+        $input = ['name' => (string) ($data['name'] ?? ''), 'entities_id' => (int) ($data['entities_id'] ?? 0)];
+        foreach (['serial', 'otherserial', 'comment'] as $f) {
+            if (! empty($data[$f])) {
+                $input[$f] = $data[$f];
+            }
+        }
+
+        $resp = $this->client()->post("/{$itemtype}", ['input' => $input]);
+        $resp->throw();
+
+        $newId = $resp->json('id') ?? $resp->json('0.id');
+        if (! $newId) {
+            throw new RuntimeException('O GLPI não retornou o ID do ativo criado.');
+        }
+
+        return (int) $newId;
+    }
+
     public function moveAsset(string $itemtype, int $id, int $entityId): void
     {
         if (! isset(self::TYPES[$itemtype]) || $id <= 0 || $entityId <= 0) {

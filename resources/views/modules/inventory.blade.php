@@ -65,7 +65,10 @@
                 </div>
             @endif
             @if ($isManager)
-                <a href="{{ route('inventory.report') }}" id="invReport" target="_blank" class="btn btn-outline-success btn-sm ms-auto">
+                <button type="button" class="btn btn-success btn-sm ms-auto js-new-asset">
+                    <i class="bi bi-plus-lg me-1"></i> Novo ativo
+                </button>
+                <a href="{{ route('inventory.report') }}" id="invReport" target="_blank" class="btn btn-outline-success btn-sm">
                     <i class="bi bi-file-earmark-arrow-down me-1"></i> Exportar relatório
                 </a>
             @endif
@@ -183,6 +186,70 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="submit" class="btn btn-success">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="newAssetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form method="POST" action="{{ route('inventory.store') }}" class="modal-content">
+            @csrf
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2 text-success"></i>Novo ativo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label small">Tipo</label>
+                        <select name="itemtype" class="form-select" required>
+                            @foreach ($types as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label small">Entidade (filial)</label>
+                        <select name="entity_id" class="form-select" required>
+                            <option value="" selected disabled>Selecione a entidade…</option>
+                            @foreach ($entities as $e)
+                                <option value="{{ $e['id'] }}">{{ html_entity_decode($e['completename'] ?? $e['name'], ENT_QUOTES | ENT_HTML5, 'UTF-8') }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label small">Nome do equipamento</label>
+                        <input type="text" name="name" class="form-control" maxlength="255" required placeholder="Ex.: PDV-03-DF-02">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Nº de série <span class="text-muted">— opcional</span></label>
+                        <input type="text" name="serial" class="form-control" maxlength="120">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Nº patrimônio (GLPI) <span class="text-muted">— opcional</span></label>
+                        <input type="text" name="otherserial" class="form-control" maxlength="120">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Modelo <span class="text-muted">— opcional</span></label>
+                        <input type="text" name="modelo" class="form-control" maxlength="120" placeholder="Ex.: Dell OptiPlex 3080">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Etiqueta <span class="text-muted">— opcional</span></label>
+                        <input type="text" name="tag" class="form-control" maxlength="60" placeholder="FL-0042">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Valor (R$) <span class="text-muted">— opcional</span></label>
+                        <input type="number" step="0.01" min="0" name="value" class="form-control" placeholder="0,00">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small">Observações <span class="text-muted">— opcional</span></label>
+                        <textarea name="comment" rows="2" class="form-control" maxlength="2000"></textarea>
+                    </div>
+                </div>
+                <div class="form-text mt-2">O ativo é criado no GLPI na entidade escolhida. Etiqueta, modelo e valor ficam guardados no portal (o valor também vai para o GLPI).</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Criar ativo</button>
             </div>
         </form>
     </div>
@@ -366,6 +433,15 @@
                 document.getElementById('mvEntity').textContent = btn.dataset.entity;
                 modal.show();
             });
+        });
+    }
+
+    // Novo ativo (gestor).
+    const newAssetEl = document.getElementById('newAssetModal');
+    if (newAssetEl && window.bootstrap) {
+        const naModal = new bootstrap.Modal(newAssetEl);
+        document.querySelectorAll('.js-new-asset').forEach(function (btn) {
+            btn.addEventListener('click', function () { naModal.show(); });
         });
     }
 })();

@@ -71,6 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/inventario/ativo/{itemtype}/{id}', [InventoryController::class, 'assetDetails'])
         ->where('itemtype', '[A-Za-z]+')->whereNumber('id')->name('inventory.asset');
     Route::middleware(['role:gestor', 'throttle:60,1'])->group(function () {
+        Route::post('/inventario/ativo', [InventoryController::class, 'store'])->name('inventory.store');
         Route::post('/inventario/mover', [InventoryController::class, 'move'])->name('inventory.move');
         Route::post('/inventario/valor', [InventoryController::class, 'setValue'])->name('inventory.value');
     });
