@@ -40,6 +40,9 @@ interface GlpiInventoryRepositoryInterface
      */
     public function moveAsset(string $itemtype, int $id, int $entityId): void;
 
+    /** Exclui um ativo no GLPI (lixeira — reversível). $itemtype chave do tipo, $id o ativo. */
+    public function deleteAsset(string $itemtype, int $id): void;
+
     /** Grava o valor do ativo no GLPI (Infocom / aba Gestão). $value null = zera. */
     public function setInfocomValue(string $itemtype, int $id, ?float $value): void;
 

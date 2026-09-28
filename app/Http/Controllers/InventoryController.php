@@ -111,6 +111,27 @@ class InventoryController extends Controller
         return back()->with('status', "Ativo \"{$data['name']}\" criado no inventário.");
     }
 
+    /** Exclui um ativo (gestor) — vai para a lixeira do GLPI e limpa os metadados locais. */
+    public function destroy(Request $request, GlpiInventoryRepositoryInterface $inventory): RedirectResponse
+    {
+        $data = $request->validate([
+            'itemtype' => ['required', 'string', 'max:60'],
+            'id' => ['required', 'integer', 'min:1'],
+        ]);
+        abort_unless(array_key_exists($data['itemtype'], $inventory->types()), 422, 'Tipo de ativo inválido.');
+
+        try {
+            $inventory->deleteAsset($data['itemtype'], (int) $data['id']);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Não foi possível excluir o ativo no GLPI: '.$e->getMessage());
+        }
+
+        AssetValue::where('itemtype', $data['itemtype'])->where('item_id', (int) $data['id'])->delete();
+        AuditLog::record('inventory.delete', "Excluiu ativo {$data['itemtype']} #{$data['id']} (enviado à lixeira do GLPI)");
+
+        return back()->with('status', 'Ativo excluído (enviado à lixeira do GLPI).');
+    }
+
     /** Define/limpa etiqueta e valor de um ativo (gestor) — no portal E o valor no GLPI (Infocom). */
     public function setValue(Request $request, GlpiInventoryRepositoryInterface $inventory): RedirectResponse
     {

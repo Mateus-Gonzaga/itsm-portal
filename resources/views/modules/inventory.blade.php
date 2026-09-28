@@ -109,13 +109,20 @@
                                 </td>
                             @endif
                             @if ($isManager)
-                                <td class="text-end">
+                                <td class="text-end text-nowrap">
                                     <button type="button" class="btn btn-sm btn-outline-secondary js-move-asset"
                                         data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}"
                                         data-name="{{ $a['name'] }}" data-entity="{{ $a['entity'] }}"
                                         title="Mover para outra entidade">
                                         <i class="bi bi-arrow-left-right"></i>
                                     </button>
+                                    <form method="POST" action="{{ route('inventory.destroy') }}" class="d-inline"
+                                          onsubmit="return confirm('Excluir o ativo &quot;{{ $a['name'] }}&quot;? Ele vai para a lixeira do GLPI.')">
+                                        @csrf @method('DELETE')
+                                        <input type="hidden" name="itemtype" value="{{ $a['typeKey'] }}">
+                                        <input type="hidden" name="id" value="{{ $a['id'] }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir ativo"><i class="bi bi-trash"></i></button>
+                                    </form>
                                 </td>
                             @endif
                         </tr>

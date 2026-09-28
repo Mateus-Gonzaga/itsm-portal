@@ -95,6 +95,16 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         return (int) $newId;
     }
 
+    public function deleteAsset(string $itemtype, int $id): void
+    {
+        if (! isset(self::TYPES[$itemtype]) || $id <= 0) {
+            throw new RuntimeException('Ativo inválido.');
+        }
+
+        // DELETE sem force_purge => vai para a lixeira do GLPI (reversível).
+        $this->client()->delete("/{$itemtype}/{$id}")->throw();
+    }
+
     public function moveAsset(string $itemtype, int $id, int $entityId): void
     {
         if (! isset(self::TYPES[$itemtype]) || $id <= 0 || $entityId <= 0) {
