@@ -232,10 +232,6 @@
                         <input type="text" name="serial" class="form-control" maxlength="120">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small">Nº patrimônio (GLPI) <span class="text-muted">— opcional</span></label>
-                        <input type="text" name="otherserial" class="form-control" maxlength="120">
-                    </div>
-                    <div class="col-md-6">
                         <label class="form-label small">Modelo <span class="text-muted">— opcional</span></label>
                         <input type="text" name="modelo" class="form-control" maxlength="120" placeholder="Ex.: Dell OptiPlex 3080">
                     </div>
