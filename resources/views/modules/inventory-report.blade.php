@@ -68,6 +68,7 @@
                 <th>Tipo</th>
                 <th>Nome / equipamento</th>
                 @if ($entidade === '')<th>Entidade</th>@endif
+                <th>Marca</th>
                 <th>Modelo</th>
                 <th>Nº de série</th>
                 <th class="num">Valor (R$)</th>
@@ -81,17 +82,18 @@
                     <td>{{ $a['type'] }}</td>
                     <td>{{ $a['name'] }}</td>
                     @if ($entidade === '')<td>{{ $a['entity'] }}</td>@endif
+                    <td>{{ ($a['manufacturer'] ?? '') && $a['manufacturer'] !== '—' ? $a['manufacturer'] : '—' }}</td>
                     <td>{{ $a['model'] }}</td>
                     <td>{{ $a['serial'] }}</td>
                     <td class="num">{{ ! empty($a['value']) ? number_format($a['value'], 2, ',', '.') : '—' }}</td>
                 </tr>
             @empty
-                <tr><td colspan="{{ $entidade === '' ? 8 : 7 }}" style="text-align:center;color:#999;padding:24px">Nenhum ativo para esta seleção.</td></tr>
+                <tr><td colspan="{{ $entidade === '' ? 9 : 8 }}" style="text-align:center;color:#999;padding:24px">Nenhum ativo para esta seleção.</td></tr>
             @endforelse
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="{{ $entidade === '' ? 7 : 6 }}" class="num">Total</td>
+                <td colspan="{{ $entidade === '' ? 8 : 7 }}" class="num">Total</td>
                 <td class="num">R$ {{ number_format($valorTotal, 2, ',', '.') }}</td>
             </tr>
         </tfoot>
