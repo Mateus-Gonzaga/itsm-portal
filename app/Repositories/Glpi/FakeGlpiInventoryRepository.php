@@ -26,6 +26,9 @@ class FakeGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
             ['id' => 1, 'type' => 'Computadores', 'typeKey' => 'Computer', 'icon' => 'bi-pc-display', 'name' => 'PC-CAIXA-01', 'entity' => 'Drogacei > FL 01 - Setor O', 'status' => 'Em uso', 'serial' => 'SN-AB1234', 'model' => 'OptiPlex 3080', 'manufacturer' => 'Dell', 'location' => 'Balcão', 'created' => '01/07/2026 09:30'],
             ['id' => 2, 'type' => 'Impressoras', 'typeKey' => 'Printer', 'icon' => 'bi-printer', 'name' => 'IMP-FISCAL-01', 'entity' => 'Drogacei > FL 01 - Setor O', 'status' => 'Em uso', 'serial' => 'PRN-9981', 'model' => 'Epson TM-T20', 'manufacturer' => 'Epson', 'location' => 'Caixa', 'created' => '02/07/2026 14:10'],
             ['id' => 3, 'type' => 'Monitores', 'typeKey' => 'Monitor', 'icon' => 'bi-display', 'name' => 'MON-01', 'entity' => 'Mel do Sol', 'status' => 'Em uso', 'serial' => 'MON-5521', 'model' => 'E2220H', 'manufacturer' => 'Dell', 'location' => '—', 'created' => '03/07/2026 08:05'],
+            ['id' => 4, 'type' => 'DVRs', 'typeKey' => 'PluginGenericobjectDvr', 'icon' => 'bi-camera-video', 'name' => 'DVR-CFTV-01', 'entity' => 'Drogacei > FL 01 - Setor O', 'status' => 'Em uso', 'serial' => 'DVR-INTEL-88', 'model' => 'MHDX 1116', 'manufacturer' => 'Intelbras', 'location' => 'CPD', 'created' => '05/07/2026 11:20'],
+            ['id' => 5, 'type' => 'Impressoras', 'typeKey' => 'Printer', 'icon' => 'bi-printer', 'name' => 'IMP-LASER-ADM', 'entity' => 'Drogacei > Matriz', 'status' => 'Em uso', 'serial' => 'PRN-HP-404', 'model' => 'LaserJet Pro M404', 'manufacturer' => 'HP', 'location' => 'Escritório', 'created' => '06/07/2026 15:45'],
+            ['id' => 6, 'type' => 'Computadores', 'typeKey' => 'Computer', 'icon' => 'bi-pc-display', 'name' => 'PC-FINANCEIRO', 'entity' => 'A2 Arquitetura', 'status' => 'Em uso', 'serial' => 'SN-LEN-99', 'model' => 'ThinkCentre M70q', 'manufacturer' => 'Lenovo', 'location' => 'Administrativo', 'created' => '08/07/2026 10:15'],
         ]);
     }
 
@@ -57,10 +60,10 @@ class FakeGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
                 ['label' => 'Memória (RAM)', 'value' => '16 GB (2 módulos)'],
                 ['label' => 'Disco(s)', 'value' => '240 GB · SSD'],
                 ['label' => 'Sistema operacional', 'value' => 'Windows 10 Pro'],
-                ['label' => 'Fabricante', 'value' => 'Dell'],
+                ['label' => 'Marca', 'value' => 'Dell'],
             ]
             : [
-                ['label' => 'Fabricante', 'value' => 'Genérico'],
+                ['label' => 'Marca', 'value' => 'Genérico'],
                 ['label' => 'Modelo', 'value' => 'Demo '.$itemtype],
                 ['label' => 'Nº de série', 'value' => 'SN-'.$id],
             ];
