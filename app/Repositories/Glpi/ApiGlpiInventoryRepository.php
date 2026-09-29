@@ -64,6 +64,7 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
                     'model' => $this->val($a[$cfg['model']] ?? null),
                     'manufacturer' => $this->val($a['manufacturers_id'] ?? null),
                     'location' => $this->val($a['locations_id'] ?? null),
+                    'created' => $this->fmtDate($a['date_creation'] ?? null),
                 ]);
             }
         }

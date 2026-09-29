@@ -84,7 +84,7 @@
         <div class="table-wrap">
             <table class="table table-hover align-middle mb-0">
                 <thead>
-                    <tr><th>Etiqueta</th><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Fabricante</th><th>Nº de série</th><th>Status</th>@if ($canSeeValues)<th class="text-end">Valor</th>@endif @if ($isManager)<th class="text-end">Ações</th>@endif</tr>
+                    <tr><th>Etiqueta</th><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Fabricante</th><th>Nº de série</th><th>Status</th><th class="text-nowrap">Adicionado em</th>@if ($canSeeValues)<th class="text-end">Valor</th>@endif @if ($isManager)<th class="text-end">Ações</th>@endif</tr>
                 </thead>
                 <tbody id="invBody">
                     @forelse ($assets as $a)
@@ -99,6 +99,7 @@
                             <td>{{ $a['manufacturer'] }}</td>
                             <td class="small">{{ $a['serial'] }}</td>
                             <td>@if ($a['status'] !== '—')<span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $a['status'] }}</span>@else<span class="text-muted">—</span>@endif</td>
+                            <td class="small text-secondary text-nowrap">{{ ($a['created'] ?? '') ?: '—' }}</td>
                             @if ($canSeeValues)
                                 <td class="text-end text-nowrap">
                                     @if (! empty($a['value']))<span class="text-success fw-semibold">R$ {{ number_format($a['value'], 2, ',', '.') }}</span>@else<span class="text-muted">—</span>@endif
@@ -127,7 +128,7 @@
                             @endif
                         </tr>
                     @empty
-                        <tr><td colspan="{{ 8 + ($canSeeValues ? 1 : 0) + ($isManager ? 1 : 0) }}" class="text-center text-muted py-5">
+                        <tr><td colspan="{{ 9 + ($canSeeValues ? 1 : 0) + ($isManager ? 1 : 0) }}" class="text-center text-muted py-5">
                             <i class="bi bi-pc-display d-block fs-2 mb-2 opacity-50"></i>
                             Nenhum ativo inventariado ainda.<br><span class="small">Os equipamentos aparecem aqui conforme o GLPI Agent faz o inventário das máquinas.</span>
                         </td></tr>

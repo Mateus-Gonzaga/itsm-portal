@@ -22,7 +22,7 @@ interface GlpiInventoryRepositoryInterface
     /**
      * Ativos (todos os tipos), normalizados.
      *
-     * @return Collection<int, array{id:int,type:string,typeKey:string,icon:string,name:string,entity:string,status:string,serial:string,model:string,manufacturer:string,location:string}>
+     * @return Collection<int, array{id:int,type:string,typeKey:string,icon:string,name:string,entity:string,status:string,serial:string,model:string,manufacturer:string,location:string,created:string}>
      */
     public function assets(): Collection;
 
