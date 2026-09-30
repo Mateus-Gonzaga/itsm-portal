@@ -367,13 +367,24 @@
     function apply() {
         const q = filterInput.value.toLowerCase();
         let soma = 0;
+        // Contagem dos cards acompanha entidade + busca (sem o filtro de tipo).
+        const porTipo = {};
+        let totalFiltro = 0;
         rows.forEach(function (tr) {
             const okType = !typeFilter || tr.dataset.type === typeFilter;
             const okEntity = !entityFilter || tr.dataset.entity === entityFilter;
             const okText = tr.textContent.toLowerCase().includes(q);
+            if (okEntity && okText) {
+                porTipo[tr.dataset.type] = (porTipo[tr.dataset.type] || 0) + 1;
+                totalFiltro++;
+            }
             const visivel = okType && okEntity && okText;
             tr.style.display = visivel ? '' : 'none';
             if (visivel) soma += parseFloat(tr.dataset.value || '0') || 0;
+        });
+        document.querySelectorAll('.inv-card').forEach(function (c) {
+            const v = c.querySelector('.v');
+            if (v) v.textContent = c.dataset.type ? (porTipo[c.dataset.type] || 0) : totalFiltro;
         });
         if (totalEl) totalEl.textContent = fmtBRL(soma);
         if (totalLabel) totalLabel.textContent = entityFilter ? 'Valor dos ativos desta entidade' : 'Valor total do inventário';
