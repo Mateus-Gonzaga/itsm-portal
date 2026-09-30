@@ -21,6 +21,10 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         'Printer' => ['label' => 'Impressoras', 'icon' => 'bi-printer', 'model' => 'printermodels_id'],
         'NetworkEquipment' => ['label' => 'Rede', 'icon' => 'bi-hdd-network', 'model' => 'networkequipmentmodels_id'],
         'Peripheral' => ['label' => 'Periféricos', 'icon' => 'bi-usb-plug', 'model' => 'peripheralmodels_id'],
+        'Phone' => ['label' => 'Telefones', 'icon' => 'bi-telephone', 'model' => 'phonemodels_id'],
+        'Rack' => ['label' => 'Racks', 'icon' => 'bi-server', 'model' => 'rackmodels_id'],
+        'PluginGenericobjectNobreak' => ['label' => 'Nobreaks', 'icon' => 'bi-battery-charging', 'model' => 'plugin_genericobject_nobreakmodels_id'],
+        'PluginGenericobjectTv' => ['label' => 'TVs', 'icon' => 'bi-tv', 'model' => 'plugin_genericobject_tvmodels_id'],
         // Ativos do plugin GenericObject (câmeras/segurança).
         'PluginGenericobjectDvr' => ['label' => 'DVRs', 'icon' => 'bi-camera-video', 'model' => 'plugin_genericobject_dvrmodels_id'],
         'PluginGenericobjectAlarme' => ['label' => 'Alarmes', 'icon' => 'bi-bell', 'model' => 'plugin_genericobject_alarmemodels_id'],
@@ -59,11 +63,14 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
                     'icon' => $cfg['icon'],
                     'name' => (string) ($a['name'] ?? '(sem nome)'),
                     'entity' => $this->entityName($a['entities_id'] ?? null),
+                    'entityId' => (int) ($a['entities_id'] ?? 0),
                     'status' => $this->val($a['states_id'] ?? null),
                     'serial' => $this->val($a['serial'] ?? null) ?: $this->val($a['otherserial'] ?? null),
+                    'rawSerial' => $this->val($a['serial'] ?? null),
                     'model' => $this->val($a[$cfg['model']] ?? null),
                     'manufacturer' => $this->val($a['manufacturers_id'] ?? null),
                     'location' => $this->val($a['locations_id'] ?? null),
+                    'comment' => (string) ($a['comment'] ?? ''),
                     'created' => $this->fmtDate($a['date_creation'] ?? null),
                 ]);
             }
@@ -85,6 +92,13 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
             }
         }
 
+        if (! empty($data['marca'])) {
+            $mId = $this->resolveOrCreateManufacturer($data['marca']);
+            if ($mId) {
+                $input['manufacturers_id'] = $mId;
+            }
+        }
+
         $resp = $this->client()->post("/{$itemtype}", ['input' => $input]);
         $resp->throw();
 
@@ -94,6 +108,45 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         }
 
         return (int) $newId;
+    }
+
+    public function updateAsset(string $itemtype, int $id, array $data): void
+    {
+        if (! isset(self::TYPES[$itemtype]) || $id <= 0) {
+            throw new RuntimeException('Ativo inválido.');
+        }
+
+        $input = ['id' => $id];
+        if (isset($data['name']) && trim((string) $data['name']) !== '') {
+            $input['name'] = trim((string) $data['name']);
+        }
+        if (array_key_exists('serial', $data)) {
+            $input['serial'] = (string) ($data['serial'] ?? '');
+        }
+        if (array_key_exists('otherserial', $data)) {
+            $input['otherserial'] = (string) ($data['otherserial'] ?? '');
+        }
+        if (array_key_exists('comment', $data)) {
+            $input['comment'] = (string) ($data['comment'] ?? '');
+        }
+        if (! empty($data['entities_id']) && (int) $data['entities_id'] > 0) {
+            $input['entities_id'] = (int) $data['entities_id'];
+        }
+
+        if (! empty($data['marca'])) {
+            $mId = $this->resolveOrCreateManufacturer($data['marca']);
+            if ($mId) {
+                $input['manufacturers_id'] = $mId;
+            }
+        }
+
+        $resp = $this->client()->put("/{$itemtype}/{$id}", ['input' => $input]);
+        $resp->throw();
+
+        // Se moveu entidade e é computador, sincroniza conectados
+        if (! empty($data['entities_id']) && (int) $data['entities_id'] > 0 && $itemtype === 'Computer') {
+            $this->moveConnectedItems($id, (int) $data['entities_id']);
+        }
     }
 
     public function deleteAsset(string $itemtype, int $id): void
@@ -209,7 +262,7 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         }
 
         // Campos comuns a todos os tipos.
-        $add('Fabricante', $a['manufacturers_id'] ?? null);
+        $add('Marca', $a['manufacturers_id'] ?? null);
         $add('Modelo', $a[self::TYPES[$itemtype]['model']] ?? null);
         $add('Nº de série', $a['serial'] ?? null);
         $add('Nº patrimônio (GLPI)', $a['otherserial'] ?? null);
@@ -400,5 +453,43 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         $this->sessionToken = $token;
 
         return $this->sessionToken;
+    }
+
+    /** Localiza ou cria um fabricante (marca) no GLPI pelo nome e retorna seu ID. */
+    private function resolveOrCreateManufacturer(string $name): ?int
+    {
+        $name = trim($name);
+        if ($name === '' || $name === '—') {
+            return null;
+        }
+
+        try {
+            // 1. Busca pelo nome exato no GLPI
+            $resp = $this->client()->get('/Manufacturer', [
+                'searchText[name]' => $name,
+            ]);
+            if ($resp->successful() && is_array($resp->json())) {
+                foreach ($resp->json() as $m) {
+                    if (strcasecmp(trim($m['name'] ?? ''), $name) === 0) {
+                        return (int) $m['id'];
+                    }
+                }
+            }
+
+            // 2. Se não encontrou, tenta criar o fabricante no GLPI
+            $createResp = $this->client()->post('/Manufacturer', [
+                'input' => ['name' => $name],
+            ]);
+            if ($createResp->successful()) {
+                $newId = $createResp->json('id') ?? $createResp->json('0.id');
+                if ($newId) {
+                    return (int) $newId;
+                }
+            }
+        } catch (\Throwable) {
+            // Best-effort: se faltar permissão ou endpoint, segue sem travar
+        }
+
+        return null;
     }
 }

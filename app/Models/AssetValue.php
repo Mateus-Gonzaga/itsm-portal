@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 /** Valor (estimado/de compra) de um ativo do inventário — guardado no portal. */
 class AssetValue extends Model
 {
-    protected $fillable = ['itemtype', 'item_id', 'tag', 'modelo', 'value'];
+    protected $fillable = ['itemtype', 'item_id', 'tag', 'modelo', 'marca', 'value'];
 
     protected function casts(): array
     {

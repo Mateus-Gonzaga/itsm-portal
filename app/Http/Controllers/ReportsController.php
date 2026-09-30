@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Data\TicketData;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
+use App\Models\AssetValue;
 use App\Repositories\Glpi\GlpiInventoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
 use Illuminate\Http\Request;
@@ -49,6 +50,19 @@ class ReportsController extends Controller
         } catch (\Throwable $e) {
             Log::warning('ReportsController: falha ao carregar ativos do inventário: '.$e->getMessage());
             $assets = collect();
+        }
+
+        try {
+            $valores = AssetValue::get()->keyBy(fn (AssetValue $v) => $v->itemtype.'-'.$v->item_id);
+            $assets = $assets->map(function (array $a) use ($valores) {
+                $meta = $valores->get(($a['typeKey'] ?? '').'-'.($a['id'] ?? 0));
+                $a['manufacturer'] = ($a['manufacturer'] && $a['manufacturer'] !== '—') ? $a['manufacturer'] : (string) (optional($meta)->marca ?? '—');
+                $a['model'] = ($a['model'] && $a['model'] !== '—') ? $a['model'] : (string) (optional($meta)->modelo ?? '—');
+
+                return $a;
+            });
+        } catch (\Throwable) {
+            // best-effort
         }
 
         $totalAssets = $assets->count();

@@ -29,8 +29,11 @@ class InventoryController extends Controller
             $a['value'] = $canSeeValues ? optional($meta)->value : null;
             $a['tag'] = optional($meta)->tag;
             $a['modelo'] = optional($meta)->modelo;
+            $a['marca'] = optional($meta)->marca;
             // Coluna "Modelo": usa o do GLPI; se vazio, cai no informado no portal.
-            $a['model'] = $a['model'] ?: (string) ($a['modelo'] ?? '');
+            $a['model'] = ($a['model'] && $a['model'] !== '—') ? $a['model'] : (string) ($a['modelo'] ?? '—');
+            // Coluna "Marca": usa a do GLPI; se vazio, cai na informada no portal.
+            $a['manufacturer'] = ($a['manufacturer'] && $a['manufacturer'] !== '—') ? $a['manufacturer'] : (string) ($a['marca'] ?? '—');
 
             return $a;
         });
@@ -58,7 +61,7 @@ class InventoryController extends Controller
         ]);
     }
 
-    /** Cria um ativo manualmente no GLPI (gestor) + metadados locais (etiqueta/modelo/valor). */
+    /** Cria um ativo manualmente no GLPI (gestor) + metadados locais (etiqueta/modelo/marca/valor). */
     public function store(Request $request, GlpiInventoryRepositoryInterface $inventory): RedirectResponse
     {
         $data = $request->validate([
@@ -68,6 +71,7 @@ class InventoryController extends Controller
             'serial' => ['nullable', 'string', 'max:120'],
             'otherserial' => ['nullable', 'string', 'max:120'], // nº patrimônio (GLPI)
             'comment' => ['nullable', 'string', 'max:2000'],
+            'marca' => ['nullable', 'string', 'max:120'],         // marca/fabricante
             'tag' => ['nullable', 'string', 'max:60'],           // etiqueta local
             'modelo' => ['nullable', 'string', 'max:120'],       // modelo local
             'value' => ['nullable', 'numeric', 'min:0'],         // valor local
@@ -83,19 +87,21 @@ class InventoryController extends Controller
                 'serial' => $data['serial'] ?? null,
                 'otherserial' => $data['otherserial'] ?? null,
                 'comment' => $data['comment'] ?? null,
+                'marca' => $data['marca'] ?? null,
             ]);
         } catch (\Throwable $e) {
             return back()->withInput()->with('error', 'Não foi possível criar o ativo no GLPI: '.$e->getMessage());
         }
 
-        // Metadados locais (etiqueta/modelo/valor) — se informados.
+        // Metadados locais (etiqueta/modelo/marca/valor) — se informados.
         $tag = ! empty($data['tag']) ? trim($data['tag']) : null;
         $modelo = ! empty($data['modelo']) ? trim($data['modelo']) : null;
+        $marca = ! empty($data['marca']) ? trim($data['marca']) : null;
         $value = $data['value'] !== null ? (float) $data['value'] : null;
-        if ($tag !== null || $modelo !== null || $value !== null) {
+        if ($tag !== null || $modelo !== null || $marca !== null || $value !== null) {
             AssetValue::updateOrCreate(
                 ['itemtype' => $data['itemtype'], 'item_id' => $newId],
-                ['tag' => $tag, 'modelo' => $modelo, 'value' => $value],
+                ['tag' => $tag, 'modelo' => $modelo, 'marca' => $marca, 'value' => $value],
             );
             if ($value !== null) {
                 try {
@@ -132,6 +138,70 @@ class InventoryController extends Controller
         return back()->with('status', 'Ativo excluído (enviado à lixeira do GLPI).');
     }
 
+    /** Atualiza o cadastro completo de um ativo (gestor) — GLPI + metadados locais. */
+    public function update(Request $request, GlpiInventoryRepositoryInterface $inventory): RedirectResponse
+    {
+        $data = $request->validate([
+            'itemtype' => ['required', 'string', 'max:60'],
+            'id' => ['required', 'integer', 'min:1'],
+            'name' => ['required', 'string', 'max:255'],
+            'entity_id' => ['nullable', 'integer', 'min:0'],
+            'serial' => ['nullable', 'string', 'max:120'],
+            'marca' => ['nullable', 'string', 'max:120'],
+            'modelo' => ['nullable', 'string', 'max:120'],
+            'tag' => ['nullable', 'string', 'max:60'],
+            'value' => ['nullable', 'numeric', 'min:0'],
+            'comment' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        abort_unless(array_key_exists($data['itemtype'], $inventory->types()), 422, 'Tipo de ativo inválido.');
+
+        $id = (int) $data['id'];
+        $itemtype = $data['itemtype'];
+
+        // 1) Atualiza dados cadastrais no GLPI
+        try {
+            $inventory->updateAsset($itemtype, $id, [
+                'name' => $data['name'],
+                'entities_id' => ! empty($data['entity_id']) ? (int) $data['entity_id'] : null,
+                'serial' => $data['serial'] ?? null,
+                'otherserial' => $data['tag'] ?? null,
+                'comment' => $data['comment'] ?? null,
+                'marca' => $data['marca'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            return back()->withInput()->with('error', 'Não foi possível atualizar o ativo no GLPI: '.$e->getMessage());
+        }
+
+        // 2) Atualiza metadados locais no portal (tag, modelo, marca, valor)
+        $tag = ! empty($data['tag']) ? trim($data['tag']) : null;
+        $modelo = ! empty($data['modelo']) ? trim($data['modelo']) : null;
+        $marca = ! empty($data['marca']) ? trim($data['marca']) : null;
+        $value = ($data['value'] ?? null) !== null ? (float) $data['value'] : null;
+
+        if ($tag === null && $modelo === null && $marca === null && $value === null) {
+            AssetValue::where('itemtype', $itemtype)->where('item_id', $id)->delete();
+        } else {
+            AssetValue::updateOrCreate(
+                ['itemtype' => $itemtype, 'item_id' => $id],
+                ['tag' => $tag, 'modelo' => $modelo, 'marca' => $marca, 'value' => $value],
+            );
+        }
+
+        // 3) Espelha o valor no GLPI (Infocom)
+        if ($value !== null) {
+            try {
+                $inventory->setInfocomValue($itemtype, $id, $value);
+            } catch (\Throwable) {
+                // best-effort
+            }
+        }
+
+        AuditLog::record('inventory.update', "Atualizou cadastro do ativo {$itemtype} #{$id} \"{$data['name']}\"");
+
+        return back()->with('status', "Ativo \"{$data['name']}\" atualizado com sucesso.");
+    }
+
     /** Define/limpa etiqueta e valor de um ativo (gestor) — no portal E o valor no GLPI (Infocom). */
     public function setValue(Request $request, GlpiInventoryRepositoryInterface $inventory): RedirectResponse
     {
@@ -140,20 +210,22 @@ class InventoryController extends Controller
             'id' => ['required', 'integer', 'min:1'],
             'tag' => ['nullable', 'string', 'max:60'],
             'modelo' => ['nullable', 'string', 'max:120'],
+            'marca' => ['nullable', 'string', 'max:120'],
             'value' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $value = $data['value'] !== null ? (float) $data['value'] : null;
         $tag = ! empty($data['tag']) ? trim($data['tag']) : null;
         $modelo = ! empty($data['modelo']) ? trim($data['modelo']) : null;
+        $marca = ! empty($data['marca']) ? trim($data['marca']) : null;
 
         // 1) Guarda no portal (fonte rápida para exibir/somar). Tudo vazio = remove a linha.
-        if ($value === null && $tag === null && $modelo === null) {
+        if ($value === null && $tag === null && $modelo === null && $marca === null) {
             AssetValue::where('itemtype', $data['itemtype'])->where('item_id', (int) $data['id'])->delete();
         } else {
             AssetValue::updateOrCreate(
                 ['itemtype' => $data['itemtype'], 'item_id' => (int) $data['id']],
-                ['tag' => $tag, 'modelo' => $modelo, 'value' => $value],
+                ['tag' => $tag, 'modelo' => $modelo, 'marca' => $marca, 'value' => $value],
             );
         }
 
@@ -178,10 +250,14 @@ class InventoryController extends Controller
         $details = $inventory->assetDetails($itemtype, $id);
         abort_if($details === null, 404, 'Ativo não encontrado ou fora do seu acesso.');
 
-        // Complementa com o que foi informado no portal (etiqueta/modelo), no topo.
+        // Complementa com o que foi informado no portal (etiqueta/modelo/marca), no topo.
         $meta = AssetValue::where('itemtype', $itemtype)->where('item_id', $id)->first();
         if ($meta) {
             $fields = collect($details['fields']);
+            if (! empty($meta->marca)) {
+                $fields = $fields->reject(fn ($f) => in_array($f['label'] ?? '', ['Marca', 'Fabricante'], true))->values();
+                $fields->prepend(['label' => 'Marca', 'value' => $meta->marca]);
+            }
             if (! empty($meta->modelo)) {
                 $fields = $fields->reject(fn ($f) => ($f['label'] ?? '') === 'Modelo')->values();
                 $fields->prepend(['label' => 'Modelo', 'value' => $meta->modelo]);
@@ -204,7 +280,8 @@ class InventoryController extends Controller
             $meta = $valores->get(($a['typeKey'] ?? '').'-'.($a['id'] ?? 0));
             $a['value'] = optional($meta)->value;
             $a['tag'] = optional($meta)->tag;
-            $a['model'] = $a['model'] ?: (string) optional($meta)->modelo;
+            $a['model'] = ($a['model'] && $a['model'] !== '—') ? $a['model'] : (string) optional($meta)->modelo;
+            $a['manufacturer'] = ($a['manufacturer'] && $a['manufacturer'] !== '—') ? $a['manufacturer'] : (string) optional($meta)->marca;
 
             return $a;
         });

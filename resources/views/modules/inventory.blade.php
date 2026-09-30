@@ -103,14 +103,21 @@
                             @if ($canSeeValues)
                                 <td class="text-end text-nowrap">
                                     @if (! empty($a['value']))<span class="text-success fw-semibold">R$ {{ number_format($a['value'], 2, ',', '.') }}</span>@else<span class="text-muted">—</span>@endif
-                                    @if ($isManager)
-                                        <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-decoration-none js-set-value" title="Editar etiqueta/valor"
-                                                data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}" data-name="{{ $a['name'] }}" data-value="{{ $a['value'] }}" data-tag="{{ $a['tag'] }}" data-modelo="{{ $a['modelo'] }}"><i class="bi bi-pencil"></i></button>
-                                    @endif
                                 </td>
                             @endif
                             @if ($isManager)
                                 <td class="text-end text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary js-edit-asset"
+                                        data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}" data-name="{{ $a['name'] }}"
+                                        data-entity-id="{{ $a['entityId'] ?? 0 }}" data-entity-name="{{ $a['entity'] }}"
+                                        data-marca="{{ $a['manufacturer'] === '—' ? '' : $a['manufacturer'] }}"
+                                        data-modelo="{{ $a['model'] === '—' ? '' : $a['model'] }}"
+                                        data-serial="{{ ($a['rawSerial'] ?? $a['serial']) === '—' ? '' : ($a['rawSerial'] ?? $a['serial']) }}"
+                                        data-tag="{{ $a['tag'] ?? '' }}" data-value="{{ $a['value'] ?? '' }}"
+                                        data-comment="{{ $a['comment'] ?? '' }}"
+                                        title="Editar cadastro do ativo">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary js-move-asset"
                                         data-id="{{ $a['id'] }}" data-type="{{ $a['typeKey'] }}"
                                         data-name="{{ $a['name'] }}" data-entity="{{ $a['entity'] }}"
@@ -171,29 +178,63 @@
     </div>
 </div>
 
-<div class="modal fade" id="valueModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" action="{{ route('inventory.value') }}" class="modal-content">
-            @csrf
-            <input type="hidden" name="itemtype" id="vlItemtype">
-            <input type="hidden" name="id" id="vlId">
+<div class="modal fade" id="editAssetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form method="POST" action="{{ route('inventory.update') }}" class="modal-content">
+            @csrf @method('PUT')
+            <input type="hidden" name="itemtype" id="edItemtype">
+            <input type="hidden" name="id" id="edId">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-tag me-2 text-success"></i>Editar ativo</h5>
+                <h5 class="modal-title"><i class="bi bi-pencil-square me-2 text-primary"></i>Editar Ativo</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="small text-secondary mb-2">Ativo: <strong id="vlName"></strong></p>
-                <label class="form-label small">Etiqueta / patrimônio</label>
-                <input type="text" name="tag" id="vlTag" class="form-control mb-3" maxlength="60" placeholder="Ex.: FL-0042">
-                <label class="form-label small">Modelo</label>
-                <input type="text" name="modelo" id="vlModelo" class="form-control mb-3" maxlength="120" placeholder="Ex.: Brother DCP-1610NW">
-                <label class="form-label small">Valor (R$)</label>
-                <input type="number" step="0.01" min="0" name="value" id="vlValue" class="form-control" placeholder="0,00">
-                <div class="form-text">O modelo do GLPI aparece automático quando existe; aqui você informa/ajusta manualmente. Deixe tudo em branco e salve para <strong>limpar</strong>.</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Nome do equipamento <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="edName" class="form-control" maxlength="255" required placeholder="Ex.: PC-CAIXA-01">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Entidade (filial)</label>
+                        <select name="entity_id" id="edEntityId" class="form-select">
+                            <option value="">(Manter entidade atual)</option>
+                            @foreach ($entities as $e)
+                                <option value="{{ $e['id'] }}">{{ html_entity_decode($e['completename'] ?? $e['name'], ENT_QUOTES | ENT_HTML5, 'UTF-8') }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Marca</label>
+                        <input type="text" name="marca" id="edMarca" class="form-control" maxlength="120" placeholder="Ex.: Dell, SMS, Intelbras, HP, Samsung...">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Modelo</label>
+                        <input type="text" name="modelo" id="edModelo" class="form-control" maxlength="120" placeholder="Ex.: OptiPlex 3080, Net Station 1500VA...">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Nº de série</label>
+                        <input type="text" name="serial" id="edSerial" class="form-control" maxlength="120" placeholder="Ex.: SN-AB1234">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Etiqueta / Patrimônio</label>
+                        <input type="text" name="tag" id="edTag" class="form-control" maxlength="60" placeholder="Ex.: FL-0042">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Valor (R$)</label>
+                        <input type="number" step="0.01" min="0" name="value" id="edValue" class="form-control" placeholder="0,00">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Observações</label>
+                        <textarea name="comment" id="edComment" rows="2" class="form-control" maxlength="2000" placeholder="Anotações gerais do ativo..."></textarea>
+                    </div>
+                </div>
+                <div class="form-text mt-2 small text-muted">
+                    As alterações são sincronizadas com o GLPI (nome, série, entidade, marca) e guardadas no portal (etiqueta, modelo e valor financeiro).
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-success">Salvar</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar alterações</button>
             </div>
         </form>
     </div>
@@ -229,12 +270,16 @@
                         <input type="text" name="name" class="form-control" maxlength="255" required placeholder="Ex.: PDV-03-DF-02">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small">Nº de série <span class="text-muted">— opcional</span></label>
-                        <input type="text" name="serial" class="form-control" maxlength="120">
+                        <label class="form-label small">Marca <span class="text-muted">— opcional</span></label>
+                        <input type="text" name="marca" class="form-control" maxlength="120" placeholder="Ex.: Dell, SMS, Intelbras, HP...">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small">Modelo <span class="text-muted">— opcional</span></label>
                         <input type="text" name="modelo" class="form-control" maxlength="120" placeholder="Ex.: Dell OptiPlex 3080">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Nº de série <span class="text-muted">— opcional</span></label>
+                        <input type="text" name="serial" class="form-control" maxlength="120">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small">Etiqueta <span class="text-muted">— opcional</span></label>
@@ -249,7 +294,7 @@
                         <textarea name="comment" rows="2" class="form-control" maxlength="2000"></textarea>
                     </div>
                 </div>
-                <div class="form-text mt-2">O ativo é criado no GLPI na entidade escolhida. Etiqueta, modelo e valor ficam guardados no portal (o valor também vai para o GLPI).</div>
+                <div class="form-text mt-2">O ativo é criado no GLPI na entidade escolhida. Marca, etiqueta, modelo e valor ficam guardados no portal (o valor e a marca também são refletidos no GLPI).</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -356,19 +401,25 @@
     apply();
     syncReport();
 
-    // Definir valor do ativo (gestor).
-    const valueModalEl = document.getElementById('valueModal');
-    if (valueModalEl && window.bootstrap) {
-        const vmodal = new bootstrap.Modal(valueModalEl);
-        document.querySelectorAll('.js-set-value').forEach(function (btn) {
+    // Editar cadastro completo do ativo (gestor).
+    const editModalEl = document.getElementById('editAssetModal');
+    if (editModalEl && window.bootstrap) {
+        const editModal = new bootstrap.Modal(editModalEl);
+        document.querySelectorAll('.js-edit-asset').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                document.getElementById('vlItemtype').value = btn.dataset.type;
-                document.getElementById('vlId').value = btn.dataset.id;
-                document.getElementById('vlName').textContent = btn.dataset.name;
-                document.getElementById('vlTag').value = btn.dataset.tag || '';
-                document.getElementById('vlModelo').value = btn.dataset.modelo || '';
-                document.getElementById('vlValue').value = btn.dataset.value || '';
-                vmodal.show();
+                document.getElementById('edItemtype').value = btn.dataset.type || '';
+                document.getElementById('edId').value = btn.dataset.id || '';
+                document.getElementById('edName').value = btn.dataset.name || '';
+                if (document.getElementById('edEntityId')) {
+                    document.getElementById('edEntityId').value = btn.dataset.entityId || '';
+                }
+                document.getElementById('edMarca').value = btn.dataset.marca || '';
+                document.getElementById('edModelo').value = btn.dataset.modelo || '';
+                document.getElementById('edSerial').value = btn.dataset.serial || '';
+                document.getElementById('edTag').value = btn.dataset.tag || '';
+                document.getElementById('edValue').value = btn.dataset.value || '';
+                document.getElementById('edComment').value = btn.dataset.comment || '';
+                editModal.show();
             });
         });
     }

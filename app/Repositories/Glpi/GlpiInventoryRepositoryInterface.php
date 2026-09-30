@@ -35,6 +35,13 @@ interface GlpiInventoryRepositoryInterface
     public function createAsset(string $itemtype, array $data): int;
 
     /**
+     * Atualiza os dados cadastrais de um ativo no GLPI (gestor).
+     *
+     * @param  array{name?:string,entities_id?:int,serial?:?string,otherserial?:?string,comment?:?string,marca?:?string}  $data
+     */
+    public function updateAsset(string $itemtype, int $id, array $data): void;
+
+    /**
      * Move um ativo para outra entidade do GLPI (gestor). $itemtype é a chave
      * do tipo (ex.: 'Computer'), $id o ativo e $entityId a entidade de destino.
      */
