@@ -2,6 +2,10 @@
 
 Histórico cronológico (nunca apagar).
 
+## 2026-09-30
+- **Chamados — e-mail de notificação ponta a ponta.** O e-mail do campo "E-mail para notificações" agora é gravado no GLPI como `alternative_email` do ator solicitante (`Ticket_User`, `use_notification=1`; sem solicitante vinculado cria um solicitante só-e-mail `users_id=0`) → respostas, solução e fechamento (notificações nativas do GLPI) chegam nesse e-mail. Quando o SMTP do portal está ativo (`MAIL_MAILER` ≠ log/array) e há e-mail do cliente, o chamado é criado com `_disablenotif` para não duplicar a confirmação (o "Novo chamado" do GLPI é suprimido só para chamados abertos pelo portal; a equipe recebe o alerta do próprio portal). **Fix:** ao abrir em nome de um cliente, o e-mail digitado era gravado no cadastro do *técnico* (se @glpi.local) — agora vai para o solicitante, e o campo não vem mais pré-preenchido com o e-mail da equipe. Método `setRequesterNotificationEmail()` na interface + Api + Fake. Arquivos: `app/Http/Controllers/TicketController.php`, `app/Repositories/Glpi/{GlpiTicketRepositoryInterface,ApiGlpiTicketRepository,FakeGlpiTicketRepository}.php`, `resources/views/tickets/create.blade.php`.
+- **Inventário — edição completa de ativos + novos tipos.** Modal "Editar ativo" (gestor): nome, entidade, marca (resolve/cria `Manufacturer`), modelo, nº de série, identificação, valor e observações (`PUT /{itemtype}/{id}` + `asset_values`, nova coluna `marca` — **exige migrate**). Novos cards/tipos: Telefones (`Phone`), Racks, Nobreaks e TVs (GenericObject `PluginGenericobjectNobreak`/`Tv`, precisam existir no GLPI). Os cards passam a contar conforme o filtro de entidade/busca.
+
 ## 2026-09-29
 - **Inventário — coluna "Adicionado em".** A lista de ativos passa a mostrar a **data/hora de criação** de cada item (`date_creation` do GLPI). `assets()` agora retorna `created` (Api + Fake); nova coluna na tabela. Arquivos: `app/Repositories/Glpi/{GlpiInventoryRepositoryInterface,ApiGlpiInventoryRepository,FakeGlpiInventoryRepository}.php`, `resources/views/modules/inventory.blade.php`.
 
