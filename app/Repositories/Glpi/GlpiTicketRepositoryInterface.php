@@ -35,6 +35,12 @@ interface GlpiTicketRepositoryInterface
      */
     public function changeRequester(int|string $id, int $userId, ?int $entityId, string $name): void;
 
+    /**
+     * Define o e-mail que recebe as notificações do GLPI (respostas, solução,
+     * fechamento) para o solicitante DESTE chamado (alternative_email do ator).
+     */
+    public function setRequesterNotificationEmail(int|string $id, string $email): void;
+
     /** Exclui o chamado (move para a lixeira do GLPI — reversível). */
     public function delete(int|string $id): void;
 

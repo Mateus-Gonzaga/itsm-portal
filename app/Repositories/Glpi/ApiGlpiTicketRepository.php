@@ -156,6 +156,10 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         if (! empty($attributes['category_id']) || ! empty($attributes['itilcategories_id'])) {
             $input['itilcategories_id'] = (int) ($attributes['category_id'] ?? $attributes['itilcategories_id']);
         }
+        // O portal já enviou a confirmação de abertura: evita o "Novo chamado" duplicado do GLPI.
+        if (! empty($attributes['disable_glpi_notification'])) {
+            $input['_disablenotif'] = true;
+        }
 
         $resp = $this->client()->post('/Ticket', ['input' => $input]);
         $resp->throw();
@@ -217,6 +221,30 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         $this->client()->post('/Ticket_User', [
             'input' => ['tickets_id' => (int) $id, 'users_id' => $userId, 'type' => 1],
         ])->throw();
+    }
+
+    public function setRequesterNotificationEmail(int|string $id, string $email): void
+    {
+        // Ator solicitante (type 1): liga a notificação e grava o e-mail alternativo.
+        // Sem solicitante vinculado, cria um solicitante "só e-mail" (users_id 0).
+        $resp = $this->client()->get("/Ticket/{$id}/Ticket_User");
+        $links = $resp->successful() && is_array($resp->json()) ? $resp->json() : [];
+        $requesters = array_filter($links, fn ($l) => (int) ($l['type'] ?? 0) === 1 && ! empty($l['id']));
+
+        if ($requesters === []) {
+            $this->client()->post('/Ticket_User', ['input' => [
+                'tickets_id' => (int) $id, 'users_id' => 0, 'type' => 1,
+                'use_notification' => 1, 'alternative_email' => $email,
+            ]])->throw();
+
+            return;
+        }
+
+        foreach ($requesters as $link) {
+            $this->client()->put('/Ticket_User/'.(int) $link['id'], ['input' => [
+                'id' => (int) $link['id'], 'use_notification' => 1, 'alternative_email' => $email,
+            ]])->throw();
+        }
     }
 
     public function delete(int|string $id): void

@@ -131,6 +131,11 @@ class FakeGlpiTicketRepository implements GlpiTicketRepositoryInterface
         return $updated;
     }
 
+    public function setRequesterNotificationEmail(int|string $id, string $email): void
+    {
+        // no-op (demo)
+    }
+
     public function changeRequester(int|string $id, int $userId, ?int $entityId, string $name): void
     {
         $t = $this->find($id);

@@ -227,6 +227,18 @@ class TicketController extends Controller
             ? ['technician' => $data['technician_name'] ?: 'Técnico', 'technician_glpi_id' => (int) $data['technician_glpi_id']]
             : [];
 
+        // E-mail do cliente: o digitado no formulário; senão o do solicitante no portal.
+        $clientEmail = $data['contact_email'] ?? null;
+        if (! $clientEmail) {
+            $clientEmail = User::where('glpi_id', $requesterId)->value('email');
+        }
+        if (! $clientEmail || str_ends_with($clientEmail, '@glpi.local') || ! filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
+            $clientEmail = null;
+        }
+        // Com SMTP do portal ativo, a confirmação sai pelo portal e o GLPI não
+        // dispara o "Novo chamado" (evita e-mail duplicado ao cliente).
+        $portalSendsMail = ! in_array(config('mail.default'), ['log', 'array'], true);
+
         $ticket = $this->tickets->create([
             'title' => $data['title'],
             'description' => $data['description'],
@@ -236,9 +248,19 @@ class TicketController extends Controller
             'category' => $data['category'] ?? null,
             'due_date' => $data['due_date'] ?? null,
             'entity_id' => $entityId ? (int) $entityId : null,
+            'disable_glpi_notification' => $clientEmail !== null && $portalSendsMail,
             ...$requester,
             ...$technician,
         ]);
+
+        // Respostas/solução/fechamento (notificações do GLPI) vão para o e-mail informado.
+        if (! empty($data['contact_email'])) {
+            try {
+                $this->tickets->setRequesterNotificationEmail($ticket->id, $data['contact_email']);
+            } catch (\Throwable $e) {
+                Log::warning('Não foi possível gravar o e-mail de notificação no chamado #'.$ticket->id.': '.$e->getMessage());
+            }
+        }
 
         // Anexos enviados junto com a abertura (falha num anexo não perde o chamado).
         foreach ($request->file('files', []) as $file) {
@@ -253,22 +275,14 @@ class TicketController extends Controller
         try {
             $ticketUrl = route('tickets.show', $ticket->id);
 
-            // Determina o e-mail do cliente / solicitante
-            $clientEmail = $data['contact_email'] ?? null;
-            if (! $clientEmail) {
-                if (! empty($user->email) && ! str_ends_with($user->email, '@glpi.local')) {
-                    $clientEmail = $user->email;
-                } elseif (! empty($requester['requester_glpi_id'])) {
-                    $clientEmail = User::where('glpi_id', (int) $requester['requester_glpi_id'])->value('email');
-                    if ($clientEmail && str_ends_with($clientEmail, '@glpi.local')) {
-                        $clientEmail = null;
-                    }
+            // Guarda o e-mail informado no cadastro do SOLICITANTE no portal (nunca no
+            // de quem abriu pela equipe), se ele ainda usa @glpi.local e o e-mail está livre.
+            if (! empty($data['contact_email'])) {
+                $requesterUser = User::where('glpi_id', $requesterId)->first();
+                if ($requesterUser && str_ends_with((string) $requesterUser->email, '@glpi.local')
+                    && ! User::where('email', $data['contact_email'])->exists()) {
+                    $requesterUser->update(['email' => $data['contact_email']]);
                 }
-            }
-
-            // Se o usuário logado informou um e-mail novo e ainda usava @glpi.local, atualiza
-            if (! empty($data['contact_email']) && str_ends_with($user->email, '@glpi.local')) {
-                $user->update(['email' => $data['contact_email']]);
             }
 
             $supportEmail = config('mail.support_address', config('mail.from.address'));
@@ -282,7 +296,7 @@ class TicketController extends Controller
             ]);
 
             // Envia e-mail de confirmação ao cliente
-            if ($clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
+            if ($clientEmail) {
                 Mail::to($clientEmail)->send(new TicketCreatedMail($ticket, $ticketUrl, isStaffNotification: false));
                 Log::info('E-mail de confirmação enviado ao cliente: '.$clientEmail);
             }

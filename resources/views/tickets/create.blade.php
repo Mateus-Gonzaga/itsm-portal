@@ -89,10 +89,10 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">E-mail para notificações <span class="text-muted small">— para confirmação e atualizações</span></label>
-                            <input type="email" name="contact_email" value="{{ old('contact_email', (!str_ends_with(auth()->user()->email ?? '', '@glpi.local') ? auth()->user()->email : '')) }}"
+                            <input type="email" name="contact_email" value="{{ old('contact_email', (! $isStaff && ! str_ends_with(auth()->user()->email ?? '', '@glpi.local') ? auth()->user()->email : '')) }}"
                                    placeholder="nome@empresa.com.br"
                                    class="form-control @error('contact_email') is-invalid @enderror">
-                            <div class="form-text">Enviaremos a confirmação e atualizações deste chamado.</div>
+                            <div class="form-text">Recebe a confirmação, as respostas e a conclusão deste chamado.@if ($isStaff) Use o e-mail do cliente.@endif</div>
                             @error('contact_email') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-6 mb-3">
