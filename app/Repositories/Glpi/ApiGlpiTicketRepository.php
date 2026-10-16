@@ -517,7 +517,14 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             updatedAt: ! empty($t['date_mod']) ? $this->date($t['date_mod']) : null,
             requesterGlpiId: $actors['requester_id'] ?? null,
             technicianGlpiId: $actors['technician_id'] ?? null,
+            solvedAt: $this->validDate($t['solvedate'] ?? null) ? $this->date($t['solvedate'])
+                : ($this->validDate($t['closedate'] ?? null) ? $this->date($t['closedate']) : null),
         );
+    }
+
+    private function validDate(mixed $d): bool
+    {
+        return is_string($d) && $d !== '' && ! str_starts_with($d, '0000-00-00') && strtolower($d) !== 'null';
     }
 
     /**

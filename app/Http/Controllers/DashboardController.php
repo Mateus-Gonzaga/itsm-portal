@@ -8,6 +8,7 @@ use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\KanbanCard;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -71,6 +72,7 @@ class DashboardController extends Controller
             : KanbanCard::selectRaw('status, count(*) as c')->groupBy('status')->pluck('c', 'status');
 
         return view('dashboard.index', [
+            'charts' => $user->role === UserRole::Cliente ? null : $this->charts($list),
             'role' => $user->role,
             'tickets' => $list,
             'metrics' => $metrics,
@@ -80,5 +82,66 @@ class DashboardController extends Controller
             'upcoming' => $upcoming,
             'kanban' => $kanban,
         ]);
+    }
+
+    /**
+     * Indicadores para os gráficos do painel (equipe): chamados por cliente,
+     * abertos × resolvidos por mês, tempo médio de solução e SLA cumprido.
+     */
+    private function charts(\Illuminate\Support\Collection $list): array
+    {
+        $now = CarbonImmutable::now();
+        $months = collect(range(5, 0))->map(fn (int $i) => $now->startOfMonth()->subMonths($i));
+
+        // Chamados por cliente (top 10, últimos 6 meses).
+        $since = $months->first();
+        $recent = $list->filter(fn (TicketData $t) => $t->createdAt->gte($since));
+        $byClient = $recent->groupBy(fn (TicketData $t) => $t->entity ?: '—')
+            ->map->count()->sortDesc()->take(10);
+
+        // Abertos × resolvidos por mês + tempo médio de solução (horas) por mês.
+        $opened = [];
+        $solved = [];
+        $avgHours = [];
+        foreach ($months as $m) {
+            $end = $m->endOfMonth();
+            $opened[] = $list->filter(fn (TicketData $t) => $t->createdAt->between($m, $end))->count();
+            $solvedInMonth = $list->filter(fn (TicketData $t) => $t->solvedAt !== null && $t->solvedAt->between($m, $end));
+            $solved[] = $solvedInMonth->count();
+            $avgHours[] = $solvedInMonth->isEmpty() ? 0
+                : round($solvedInMonth->avg(fn (TicketData $t) => max(0, $t->createdAt->diffInMinutes($t->solvedAt)) / 60), 1);
+        }
+
+        // SLA: dos resolvidos com prazo, quantos dentro do prazo (últimos 6 meses).
+        $withSla = $list->filter(fn (TicketData $t) => $t->solvedAt !== null && $t->dueDate !== null && $t->solvedAt->gte($since));
+        $slaOk = $withSla->filter(fn (TicketData $t) => $t->solvedAt->lte($t->dueDate))->count();
+        $slaLate = $withSla->count() - $slaOk;
+
+        $solvedAll = $list->filter(fn (TicketData $t) => $t->solvedAt !== null && $t->solvedAt->gte($since));
+        $avgAll = $solvedAll->isEmpty() ? null
+            : $solvedAll->avg(fn (TicketData $t) => max(0, $t->createdAt->diffInMinutes($t->solvedAt)) / 60);
+
+        return [
+            'months' => $months->map(fn ($m) => $m->locale('pt_BR')->translatedFormat('M/y'))->values()->all(),
+            'opened' => $opened,
+            'solved' => $solved,
+            'avgHours' => $avgHours,
+            'clients' => ['labels' => $byClient->keys()->values()->all(), 'data' => $byClient->values()->all()],
+            'sla' => ['ok' => $slaOk, 'late' => $slaLate,
+                'pct' => $withSla->count() > 0 ? (int) round($slaOk / $withSla->count() * 100) : null],
+            'avgAll' => $avgAll === null ? null : $this->humanHours($avgAll),
+        ];
+    }
+
+    private function humanHours(float $hours): string
+    {
+        if ($hours < 1) {
+            return max(1, (int) round($hours * 60)).' min';
+        }
+        if ($hours < 48) {
+            return number_format($hours, 1, ',', '.').' h';
+        }
+
+        return number_format($hours / 24, 1, ',', '.').' dias';
     }
 }

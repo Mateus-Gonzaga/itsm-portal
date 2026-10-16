@@ -37,6 +37,8 @@ final class TicketData
         // ID do técnico atribuído no GLPI — agrupa chamados por técnico sem
         // uma busca por técnico (tela Técnicos).
         public readonly ?int $technicianGlpiId = null,
+        // Data de solução (GLPI solvedate; senão closedate) — tempo de solução e SLA cumprido.
+        public readonly ?CarbonImmutable $solvedAt = null,
     ) {
     }
 

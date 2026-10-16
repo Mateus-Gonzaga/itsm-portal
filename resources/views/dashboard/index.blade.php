@@ -68,6 +68,112 @@
     @endforeach
 </div>
 
+@if (! empty($charts))
+{{-- Indicadores (equipe): últimos 6 meses --}}
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold"><i class="bi bi-graph-up me-1 text-success"></i>Abertos × resolvidos por mês</span>
+                <span class="small text-secondary">últimos 6 meses</span>
+            </div>
+            <div class="card-body"><div style="height:260px"><canvas id="chMonthly" aria-label="Chamados abertos e resolvidos por mês" role="img"></canvas></div></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header fw-semibold"><i class="bi bi-stopwatch me-1 text-success"></i>SLA cumprido</div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                @if ($charts['sla']['pct'] === null)
+                    <p class="text-secondary small text-center mb-0">Ainda não há chamados resolvidos com prazo definido.</p>
+                @else
+                    <div style="height:170px;width:170px;position:relative">
+                        <canvas id="chSla" aria-label="Percentual de SLA cumprido" role="img"></canvas>
+                        <div class="position-absolute top-50 start-50 translate-middle text-center">
+                            <div class="fw-bold fs-3" style="font-family:'Rajdhani',sans-serif">{{ $charts['sla']['pct'] }}%</div>
+                        </div>
+                    </div>
+                    <div class="small text-secondary mt-2">
+                        <span class="me-2"><i class="bi bi-circle-fill text-success"></i> {{ $charts['sla']['ok'] }} no prazo</span>
+                        <span><i class="bi bi-circle-fill text-danger"></i> {{ $charts['sla']['late'] }} fora</span>
+                    </div>
+                @endif
+                <div class="mt-3 text-center">
+                    <div class="small text-secondary">Tempo médio de solução</div>
+                    <div class="fw-bold fs-5">{{ $charts['avgAll'] ?? '—' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header fw-semibold"><i class="bi bi-buildings me-1 text-success"></i>Chamados por cliente <span class="small text-secondary fw-normal">(top 10)</span></div>
+            <div class="card-body">
+                @if (empty($charts['clients']['labels']))
+                    <p class="text-secondary small mb-0">Sem chamados no período.</p>
+                @else
+                    <div style="height:{{ max(180, count($charts['clients']['labels']) * 30) }}px"><canvas id="chClients" aria-label="Chamados por cliente" role="img"></canvas></div>
+                @endif
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header fw-semibold"><i class="bi bi-hourglass-split me-1 text-success"></i>Tempo médio de solução (horas)</div>
+            <div class="card-body"><div style="height:220px"><canvas id="chAvg" aria-label="Tempo médio de solução por mês" role="img"></canvas></div></div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    if (!window.Chart) return;
+    const data = @json($charts);
+    const css = getComputedStyle(document.documentElement);
+    const text = css.getPropertyValue('--muted-c').trim() || '#64748b';
+    const grid = css.getPropertyValue('--border-c').trim() || '#e6eaf0';
+    Chart.defaults.color = text;
+    Chart.defaults.font.family = 'Inter, sans-serif';
+    Chart.defaults.plugins.legend.labels.boxWidth = 12;
+    const GREEN = '#068A4F', LIME = '#A8CF45', RED = '#dc2626';
+    const axes = { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: grid }, ticks: { precision: 0 } } };
+
+    new Chart(document.getElementById('chMonthly'), {
+        type: 'bar',
+        data: { labels: data.months, datasets: [
+            { label: 'Abertos', data: data.opened, backgroundColor: LIME, borderRadius: 6 },
+            { label: 'Resolvidos', data: data.solved, backgroundColor: GREEN, borderRadius: 6 },
+        ] },
+        options: { maintainAspectRatio: false, scales: axes, plugins: { legend: { position: 'bottom' } } },
+    });
+
+    const sla = document.getElementById('chSla');
+    if (sla) new Chart(sla, {
+        type: 'doughnut',
+        data: { labels: ['No prazo', 'Fora do prazo'], datasets: [{ data: [data.sla.ok, data.sla.late], backgroundColor: [GREEN, RED], borderWidth: 0 }] },
+        options: { maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } } },
+    });
+
+    const cl = document.getElementById('chClients');
+    if (cl) new Chart(cl, {
+        type: 'bar',
+        data: { labels: data.clients.labels, datasets: [{ label: 'Chamados', data: data.clients.data, backgroundColor: GREEN, borderRadius: 5 }] },
+        options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, grid: { color: grid }, ticks: { precision: 0 } }, y: { grid: { display: false } } } },
+    });
+
+    new Chart(document.getElementById('chAvg'), {
+        type: 'line',
+        data: { labels: data.months, datasets: [{ label: 'Horas', data: data.avgHours, borderColor: GREEN, backgroundColor: 'rgba(6,138,79,.12)', fill: true, tension: .35, pointRadius: 4, pointBackgroundColor: GREEN }] },
+        options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: grid } } } },
+    });
+})();
+</script>
+@endpush
+@endif
+
 <div class="row g-4">
     {{-- Coluna principal --}}
     <div class="{{ $role === UserRole::Gestor ? 'col-lg-8' : 'col-12' }}">
