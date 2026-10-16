@@ -38,4 +38,10 @@ return [
     | Endereço público do portal (usado no monitoramento do Zabbix).
     */
     'public_url' => env('PORTAL_PUBLIC_URL', env('APP_URL')),
+
+    /*
+    | Token da página /saude (lida pelo Zabbix). Vazio = página desligada (404).
+    | Gere com: php -r "echo bin2hex(random_bytes(20));"
+    */
+    'health_token' => env('PORTAL_HEALTH_TOKEN', ''),
 ];

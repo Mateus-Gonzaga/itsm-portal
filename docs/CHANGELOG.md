@@ -2,6 +2,13 @@
 
 Histórico cronológico (nunca apagar).
 
+## 2026-10-16 (3) — Zabbix
+- **`/saude`** (`HealthController`, token `PORTAL_HEALTH_TOKEN`, sem token → 404): JSON com banco, cache, API do GLPI, fila de e-mails do GLPI (pendentes, idade do mais antigo, ação `queuednotification` ativa), atraso do agendador (batimento a cada 1 min em `routes/console.php`) e % de disco livre.
+- **`monitor:zabbix-extra`**: host "GLPI FOURLINE" com cenário tela+API e alertas (fora do ar/lento); item HTTP da `/saude` + itens dependentes (JSONPath) e alertas (banco, Redis, API GLPI, envio de e-mails do GLPI desativado/parado >30 min, agendador parado, disco <15%, saúde sem resposta); `--vm=nome:ip` cria host com template "Linux by Zabbix agent"; `--certificado=dominio` usa "Website certificate by Zabbix agent 2".
+- **`zabbix:manutencao [min] [--encerrar]`**: janela de manutenção (com coleta) no grupo do portal para publicar sem alarme falso.
+- **`zabbix:organizar-clientes --sugerir|--aplicar`**: cruza hosts do Zabbix com os computadores do GLPI (cliente pela entidade), gera CSV revisável em `storage/app/` e aplica os grupos `Clientes/<Cliente>/<Servidores|Caixas>` (só adiciona grupos).
+- **`zabbix:equipe`**: `--listar` usuários/mídias, `--midia=login:email`, `--limpar-duplicados` (triggers do host do portal). Cliente JSON-RPC comum em `App\Support\ZabbixApi`.
+
 ## 2026-10-16 (2)
 - **Monitoramento do portal no Zabbix** — comando `php artisan monitor:zabbix-portal [--url=] [--usergroup=] [--dry-run]` (idempotente): grupo + host `portal-fourline-connect`, cenário web "Portal - login" (1 min, HTTP 200 + texto FOURLINE), triggers "fora do ar" (alta, 2 falhas seguidas) e "lento >5 s" (média 5 min), ação que avisa o grupo de usuários por todas as mídias (queda e retorno). Exige usuário Zabbix com escrita. `app/Console/Commands/ZabbixPortalMonitor.php`.
 - **Aviso de erros por e-mail** (`app/Support/ErrorAlert.php`, `bootstrap/app.php`): erros reportáveis em produção enviam e-mail (destino `ERROR_ALERT_EMAIL`, padrão `MAIL_FROM_ADDRESS`, `off` desliga) com página, usuário, IP e resumo do rastreamento; mesmo erro 1x/30 min, máx. 20/h; envio após a resposta.

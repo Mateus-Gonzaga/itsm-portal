@@ -18,6 +18,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
 
+// Saúde do portal para o Zabbix (protegida por token; ver HealthController).
+Route::get('/saude', \App\Http\Controllers\HealthController::class)->middleware('throttle:30,1')->name('health');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
