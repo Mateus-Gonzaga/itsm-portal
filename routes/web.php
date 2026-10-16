@@ -34,6 +34,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard-analitico/host/{hostid}/historico', [DashboardsController::class, 'history'])->name('modules.analytics.history');
     });
     Route::get('/relatorios', ReportsController::class)->middleware('role:gestor')->name('modules.reports');
+    Route::get('/relatorios/exportar', [ReportsController::class, 'export'])->middleware(['role:gestor', 'throttle:30,1'])->name('reports.export');
+    Route::get('/relatorios/cliente', [ReportsController::class, 'client'])->middleware('role:gestor')->name('reports.client');
     Route::get('/clientes', ClientsController::class)->middleware('role:gestor')->name('modules.clients');
 
     // Perfil do Cliente (ficha vinculada à entidade do GLPI por glpi_entity_id) — equipe.

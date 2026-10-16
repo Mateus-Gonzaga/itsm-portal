@@ -2,6 +2,12 @@
 
 Histórico cronológico (nunca apagar).
 
+## 2026-10-16 (4) — Relatórios
+- **Módulo de Relatórios refeito** (`ReportsController`, `modules/reports.blade.php`): filtros de período (30 dias, este mês, mês passado, 90 dias, ano, tudo, personalizado), cliente (empresa), técnico, categoria e situação; indicadores do recorte (total, abertos, resolvidos, atrasados, **tempo médio de solução**, **SLA cumprido**); abas Visão geral (gráfico abertos × resolvidos por dia/semana/mês, situação, prioridade, tipo, top clientes), Por cliente, Por técnico, Por categoria (tabelas com % resolvidos, tempo médio e SLA), Chamados (lista paginada com situação de SLA) e Marcas (inventário). Cada aba só calcula o que mostra.
+- **Exportar Excel** (`/relatorios/exportar?tipo=chamados|clientes|tecnicos|categorias`, CSV `;` com BOM).
+- **Relatório do cliente** para imprimir/PDF (`/relatorios/cliente?cliente=…`, `modules/reports-client.blade.php`): indicadores, por filial, por categoria e lista de chamados do período com prazo.
+- Testes: `tests/Feature/ReportsAndPagesTest.php` (abas, exportação, relatório do cliente, bloqueio p/ cliente, inventário paginado, painel, /saude).
+
 ## 2026-10-16 (3) — Zabbix
 - **`/saude`** (`HealthController`, token `PORTAL_HEALTH_TOKEN`, sem token → 404): JSON com banco, cache, API do GLPI, fila de e-mails do GLPI (pendentes, idade do mais antigo, ação `queuednotification` ativa), atraso do agendador (batimento a cada 1 min em `routes/console.php`) e % de disco livre.
 - **`monitor:zabbix-extra`**: host "GLPI FOURLINE" com cenário tela+API e alertas (fora do ar/lento); item HTTP da `/saude` + itens dependentes (JSONPath) e alertas (banco, Redis, API GLPI, envio de e-mails do GLPI desativado/parado >30 min, agendador parado, disco <15%, saúde sem resposta); `--vm=nome:ip` cria host com template "Linux by Zabbix agent"; `--certificado=dominio` usa "Website certificate by Zabbix agent 2".
