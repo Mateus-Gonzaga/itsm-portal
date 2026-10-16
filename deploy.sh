@@ -14,6 +14,10 @@ fi
 echo ">> Baixando atualizações do Git..."
 git pull --ff-only
 
+# Silencia os avisos do Zabbix durante a publicação (se o monitoramento existir).
+echo ">> Janela de manutenção no Zabbix (15 min)..."
+$COMPOSE exec -T app php artisan zabbix:manutencao 15 2>/dev/null || echo "   (sem Zabbix/permissão — seguindo)"
+
 # Descriptografa a chave da Google Agenda (se ainda não existir)
 if [ -f storage/app/google-service-account.enc ] && [ ! -f storage/app/google-service-account.json ]; then
     echo ">> Configurando chave da Google Agenda..."
@@ -49,12 +53,29 @@ echo ">> Rodando migrações..."
 $COMPOSE exec -T app php artisan migrate --force
 
 echo ">> Atualizando caches..."
+$COMPOSE exec -T app php artisan optimize:clear
 $COMPOSE exec -T app php artisan config:cache
 $COMPOSE exec -T app php artisan route:cache
 $COMPOSE exec -T app php artisan view:cache
 
+# nginx relê a configuração e reencontra o app (evita 502 após recriar contêineres).
+echo ">> Reiniciando web e agendador..."
+$COMPOSE restart web scheduler
+
 echo ">> Testando sincronização da Google Agenda..."
 $COMPOSE exec -T app php artisan agenda:google-sync || true
+
+# Confere se o portal responde antes de reativar os avisos.
+echo ">> Verificando o portal..."
+sleep 3
+CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8083/login || echo 000)
+if [ "$CODE" = "200" ]; then
+    echo "   OK (HTTP 200)"
+    $COMPOSE exec -T app php artisan zabbix:manutencao --encerrar 2>/dev/null || true
+else
+    echo "   ATENÇÃO: /login respondeu HTTP $CODE — veja: $COMPOSE logs app --tail=50"
+    echo "   (a janela de manutenção do Zabbix fecha sozinha em 15 min)"
+fi
 
 echo ""
 echo ">> Deploy concluído. Acesse:  http://<IP-da-VM>:8083"
