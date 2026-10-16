@@ -209,6 +209,16 @@
                         {{ $ticket->dueDate?->format('d/m/Y H:i') ?? '—' }}
                         @if ($ticket->isOverdue())<span class="badge bg-danger ms-1">atrasado</span>@endif
                     </dd>
+                    @if (! empty($linkedAssets))
+                        <dt class="col-5">Equipamento</dt>
+                        <dd class="col-7">
+                            @foreach ($linkedAssets as $la)
+                                <a href="{{ route('modules.inventory', ['q' => $la['name']]) }}" class="d-block text-decoration-none">
+                                    <i class="bi bi-pc-display me-1"></i>{{ $la['name'] }} <span class="text-secondary">({{ $la['type'] }})</span>
+                                </a>
+                            @endforeach
+                        </dd>
+                    @endif
                 </dl>
             </div>
         </div>

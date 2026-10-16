@@ -8,9 +8,17 @@
             <div class="card-body">
                 <form method="POST" action="{{ route('tickets.store') }}" enctype="multipart/form-data">
                     @csrf
+                    @if (! empty($asset))
+                        <input type="hidden" name="asset_ref" value="{{ $asset['ref'] }}">
+                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 small">
+                            <i class="bi bi-pc-display fs-5"></i>
+                            <div>Chamado vinculado ao equipamento <strong>{{ $asset['name'] }}</strong>
+                                <span class="text-secondary">({{ $asset['type'] }})</span> — entra no histórico de defeitos dele.</div>
+                        </div>
+                    @endif
                     <div class="mb-3">
                         <label class="form-label">Título</label>
-                        <input type="text" name="title" value="{{ old('title') }}"
+                        <input type="text" name="title" value="{{ old('title', ! empty($asset) ? $asset['name'].' — ' : '') }}"
                                class="form-control @error('title') is-invalid @enderror" required>
                         @error('title') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>

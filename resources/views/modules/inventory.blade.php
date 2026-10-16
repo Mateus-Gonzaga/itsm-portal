@@ -28,59 +28,71 @@
     <div class="alert alert-danger py-2 small">{{ session('error') }}</div>
 @endif
 
+@php
+    // Monta a URL do inventário mantendo os filtros atuais (sem a página).
+    $invUrl = fn (array $over = []) => route('modules.inventory', array_filter(array_merge($filters, $over), fn ($v) => $v !== '' && $v !== null));
+@endphp
 <div class="row g-2 mb-3">
     <div class="col-6 col-md">
-        <button class="inv-card active" data-type="" type="button">
+        <a class="inv-card text-reset text-decoration-none {{ $filters['tipo'] === '' ? 'active' : '' }}" href="{{ $invUrl(['tipo' => '']) }}">
             <span class="ic"><i class="bi bi-box-seam"></i></span>
             <span><span class="v">{{ $total }}</span><br><span class="l">Todos</span></span>
-        </button>
+        </a>
     </div>
     @foreach ($counts as $c)
         <div class="col-6 col-md-4 col-lg-3 col-xl-2">
-            <button class="inv-card" data-type="{{ $c['label'] }}" type="button">
+            <a class="inv-card text-reset text-decoration-none {{ $filters['tipo'] === $c['label'] ? 'active' : '' }}" href="{{ $invUrl(['tipo' => $c['label']]) }}">
                 <span class="ic"><i class="bi {{ $c['icon'] }}"></i></span>
                 <span><span class="v">{{ $c['count'] }}</span><br><span class="l">{{ $c['label'] }}</span></span>
-            </button>
+            </a>
         </div>
     @endforeach
 </div>
 
 <div class="card">
     <div class="card-body">
-        <div class="d-flex flex-wrap gap-2 mb-3">
+        <form method="GET" action="{{ route('modules.inventory') }}" id="invFilterForm" class="d-flex flex-wrap gap-2 mb-3">
+            @if ($filters['tipo'] !== '')<input type="hidden" name="tipo" value="{{ $filters['tipo'] }}">@endif
             <div class="input-group input-group-sm" style="max-width:320px">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="invFilter" class="form-control" placeholder="Buscar por nome, série, modelo...">
+                <input type="search" name="q" id="invFilter" class="form-control" value="{{ $filters['q'] }}" placeholder="Buscar por nome, série, modelo..." autocomplete="off">
             </div>
-            @php $invEntities = $assets->pluck('entity')->unique()->sort()->values(); @endphp
-            @if ($invEntities->count() > 1)
+            @if ($entityOptions->count() > 1)
                 <div class="input-group input-group-sm" style="max-width:340px">
                     <span class="input-group-text"><i class="bi bi-diagram-3"></i></span>
-                    <select id="invEntity" class="form-select">
+                    <select name="entidade" id="invEntity" class="form-select">
                         <option value="">Todas as entidades</option>
-                        @foreach ($invEntities as $e)
-                            <option value="{{ $e }}">{{ $e }}</option>
+                        @foreach ($entityOptions as $e)
+                            <option value="{{ $e }}" @selected($filters['entidade'] === $e)>{{ $e }}</option>
                         @endforeach
                     </select>
                 </div>
+            @endif
+            @if ($filters['q'] !== '' || $filters['entidade'] !== '' || $filters['tipo'] !== '')
+                <a href="{{ route('modules.inventory') }}" class="btn btn-link btn-sm text-secondary">Limpar filtros</a>
             @endif
             @if ($isManager)
                 <button type="button" class="btn btn-success btn-sm ms-auto js-new-asset">
                     <i class="bi bi-plus-lg me-1"></i> Novo ativo
                 </button>
-                <a href="{{ route('inventory.report') }}" id="invReport" target="_blank" class="btn btn-outline-success btn-sm">
+                <a href="{{ route('inventory.report', $filters['entidade'] !== '' ? ['entidade' => $filters['entidade']] : []) }}" id="invReport" target="_blank" class="btn btn-outline-success btn-sm">
                     <i class="bi bi-file-earmark-arrow-down me-1"></i> Exportar relatório
                 </a>
             @endif
-        </div>
-        @if ($canSeeValues)
-            <div class="d-flex justify-content-end mb-2">
+        </form>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <span class="small text-secondary">
+                @if ($assets->total() > 0)
+                    Mostrando {{ $assets->firstItem() }}–{{ $assets->lastItem() }} de {{ $assets->total() }} ativo(s)
+                @endif
+            </span>
+            @if ($canSeeValues)
                 <span class="badge bg-success-subtle text-success-emphasis fs-6">
-                    <i class="bi bi-cash-coin me-1"></i><span id="invTotalLabel">Valor total do inventário</span>:
-                    R$ <span id="invTotal">{{ number_format($valorTotal, 2, ',', '.') }}</span>
+                    <i class="bi bi-cash-coin me-1"></i>{{ $filters['entidade'] !== '' ? 'Valor dos ativos desta entidade' : 'Valor total do inventário' }}:
+                    R$ {{ number_format($valorTotal, 2, ',', '.') }}
                 </span>
-            </div>
-        @endif
+            @endif
+        </div>
         <div class="table-wrap">
             <table class="table table-hover align-middle mb-0">
                 <thead>
@@ -137,12 +149,19 @@
                     @empty
                         <tr><td colspan="{{ 9 + ($canSeeValues ? 1 : 0) + ($isManager ? 1 : 0) }}" class="text-center text-muted py-5">
                             <i class="bi bi-pc-display d-block fs-2 mb-2 opacity-50"></i>
-                            Nenhum ativo inventariado ainda.<br><span class="small">Os equipamentos aparecem aqui conforme o GLPI Agent faz o inventário das máquinas.</span>
+                            @if ($filters['q'] !== '' || $filters['entidade'] !== '' || $filters['tipo'] !== '')
+                                Nenhum ativo encontrado com estes filtros.
+                            @else
+                                Nenhum ativo inventariado ainda.<br><span class="small">Os equipamentos aparecem aqui conforme o GLPI Agent faz o inventário das máquinas.</span>
+                            @endif
                         </td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        @if ($assets->hasPages())
+            <div class="mt-3 d-flex justify-content-center">{{ $assets->onEachSide(1)->links() }}</div>
+        @endif
     </div>
 </div>
 
@@ -321,8 +340,14 @@
                 </div>
                 <div id="pcError" class="alert alert-warning py-2 small d-none"></div>
                 <dl id="pcBody" class="row mb-0 d-none"></dl>
+                <div id="pcTicketsWrap" class="d-none mt-3 pt-3 border-top">
+                    <h6 class="fw-semibold mb-2"><i class="bi bi-clock-history me-1 text-success"></i>Histórico de chamados deste equipamento</h6>
+                    <div id="pcTicketsEmpty" class="small text-secondary d-none">Nenhum chamado vinculado a este equipamento ainda.</div>
+                    <div id="pcTickets" class="list-group list-group-flush small"></div>
+                </div>
             </div>
             <div class="modal-footer">
+                <a href="#" id="pcNewTicket" class="btn btn-success me-auto d-none"><i class="bi bi-plus-circle me-1"></i>Abrir chamado para este equipamento</a>
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
@@ -333,84 +358,24 @@
 @push('scripts')
 <script>
 (function () {
+    // Filtros no servidor: a busca envia sozinha após uma pausa na digitação,
+    // e trocar a entidade envia na hora (volta para a página 1).
+    const filterForm = document.getElementById('invFilterForm');
     const filterInput = document.getElementById('invFilter');
     const entitySel = document.getElementById('invEntity');
-    const rows = Array.from(document.querySelectorAll('#invBody tr[data-type]'));
-    let typeFilter = '';
-    let entityFilter = '';
-
-    // Estado inicial dos filtros vindo da URL — preserva a tela/pesquisa ao
-    // voltar de um salvamento (o back() do servidor mantém a query string).
-    const params = new URLSearchParams(location.search);
-    if (filterInput && params.get('q')) filterInput.value = params.get('q');
-    entityFilter = params.get('entidade') || '';
-    typeFilter = params.get('tipo') || '';
-    if (entitySel && entityFilter) entitySel.value = entityFilter;
-    document.querySelectorAll('.inv-card').forEach(function (c) {
-        c.classList.toggle('active', (c.dataset.type || '') === typeFilter);
-    });
-
-    // Mantém a URL em sincronia com os filtros visíveis (via replaceState).
-    function syncUrl() {
-        const p = new URLSearchParams();
-        if (filterInput && filterInput.value) p.set('q', filterInput.value);
-        if (entityFilter) p.set('entidade', entityFilter);
-        if (typeFilter) p.set('tipo', typeFilter);
-        const qs = p.toString();
-        history.replaceState(null, '', qs ? location.pathname + '?' + qs : location.pathname);
-    }
-
-    const totalEl = document.getElementById('invTotal');
-    const totalLabel = document.getElementById('invTotalLabel');
-    function fmtBRL(n) { return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-
-    function apply() {
-        const q = filterInput.value.toLowerCase();
-        let soma = 0;
-        // Contagem dos cards acompanha entidade + busca (sem o filtro de tipo).
-        const porTipo = {};
-        let totalFiltro = 0;
-        rows.forEach(function (tr) {
-            const okType = !typeFilter || tr.dataset.type === typeFilter;
-            const okEntity = !entityFilter || tr.dataset.entity === entityFilter;
-            const okText = tr.textContent.toLowerCase().includes(q);
-            if (okEntity && okText) {
-                porTipo[tr.dataset.type] = (porTipo[tr.dataset.type] || 0) + 1;
-                totalFiltro++;
-            }
-            const visivel = okType && okEntity && okText;
-            tr.style.display = visivel ? '' : 'none';
-            if (visivel) soma += parseFloat(tr.dataset.value || '0') || 0;
+    let typingTimer = null;
+    if (filterInput && filterForm) {
+        filterInput.addEventListener('input', function () {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(function () { filterForm.requestSubmit(); }, 450);
         });
-        document.querySelectorAll('.inv-card').forEach(function (c) {
-            const v = c.querySelector('.v');
-            if (v) v.textContent = c.dataset.type ? (porTipo[c.dataset.type] || 0) : totalFiltro;
-        });
-        if (totalEl) totalEl.textContent = fmtBRL(soma);
-        if (totalLabel) totalLabel.textContent = entityFilter ? 'Valor dos ativos desta entidade' : 'Valor total do inventário';
-        syncUrl();
+        // Mantém o cursor no campo de busca após recarregar.
+        if (filterInput.value) {
+            filterInput.focus();
+            filterInput.setSelectionRange(filterInput.value.length, filterInput.value.length);
+        }
     }
-    filterInput.addEventListener('input', apply);
-    // Mantém o link do relatório apontando para a entidade filtrada (ou todas).
-    const reportLink = document.getElementById('invReport');
-    const reportBase = reportLink ? reportLink.getAttribute('href') : '';
-    function syncReport() {
-        if (!reportLink) return;
-        reportLink.href = entityFilter ? reportBase + '?entidade=' + encodeURIComponent(entityFilter) : reportBase;
-    }
-    if (entitySel) entitySel.addEventListener('change', function () { entityFilter = this.value; apply(); syncReport(); });
-    document.querySelectorAll('.inv-card').forEach(function (card) {
-        card.addEventListener('click', function () {
-            document.querySelectorAll('.inv-card').forEach((c) => c.classList.remove('active'));
-            card.classList.add('active');
-            typeFilter = card.dataset.type;
-            apply();
-        });
-    });
-
-    // Aplica os filtros vindos da URL já na abertura (preserva ao voltar de salvar).
-    apply();
-    syncReport();
+    if (entitySel && filterForm) entitySel.addEventListener('change', function () { filterForm.requestSubmit(); });
 
     // Editar cadastro completo do ativo (gestor).
     const editModalEl = document.getElementById('editAssetModal');
@@ -463,6 +428,8 @@
                 body.classList.add('d-none');
                 document.getElementById('pcError').classList.add('d-none');
                 document.getElementById('pcLoading').classList.remove('d-none');
+                document.getElementById('pcTicketsWrap').classList.add('d-none');
+                document.getElementById('pcNewTicket').classList.add('d-none');
                 pcModal.show();
 
                 fetch(ASSET_URL + '/' + itemtype + '/' + id, { headers: { 'Accept': 'application/json' } })
@@ -476,6 +443,36 @@
                         row('Último inventário', d.updatedAt);
                         document.getElementById('pcLoading').classList.add('d-none');
                         body.classList.remove('d-none');
+
+                        // Histórico de chamados (defeitos) do equipamento.
+                        const list = document.getElementById('pcTickets');
+                        list.innerHTML = '';
+                        const tickets = d.tickets || [];
+                        tickets.forEach(function (t) {
+                            const a = document.createElement('a');
+                            a.href = t.url;
+                            a.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2 px-0';
+                            const left = document.createElement('span');
+                            left.className = 'text-truncate';
+                            left.innerHTML = '<span class="text-secondary me-1">#' + t.id + '</span>';
+                            left.append(document.createTextNode(t.title || 'Chamado'));
+                            const right = document.createElement('span');
+                            right.className = 'text-nowrap';
+                            right.innerHTML = '<span class="text-secondary me-2">' + (t.date || '') + '</span>';
+                            const badge = document.createElement('span');
+                            badge.className = 'badge ' + (t.open ? 'bg-warning-subtle text-warning-emphasis' : 'bg-success-subtle text-success-emphasis');
+                            badge.textContent = t.statusLabel;
+                            right.append(badge);
+                            a.append(left, right);
+                            list.append(a);
+                        });
+                        document.getElementById('pcTicketsEmpty').classList.toggle('d-none', tickets.length > 0);
+                        document.getElementById('pcTicketsWrap').classList.remove('d-none');
+                        if (d.newTicketUrl) {
+                            const nt = document.getElementById('pcNewTicket');
+                            nt.href = d.newTicketUrl;
+                            nt.classList.remove('d-none');
+                        }
                     })
                     .catch(function (err) {
                         document.getElementById('pcLoading').classList.add('d-none');

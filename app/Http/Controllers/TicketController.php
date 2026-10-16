@@ -11,6 +11,7 @@ use App\Enums\UserRole;
 use App\Mail\TicketCreatedMail;
 use App\Models\User;
 use App\Repositories\Glpi\GlpiDirectoryRepositoryInterface;
+use App\Repositories\Glpi\GlpiInventoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -59,14 +60,21 @@ class TicketController extends Controller
         return cache()->remember('tickets_requester_entities', 60, fn () => $dir->users()->pluck('entity', 'id')->all());
     }
 
-    public function show(Request $request, int|string $id, GlpiDirectoryRepositoryInterface $dir): View
+    public function show(Request $request, int|string $id, GlpiDirectoryRepositoryInterface $dir, GlpiInventoryRepositoryInterface $inventory): View
     {
         $ticket = $this->tickets->find($id);
         abort_if($ticket === null, 404, 'Chamado não encontrado.');
         $this->denyIfNotOwner($request, $ticket);
 
+        try {
+            $linkedAssets = $inventory->ticketAssets((int) $ticket->id);
+        } catch (\Throwable) {
+            $linkedAssets = [];
+        }
+
         return view('tickets.show', [
             'ticket' => $ticket,
+            'linkedAssets' => $linkedAssets,
             'timeline' => $this->tickets->timeline($id),
             // Listas para o staff: técnicos (atribuir) e clientes (trocar solicitante).
             'technicians' => $request->user()->role === UserRole::Cliente ? collect() : $this->staffTechnicians($dir),
@@ -175,11 +183,13 @@ class TicketController extends Controller
             ->unique('id')->sortBy('name')->values();
     }
 
-    public function create(Request $request, GlpiDirectoryRepositoryInterface $dir): View
+    public function create(Request $request, GlpiDirectoryRepositoryInterface $dir, GlpiInventoryRepositoryInterface $inventory): View
     {
         $isStaff = $request->user()->role !== UserRole::Cliente;
 
         return view('tickets.create', [
+            // Chamado aberto a partir de um equipamento do inventário (?ativo=Tipo:ID).
+            'asset' => $this->resolveAsset((string) $request->query('ativo', ''), $inventory),
             'priorities' => TicketPriority::cases(),
             'types' => TicketType::cases(),
             'categories' => $this->tickets->categories(),
@@ -190,7 +200,34 @@ class TicketController extends Controller
         ]);
     }
 
-    public function store(Request $request, GlpiDirectoryRepositoryInterface $dir): RedirectResponse
+    /**
+     * "Tipo:ID" → dados do equipamento, só se ele existir e for visível ao usuário
+     * (a leitura é escopada pela entidade dele no GLPI).
+     *
+     * @return array{itemtype:string,id:int,name:string,type:string,ref:string}|null
+     */
+    private function resolveAsset(string $ref, GlpiInventoryRepositoryInterface $inventory): ?array
+    {
+        if (! preg_match('/^([A-Za-z0-9_]+):(\d+)$/', $ref, $m) || ! array_key_exists($m[1], $inventory->types())) {
+            return null;
+        }
+
+        try {
+            $details = $inventory->assetDetails($m[1], (int) $m[2]);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $details === null ? null : [
+            'itemtype' => $m[1],
+            'id' => (int) $m[2],
+            'name' => (string) ($details['name'] ?? ''),
+            'type' => $inventory->types()[$m[1]]['label'],
+            'ref' => $ref,
+        ];
+    }
+
+    public function store(Request $request, GlpiDirectoryRepositoryInterface $dir, GlpiInventoryRepositoryInterface $inventory): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -200,6 +237,7 @@ class TicketController extends Controller
             'category_id' => ['nullable', 'integer'],
             'category' => ['nullable', 'string'],
             'contact_email' => ['nullable', 'email', 'max:255'],
+            'asset_ref' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9_]+:\d+$/'],
             'due_date' => ['nullable', 'date'],
             'requester_glpi_id' => ['nullable', 'integer'],
             'requester_name' => ['nullable', 'string', 'max:150'],
@@ -259,6 +297,15 @@ class TicketController extends Controller
                 $this->tickets->setRequesterNotificationEmail($ticket->id, $data['contact_email']);
             } catch (\Throwable $e) {
                 Log::warning('Não foi possível gravar o e-mail de notificação no chamado #'.$ticket->id.': '.$e->getMessage());
+            }
+        }
+
+        // Vincula o equipamento (aberto a partir do inventário) — histórico de defeitos.
+        if (! empty($data['asset_ref']) && ($asset = $this->resolveAsset($data['asset_ref'], $inventory))) {
+            try {
+                $inventory->linkTicket($asset['itemtype'], $asset['id'], (int) $ticket->id);
+            } catch (\Throwable $e) {
+                Log::warning('Não foi possível vincular o equipamento ao chamado #'.$ticket->id.': '.$e->getMessage());
             }
         }
 

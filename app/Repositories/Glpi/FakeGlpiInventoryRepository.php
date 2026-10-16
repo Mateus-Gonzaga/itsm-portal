@@ -65,6 +65,24 @@ class FakeGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         // no-op (demo)
     }
 
+    public function assetTickets(string $itemtype, int $id): array
+    {
+        return [
+            ['id' => 1012, 'title' => 'Computador não liga', 'status' => 6, 'date' => '10/07/2026 09:12'],
+            ['id' => 987, 'title' => 'Lentidão ao abrir o sistema', 'status' => 5, 'date' => '02/06/2026 15:40'],
+        ];
+    }
+
+    public function linkTicket(string $itemtype, int $id, int $ticketId): void
+    {
+        // no-op (demo)
+    }
+
+    public function ticketAssets(int $ticketId): array
+    {
+        return [];
+    }
+
     public function assetDetails(string $itemtype, int $id): ?array
     {
         $fields = $itemtype === 'Computer'

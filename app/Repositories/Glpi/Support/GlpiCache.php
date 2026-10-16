@@ -37,7 +37,7 @@ final class GlpiCache
      * Lê do cache ou executa $callback. Resultados VAZIOS não são guardados
      * (um erro momentâneo do GLPI não fica "preso" no cache).
      */
-    public static function remember(string $group, string $key, int $ttl, Closure $callback): mixed
+    public static function remember(string $group, string $key, int $ttl, Closure $callback, bool $cacheEmpty = false): mixed
     {
         if (! self::enabled()) {
             return $callback();
@@ -51,7 +51,7 @@ final class GlpiCache
 
         $value = $callback();
         $empty = $value === null || $value === [] || ($value instanceof Collection && $value->isEmpty());
-        if (! $empty) {
+        if (! $empty || ($cacheEmpty && $value !== null)) {
             Cache::put($full, $value, $ttl);
         }
 

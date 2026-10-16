@@ -61,4 +61,21 @@ interface GlpiInventoryRepositoryInterface
      * @return array{name:string,type:string,fields:array<int,array{label:string,value:string}>,createdAt:?string,updatedAt:?string}|null
      */
     public function assetDetails(string $itemtype, int $id): ?array;
+
+    /**
+     * Histórico de chamados do equipamento (vínculos Item_Ticket), mais recentes primeiro.
+     *
+     * @return array<int, array{id:int,title:string,status:int,date:?string}>
+     */
+    public function assetTickets(string $itemtype, int $id): array;
+
+    /** Vincula o equipamento a um chamado no GLPI (Item_Ticket). */
+    public function linkTicket(string $itemtype, int $id, int $ticketId): void;
+
+    /**
+     * Equipamentos vinculados a um chamado.
+     *
+     * @return array<int, array{itemtype:string,id:int,name:string,type:string}>
+     */
+    public function ticketAssets(int $ticketId): array;
 }

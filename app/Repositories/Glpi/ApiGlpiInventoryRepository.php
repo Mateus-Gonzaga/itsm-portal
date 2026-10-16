@@ -210,6 +210,86 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         GlpiCache::flush('inventory');
     }
 
+    public function assetTickets(string $itemtype, int $id): array
+    {
+        if (! isset(self::TYPES[$itemtype]) || $id <= 0) {
+            return [];
+        }
+
+        return GlpiCache::remember('tickets', $this->scopeKey().":asset-tickets:{$itemtype}:{$id}", 60, function () use ($itemtype, $id) {
+            $links = $this->client()->get("/{$itemtype}/{$id}/Item_Ticket");
+            if (! $links->successful() || ! is_array($links->json())) {
+                return [];
+            }
+
+            // Mais recentes primeiro; limita a 20 para não pesar no GLPI.
+            $ids = collect($links->json())->pluck('tickets_id')->map(fn ($v) => (int) $v)
+                ->filter()->unique()->sortDesc()->take(20)->values();
+
+            $glpiTz = config('glpi.timezone', 'UTC');
+            $appTz = config('app.timezone', 'America/Sao_Paulo');
+
+            return $ids->map(function (int $tid) use ($glpiTz, $appTz) {
+                $t = $this->client()->get("/Ticket/{$tid}");
+                if (! $t->successful() || empty($t->json('id'))) {
+                    return null;
+                }
+                $date = $t->json('date');
+
+                return [
+                    'id' => $tid,
+                    'title' => html_entity_decode((string) $t->json('name'), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                    'status' => (int) $t->json('status'),
+                    'date' => $date ? CarbonImmutable::parse($date, $glpiTz)->setTimezone($appTz)->format('d/m/Y H:i') : null,
+                ];
+            })->filter()->values()->all();
+        }, cacheEmpty: true) ?? [];
+    }
+
+    public function linkTicket(string $itemtype, int $id, int $ticketId): void
+    {
+        if (! isset(self::TYPES[$itemtype]) || $id <= 0 || $ticketId <= 0) {
+            return;
+        }
+
+        $this->client()->post('/Item_Ticket', ['input' => [
+            'itemtype' => $itemtype,
+            'items_id' => $id,
+            'tickets_id' => $ticketId,
+        ]])->throw();
+        GlpiCache::flush('tickets');
+    }
+
+    public function ticketAssets(int $ticketId): array
+    {
+        if ($ticketId <= 0) {
+            return [];
+        }
+
+        return GlpiCache::remember('tickets', $this->scopeKey().":ticket-assets:{$ticketId}", 120, function () use ($ticketId) {
+            $links = $this->client()->get("/Ticket/{$ticketId}/Item_Ticket");
+            if (! $links->successful() || ! is_array($links->json())) {
+                return [];
+            }
+
+            return collect($links->json())
+                ->filter(fn ($l) => isset(self::TYPES[(string) ($l['itemtype'] ?? '')]) && (int) ($l['items_id'] ?? 0) > 0)
+                ->take(10)
+                ->map(function ($l) {
+                    $type = (string) $l['itemtype'];
+                    $iid = (int) $l['items_id'];
+                    $item = $this->client()->get("/{$type}/{$iid}");
+
+                    return [
+                        'itemtype' => $type,
+                        'id' => $iid,
+                        'name' => $item->successful() ? (string) ($item->json('name') ?: "#{$iid}") : "#{$iid}",
+                        'type' => self::TYPES[$type]['label'],
+                    ];
+                })->values()->all();
+        }, cacheEmpty: true) ?? [];
+    }
+
     public function assetDetails(string $itemtype, int $id): ?array
     {
         if (! isset(self::TYPES[$itemtype]) || $id <= 0) {

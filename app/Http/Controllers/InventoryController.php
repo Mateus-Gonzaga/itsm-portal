@@ -38,26 +38,60 @@ class InventoryController extends Controller
             return $a;
         });
 
+        // Filtros no SERVIDOR (antes a página trazia todos os ativos, ~1,2 MB).
+        $q = trim((string) $request->query('q', ''));
+        $entidade = (string) $request->query('entidade', '');
+        $tipo = (string) $request->query('tipo', '');
+
+        $entityOptions = $assets->pluck('entity')->unique()->sort()->values();
+
+        // Entidade + busca: base dos cards (a contagem acompanha o filtro).
+        $scoped = $assets
+            ->when($entidade !== '', fn ($c) => $c->where('entity', $entidade))
+            ->when($q !== '', function ($c) use ($q) {
+                $needle = mb_strtolower($q);
+
+                return $c->filter(fn (array $a) => str_contains(mb_strtolower(implode(' ', [
+                    $a['name'] ?? '', $a['serial'] ?? '', $a['rawSerial'] ?? '', $a['model'] ?? '',
+                    $a['manufacturer'] ?? '', $a['entity'] ?? '', $a['tag'] ?? '', $a['type'] ?? '',
+                    $a['status'] ?? '', $a['comment'] ?? '',
+                ])), $needle));
+            });
+
         // Contagem por tipo (na ordem dos tipos suportados).
         $counts = collect($inventory->types())
             ->map(fn ($cfg, $key) => [
                 'label' => $cfg['label'],
                 'icon' => $cfg['icon'],
-                'count' => $assets->where('typeKey', $key)->count(),
+                'count' => $scoped->where('typeKey', $key)->count(),
             ])
             ->values();
 
+        $filtered = $tipo !== '' ? $scoped->where('type', $tipo)->values() : $scoped->values();
+
+        $perPage = 50;
+        $page = max(1, (int) $request->query('page', 1));
+        $paged = new \Illuminate\Pagination\LengthAwarePaginator(
+            $filtered->forPage($page, $perPage)->values(),
+            $filtered->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->except('page')],
+        );
+
         return view('modules.inventory', [
-            'assets' => $assets,
+            'assets' => $paged,
             'counts' => $counts,
-            'total' => $assets->count(),
+            'total' => $scoped->count(),
+            'entityOptions' => $entityOptions,
+            'filters' => ['q' => $q, 'entidade' => $entidade, 'tipo' => $tipo],
             'isManager' => $isManager,
             'canSeeValues' => $canSeeValues,
             // Só o gestor edita a entidade do ativo; lista para o seletor.
             'entities' => $isManager ? $directory->entities() : collect(),
             // Tipos (chave => rótulo) para o formulário "Novo ativo".
             'types' => $isManager ? collect($inventory->types())->map(fn ($c) => $c['label']) : collect(),
-            'valorTotal' => $canSeeValues ? (float) $assets->sum(fn (array $a) => (float) ($a['value'] ?? 0)) : 0,
+            'valorTotal' => $canSeeValues ? (float) $filtered->sum(fn (array $a) => (float) ($a['value'] ?? 0)) : 0,
         ]);
     }
 
@@ -267,6 +301,20 @@ class InventoryController extends Controller
             }
             $details['fields'] = $fields->values()->all();
         }
+
+        // Histórico de chamados do equipamento + atalho para abrir um novo.
+        $statusLabels = [1 => 'Novo', 2 => 'Atribuído', 3 => 'Planejado', 4 => 'Pendente', 5 => 'Solucionado', 6 => 'Fechado'];
+        try {
+            $details['tickets'] = collect($inventory->assetTickets($itemtype, $id))
+                ->map(fn (array $t) => $t + [
+                    'statusLabel' => $statusLabels[$t['status']] ?? '—',
+                    'open' => ! in_array($t['status'], [5, 6], true),
+                    'url' => route('tickets.show', $t['id']),
+                ])->all();
+        } catch (\Throwable) {
+            $details['tickets'] = [];
+        }
+        $details['newTicketUrl'] = route('tickets.create', ['ativo' => $itemtype.':'.$id]);
 
         return response()->json($details);
     }
