@@ -28,11 +28,14 @@
                     $cpu = $semDados ? null : $h['cpu'];
                     $ram = $semDados ? null : $h['ram'];
                     $disk = $semDados ? null : $h['disk'];
+                    // Valores para ordenar as colunas (status: indisponível < disponível < sem agente < web).
+                    $statusOrdem = ($h['webOnly'] ?? false) ? 3 : (($h['available'] ?? 0) === 2 ? 0 : (($h['available'] ?? 0) === 1 ? 1 : 2));
+                    $sortData = json_encode([mb_strtolower($h['name']), $statusOrdem, $cpu ?? -1, $ram ?? -1, $disk ?? -1]);
                 @endphp
                 <tr class="host-row" style="cursor:pointer" onclick="openHost(this)"
                     data-id="{{ $h['id'] ?? '' }}" data-name="{{ $h['name'] }}"
                     data-cpu="{{ $cpu ?? '' }}" data-ram="{{ $ram ?? '' }}" data-disk="{{ $disk ?? '' }}"
-                    data-sort='@json([mb_strtolower($h['name']), ($h['webOnly'] ?? false) ? 3 : [1 => 1, 2 => 0][$h['available'] ?? 0] ?? 2, $cpu ?? -1, $ram ?? -1, $disk ?? -1])'
+                    data-sort="{{ $sortData }}"
                     title="Ver detalhes e histórico">
                     <td class="fw-semibold">{{ $h['name'] }} <i class="bi bi-graph-up-arrow text-secondary small ms-1"></i></td>
                     <td class="text-nowrap">{!! $avail($h['available'], $h['webOnly'] ?? false) !!}</td>
