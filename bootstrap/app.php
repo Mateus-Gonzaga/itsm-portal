@@ -16,5 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Erros inesperados também viram aviso por e-mail para a equipe
+        // (além do log). Ver App\Support\ErrorAlert.
+        $exceptions->report(function (\Throwable $e): void {
+            if (app()->environment('production')) {
+                \App\Support\ErrorAlert::report($e);
+            }
+        });
     })->create();
