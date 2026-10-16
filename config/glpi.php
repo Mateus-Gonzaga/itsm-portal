@@ -37,4 +37,17 @@ return [
     */
     'timezone' => env('GLPI_TIMEZONE', 'UTC'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cache das leituras da API (desempenho)
+    |--------------------------------------------------------------------------
+    |
+    | Guarda por pouco tempo as leituras do GLPI (chamados, agenda, diretório,
+    | inventário) e reaproveita o token da conta de serviço. Toda escrita feita
+    | pelo portal invalida o grupo afetado na hora. Mudanças feitas direto no
+    | GLPI aparecem em até ~1–2 min. GLPI_CACHE=false desliga.
+    |
+    */
+    'cache' => env('GLPI_CACHE', true),
+
 ];

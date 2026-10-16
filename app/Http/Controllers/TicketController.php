@@ -271,20 +271,28 @@ class TicketController extends Controller
             }
         }
 
-        // Disparo de e-mail via SMTP do Portal (imediato e confiável)
-        try {
-            $ticketUrl = route('tickets.show', $ticket->id);
-
-            // Guarda o e-mail informado no cadastro do SOLICITANTE no portal (nunca no
-            // de quem abriu pela equipe), se ele ainda usa @glpi.local e o e-mail está livre.
-            if (! empty($data['contact_email'])) {
-                $requesterUser = User::where('glpi_id', $requesterId)->first();
-                if ($requesterUser && str_ends_with((string) $requesterUser->email, '@glpi.local')
-                    && ! User::where('email', $data['contact_email'])->exists()) {
-                    $requesterUser->update(['email' => $data['contact_email']]);
-                }
+        // Guarda o e-mail informado no cadastro do SOLICITANTE no portal (nunca no
+        // de quem abriu pela equipe), se ele ainda usa @glpi.local e o e-mail está livre.
+        if (! empty($data['contact_email'])) {
+            $requesterUser = User::where('glpi_id', $requesterId)->first();
+            if ($requesterUser && str_ends_with((string) $requesterUser->email, '@glpi.local')
+                && ! User::where('email', $data['contact_email'])->exists()) {
+                $requesterUser->update(['email' => $data['contact_email']]);
             }
+        }
 
+        // E-mails via SMTP do portal DEPOIS de responder ao navegador: quem abre o
+        // chamado não espera o servidor de e-mail.
+        $ticketUrl = route('tickets.show', $ticket->id);
+        app()->terminating(fn () => $this->sendTicketCreatedMails($ticket, $ticketUrl, $clientEmail));
+
+        return redirect()->route('tickets.show', $ticket->id)
+            ->with('status', "Chamado \"{$ticket->title}\" aberto com sucesso (#{$ticket->id}).");
+    }
+
+    private function sendTicketCreatedMails(TicketData $ticket, string $ticketUrl, ?string $clientEmail): void
+    {
+        try {
             $supportEmail = config('mail.support_address', config('mail.from.address'));
 
             Log::info('Preparando disparo de e-mail para o chamado #'.$ticket->id, [
@@ -311,9 +319,6 @@ class TicketController extends Controller
                 'exception' => $e,
             ]);
         }
-
-        return redirect()->route('tickets.show', $ticket->id)
-            ->with('status', "Chamado \"{$ticket->title}\" aberto com sucesso (#{$ticket->id}).");
     }
 
     public function addComment(Request $request, int|string $id): RedirectResponse

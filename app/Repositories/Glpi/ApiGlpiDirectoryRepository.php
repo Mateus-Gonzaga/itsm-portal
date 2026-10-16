@@ -2,10 +2,9 @@
 
 namespace App\Repositories\Glpi;
 
+use App\Repositories\Glpi\Support\GlpiCache;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
-use RuntimeException;
 
 /**
  * Diretório lido/gravado na API REST do GLPI (entidades, perfis, usuários).
@@ -26,14 +25,17 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
     ) {
     }
 
+    /** Diretório muda pouco: cache de 5 min (conta de serviço), invalidado nas escritas. */
+    private const TTL = 300;
+
     public function entities(): Collection
     {
-        $resp = $this->client()->get('/Entity', ['range' => '0-999', 'expand_dropdowns' => 'true']);
-        if (! $resp->successful() || ! is_array($resp->json())) {
-            return collect();
-        }
+        return GlpiCache::remember('directory', 'entities', self::TTL, fn () => $this->loadEntities());
+    }
 
-        return collect($resp->json())
+    private function loadEntities(): Collection
+    {
+        return collect(GlpiCache::fetchAll($this->client(), '/Entity', ['expand_dropdowns' => 'true']))
             ->map(fn (array $e) => [
                 'id' => (int) ($e['id'] ?? 0),
                 'name' => (string) ($e['name'] ?? ''),
@@ -46,12 +48,12 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
 
     public function profiles(): Collection
     {
-        $resp = $this->client()->get('/Profile', ['range' => '0-200']);
-        if (! $resp->successful() || ! is_array($resp->json())) {
-            return collect();
-        }
+        return GlpiCache::remember('directory', 'profiles', self::TTL, fn () => $this->loadProfiles());
+    }
 
-        return collect($resp->json())
+    private function loadProfiles(): Collection
+    {
+        return collect(GlpiCache::fetchAll($this->client(), '/Profile'))
             ->map(fn (array $p) => [
                 'id' => (int) ($p['id'] ?? 0),
                 'name' => (string) ($p['name'] ?? ''),
@@ -63,9 +65,14 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
 
     public function users(): Collection
     {
-        $usersResp = $this->client()->get('/User', ['range' => '0-999']);
-        $puResp = $this->client()->get('/Profile_User', ['range' => '0-999']);
-        if (! $usersResp->successful() || ! is_array($usersResp->json())) {
+        return GlpiCache::remember('directory', 'users', self::TTL, fn () => $this->loadUsers());
+    }
+
+    private function loadUsers(): Collection
+    {
+        $users = GlpiCache::fetchAll($this->client(), '/User');
+        $profileUsers = GlpiCache::fetchAll($this->client(), '/Profile_User');
+        if ($users === []) {
             return collect();
         }
 
@@ -74,7 +81,7 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
 
         // Agrupa Profile_User por usuário e escolhe o vínculo PRINCIPAL:
         // não-dinâmico e fora da raiz; senão não-dinâmico; senão o primeiro.
-        $byUser = collect(is_array($puResp->json()) ? $puResp->json() : [])->groupBy('users_id');
+        $byUser = collect($profileUsers)->groupBy('users_id');
         $primary = function (int $uid) use ($byUser) {
             $rows = $byUser->get($uid, collect());
             if ($rows instanceof Collection === false) {
@@ -84,7 +91,7 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
             return $rows->sortByDesc(fn ($r) => (! (bool) ($r['is_dynamic'] ?? false) ? 2 : 0) + ((int) ($r['entities_id'] ?? 0) !== 0 ? 1 : 0))->first();
         };
 
-        return collect($usersResp->json())
+        return collect($users)
             ->reject(fn (array $u) => in_array((string) ($u['name'] ?? ''), self::SYSTEM, true))
             ->map(function (array $u) use ($primary, $entityNames, $profileNames) {
                 $login = (string) ($u['name'] ?? '');
@@ -121,6 +128,7 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
     {
         $resp = $this->client()->post('/Entity', ['input' => ['name' => $name, 'entities_id' => $parentId]]);
         $resp->throw();
+        GlpiCache::flush('directory');
 
         return (int) ($resp->json('id') ?? $resp->json('0.id'));
     }
@@ -128,6 +136,7 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
     public function updateEntity(int $id, string $name): void
     {
         $this->client()->put("/Entity/{$id}", ['input' => ['id' => $id, 'name' => $name]])->throw();
+        GlpiCache::flush('directory');
     }
 
     public function createUser(array $data): void
@@ -150,6 +159,7 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
             'is_recursive' => $data['recursive'] ? 1 : 0,
             'is_dynamic' => 0,
         ]])->throw();
+        GlpiCache::flush('directory');
     }
 
     public function updateUser(int $id, array $data): void
@@ -183,43 +193,32 @@ class ApiGlpiDirectoryRepository implements GlpiDirectoryRepositoryInterface
         } else {
             $this->client()->post('/Profile_User', ['input' => $puInput])->throw();
         }
+        GlpiCache::flush('directory');
     }
 
     public function setUserActive(int $id, bool $active): void
     {
         $this->client()->put("/User/{$id}", ['input' => ['id' => $id, 'is_active' => $active ? 1 : 0]])->throw();
+        GlpiCache::flush('directory');
     }
 
     // ----------------------------------------------------------------
 
     private function client(): PendingRequest
     {
-        return Http::baseUrl($this->apiUrl)
-            ->acceptJson()
-            ->withHeaders(array_filter([
-                'Session-Token' => $this->session(),
-                'App-Token' => $this->appToken ?: null,
-            ]));
+        return GlpiCache::client($this->apiUrl, $this->appToken, $this->session(),
+            fn () => $this->session(fresh: true));
     }
 
-    private function session(): string
+    /** Conta de serviço: token reaproveitado entre requisições (cache). */
+    private function session(bool $fresh = false): string
     {
-        if ($this->sessionToken !== null) {
+        if ($this->sessionToken !== null && ! $fresh) {
             return $this->sessionToken;
         }
 
-        $resp = Http::baseUrl($this->apiUrl)
-            ->acceptJson()
-            ->withBasicAuth($this->user, $this->password)
-            ->withHeaders(array_filter(['App-Token' => $this->appToken ?: null]))
-            ->get('/initSession');
-        $resp->throw();
-
-        $token = $resp->json('session_token');
-        if (! $token) {
-            throw new RuntimeException('GLPI initSession não retornou session_token.');
-        }
-
-        return $this->sessionToken = $token;
+        return $this->sessionToken = GlpiCache::serviceToken(
+            $this->apiUrl, $this->user, $this->password, $this->appToken, fresh: $fresh,
+        );
     }
 }

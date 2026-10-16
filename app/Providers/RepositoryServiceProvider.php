@@ -28,7 +28,7 @@ class RepositoryServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(GlpiTicketRepositoryInterface::class, function () {
+        $this->app->scoped(GlpiTicketRepositoryInterface::class, function () {
             $driver = config('glpi.driver', 'fake');
 
             return match ($driver) {
@@ -46,7 +46,7 @@ class RepositoryServiceProvider extends ServiceProvider
         });
 
         // Agenda interna — mesma flag GLPI_DRIVER decide Fake vs Api.
-        $this->app->bind(GlpiPlanningRepositoryInterface::class, function () {
+        $this->app->scoped(GlpiPlanningRepositoryInterface::class, function () {
             $driver = config('glpi.driver', 'fake');
 
             return match ($driver) {
@@ -76,7 +76,7 @@ class RepositoryServiceProvider extends ServiceProvider
         });
 
         // Inventário (ativos do GLPI) — tela Inventário.
-        $this->app->bind(GlpiInventoryRepositoryInterface::class, function () {
+        $this->app->scoped(GlpiInventoryRepositoryInterface::class, function () {
             $driver = config('glpi.driver', 'fake');
 
             return match ($driver) {
@@ -94,7 +94,7 @@ class RepositoryServiceProvider extends ServiceProvider
         });
 
         // Diretório (entidades/perfis/acessos) — tela Clientes.
-        $this->app->bind(GlpiDirectoryRepositoryInterface::class, function () {
+        $this->app->scoped(GlpiDirectoryRepositoryInterface::class, function () {
             $driver = config('glpi.driver', 'fake');
 
             return match ($driver) {

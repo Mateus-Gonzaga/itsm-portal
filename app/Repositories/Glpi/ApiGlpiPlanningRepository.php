@@ -3,11 +3,10 @@
 namespace App\Repositories\Glpi;
 
 use App\Data\PlanningEvent;
+use App\Repositories\Glpi\Support\GlpiCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
-use RuntimeException;
 
 /**
  * Agenda contra a API REST do GLPI 11.
@@ -35,6 +34,12 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
     }
 
     public function events(array $filters = []): Collection
+    {
+        return GlpiCache::remember('planning', GlpiCache::scope().':events:'.md5(json_encode($filters)), 60,
+            fn () => $this->loadEvents($filters));
+    }
+
+    private function loadEvents(array $filters): Collection
     {
         $techId = ! empty($filters['technician_glpi_id']) ? (int) $filters['technician_glpi_id'] : null;
 
@@ -91,6 +96,7 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
         }
 
         $this->client()->post('/PlanningExternalEvent', ['input' => $input])->throw();
+        GlpiCache::flush('planning');
     }
 
     public function rescheduleEvent(int $eventId, CarbonImmutable $begin, CarbonImmutable $end): void
@@ -102,6 +108,7 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
                 'end' => $end->setTimezone($glpiTz)->format('Y-m-d H:i:s'),
             ],
         ])->throw();
+        GlpiCache::flush('planning');
     }
 
     public function setEventDone(int $eventId, bool $done): void
@@ -109,11 +116,13 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
         $this->client()->put("/PlanningExternalEvent/{$eventId}", [
             'input' => ['state' => $done ? 2 : 1],
         ])->throw();
+        GlpiCache::flush('planning');
     }
 
     public function deleteEvent(int $eventId): void
     {
         $this->client()->delete("/PlanningExternalEvent/{$eventId}")->throw();
+        GlpiCache::flush('planning');
     }
 
     public function reschedule(int $taskId, CarbonImmutable $begin, CarbonImmutable $end): void
@@ -125,6 +134,7 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
                 'end' => $end->setTimezone($glpiTz)->format('Y-m-d H:i:s'),
             ],
         ])->throw();
+        GlpiCache::flush('planning');
     }
 
     public function schedule(int $ticketId, int $technicianGlpiId, CarbonImmutable $begin, CarbonImmutable $end, ?string $content = null): int
@@ -140,6 +150,7 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
                 'content' => $content !== null && $content !== '' ? $content : 'Atendimento agendado.',
             ],
         ])->throw();
+        GlpiCache::flush('planning', 'tickets');
 
         return (int) ($resp->json('id') ?? 0);
     }
@@ -209,13 +220,8 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
     /** @return array<int, array{title: string, due: ?string, open: bool}> */
     private function ticketsMap(): array
     {
-        $resp = $this->client()->get('/Ticket', ['range' => '0-499']);
-        if (! $resp->successful() || ! is_array($resp->json())) {
-            return [];
-        }
-
         $map = [];
-        foreach ($resp->json() as $t) {
+        foreach (GlpiCache::fetchAll($this->client(), '/Ticket') as $t) {
             $status = (int) ($t['status'] ?? 1);
             $map[(int) $t['id']] = [
                 'title' => (string) ($t['name'] ?? 'Chamado'),
@@ -230,9 +236,7 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
     /** @return Collection<int, array> TicketTask cruas (ids, sem expand). */
     private function tasks(): Collection
     {
-        $resp = $this->client()->get('/TicketTask', ['range' => '0-499']);
-
-        return $resp->successful() && is_array($resp->json()) ? collect($resp->json()) : collect();
+        return collect(GlpiCache::fetchAll($this->client(), '/TicketTask'));
     }
 
     private function userMap(): array
@@ -241,33 +245,32 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
             return $this->userMap;
         }
 
-        $resp = $this->client()->get('/User', ['range' => '0-999']);
-        if (! $resp->successful() || ! is_array($resp->json())) {
-            return $this->userMap = [];
-        }
-
-        $map = [];
-        foreach ($resp->json() as $u) {
-            $name = trim((string) ($u['realname'] ?? '')) ?: (string) ($u['name'] ?? '');
-            if ($name !== '') {
-                $map[(int) ($u['id'] ?? 0)] = $name;
+        // Mesmo cache de usuários do repositório de chamados (10 min por escopo).
+        return $this->userMap = GlpiCache::remember('directory', GlpiCache::scope().':usermap', 600, function () {
+            $map = [];
+            foreach (GlpiCache::fetchAll($this->client(), '/User') as $u) {
+                $name = trim((string) ($u['realname'] ?? '')) ?: (string) ($u['name'] ?? '');
+                if ($name !== '') {
+                    $map[(int) ($u['id'] ?? 0)] = $name;
+                }
             }
-        }
 
-        return $this->userMap = $map;
+            return $map;
+        }) ?? [];
     }
 
     private function client(): PendingRequest
     {
-        return Http::baseUrl($this->apiUrl)
-            ->acceptJson()
-            ->withHeaders(array_filter([
-                'Session-Token' => $this->session(),
-                'App-Token' => $this->appToken ?: null,
-            ]));
+        $userToken = session('glpi_token');
+        if (is_string($userToken) && $userToken !== '') {
+            return GlpiCache::client($this->apiUrl, $this->appToken, $userToken);
+        }
+
+        return GlpiCache::client($this->apiUrl, $this->appToken, $this->session(),
+            fn () => $this->session(fresh: true));
     }
 
-    private function session(): string
+    private function session(bool $fresh = false): string
     {
         // Usuário logado via GLPI: usa o token DELE (isolamento nativo por entidade).
         $userToken = session('glpi_token');
@@ -275,23 +278,13 @@ class ApiGlpiPlanningRepository implements GlpiPlanningRepositoryInterface
             return $userToken;
         }
 
-        if ($this->sessionToken !== null) {
+        if ($this->sessionToken !== null && ! $fresh) {
             return $this->sessionToken;
         }
 
-        $resp = Http::baseUrl($this->apiUrl)
-            ->acceptJson()
-            ->withBasicAuth($this->user, $this->password)
-            ->withHeaders(array_filter(['App-Token' => $this->appToken ?: null]))
-            ->get('/initSession');
-        $resp->throw();
-
-        $token = $resp->json('session_token');
-        if (! $token) {
-            throw new RuntimeException('GLPI initSession não retornou session_token.');
-        }
-
-        return $this->sessionToken = $token;
+        return $this->sessionToken = GlpiCache::serviceToken(
+            $this->apiUrl, $this->user, $this->password, $this->appToken, fresh: $fresh,
+        );
     }
 
     private function validDate(mixed $d): bool

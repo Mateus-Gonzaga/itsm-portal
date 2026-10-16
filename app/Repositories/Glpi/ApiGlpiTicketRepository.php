@@ -7,6 +7,7 @@ use App\Data\TicketData;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\TicketType;
+use App\Repositories\Glpi\Support\GlpiCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
@@ -27,6 +28,9 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
     /** Mapa id->nome de exibição dos usuários do GLPI, carregado sob demanda. */
     private ?array $userMap = null;
 
+    /** Listagem completa já montada nesta requisição. */
+    private ?Collection $allTicketsMemo = null;
+
     public function __construct(
         private readonly string $apiUrl,
         private readonly string $appToken,
@@ -37,8 +41,15 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
 
     public function all(array $filters = []): Collection
     {
+        // Cache curto por escopo de visibilidade; qualquer escrita invalida.
+        return GlpiCache::remember('tickets', GlpiCache::scope().':all:'.md5(json_encode($filters)), 60,
+            fn () => $this->loadAll($filters));
+    }
+
+    private function loadAll(array $filters): Collection
+    {
         // Filtro por ator (solicitante/técnico) usa a busca do GLPI, que conhece
-        // os atores; depois carrega cada chamado já com nomes resolvidos.
+        // os atores; os chamados vêm da listagem em lote (sem 1 leitura por chamado).
         if (! empty($filters['requester_glpi_id'])) {
             $tickets = $this->ticketsByActor(4, (int) $filters['requester_glpi_id']);
         } elseif (! empty($filters['technician_glpi_id'])) {
@@ -65,18 +76,18 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
     /** Lista todos os chamados (visão do gestor) via getAllItems. */
     private function allTickets(): Collection
     {
-        $resp = $this->client()->get('/Ticket', [
-            'expand_dropdowns' => 'true',
-            'range' => '0-999',
-        ]);
+        if ($this->allTicketsMemo !== null) {
+            return $this->allTicketsMemo;
+        }
 
-        if (! $resp->successful() || ! is_array($resp->json())) {
+        $rows = GlpiCache::fetchAll($this->client(), '/Ticket', ['expand_dropdowns' => 'true']);
+        if ($rows === []) {
             return collect();
         }
 
         $allActors = $this->allTicketActors();
 
-        return collect($resp->json())->map(function (array $t) use ($allActors) {
+        return $this->allTicketsMemo = collect($rows)->map(function (array $t) use ($allActors) {
             $id = (int) ($t['id'] ?? 0);
             $actors = $allActors[$id] ?? null;
 
@@ -100,7 +111,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             'criteria[0][searchtype]' => 'equals',
             'criteria[0][value]' => $glpiUserId,
             'forcedisplay[0]' => 2, // 2 = id
-            'range' => '0-999',
+            'range' => '0-4999',
         ]);
 
         if (! $resp->successful()) {
@@ -112,10 +123,24 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             ->filter()
             ->values();
 
-        return $ids->map(fn (int $id) => $this->find($id))->filter()->values();
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        // Monta a partir da listagem em lote (mesmo token = mesma visibilidade);
+        // só cai na leitura individual se algum ID não vier na listagem.
+        $byId = $this->allTickets()->keyBy(fn (TicketData $t) => (int) $t->id);
+
+        return $ids->map(fn (int $id) => $byId->get($id) ?? $this->loadOne($id))->filter()->values();
     }
 
     public function find(int|string $id): ?TicketData
+    {
+        return GlpiCache::remember('tickets', GlpiCache::scope().':find:'.(int) $id, 30,
+            fn () => $this->loadOne((int) $id));
+    }
+
+    private function loadOne(int $id): ?TicketData
     {
         $resp = $this->client()->get("/Ticket/{$id}", ['expand_dropdowns' => 'true']);
 
@@ -123,7 +148,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             return null;
         }
 
-        return $this->toTicketData($resp->json(), $this->ticketActors((int) $id));
+        return $this->toTicketData($resp->json(), $this->ticketActors($id));
     }
 
     public function create(array $attributes): TicketData
@@ -163,6 +188,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
 
         $resp = $this->client()->post('/Ticket', ['input' => $input]);
         $resp->throw();
+        $this->invalidate();
 
         $id = $resp->json('id') ?? $resp->json('0.id');
 
@@ -198,6 +224,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         }
 
         $this->client()->put("/Ticket/{$id}", ['input' => $input])->throw();
+        $this->invalidate();
 
         return $this->find($id) ?? throw new RuntimeException("Chamado {$id} não encontrado após update.");
     }
@@ -221,6 +248,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         $this->client()->post('/Ticket_User', [
             'input' => ['tickets_id' => (int) $id, 'users_id' => $userId, 'type' => 1],
         ])->throw();
+        $this->invalidate();
     }
 
     public function setRequesterNotificationEmail(int|string $id, string $email): void
@@ -236,6 +264,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
                 'tickets_id' => (int) $id, 'users_id' => 0, 'type' => 1,
                 'use_notification' => 1, 'alternative_email' => $email,
             ]])->throw();
+            $this->invalidate();
 
             return;
         }
@@ -245,15 +274,30 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
                 'id' => (int) $link['id'], 'use_notification' => 1, 'alternative_email' => $email,
             ]])->throw();
         }
+        $this->invalidate();
     }
 
     public function delete(int|string $id): void
     {
         // Sem force_purge => vai para a lixeira do GLPI (reversível).
         $this->client()->delete("/Ticket/{$id}")->throw();
+        $this->invalidate();
+    }
+
+    /** Escrita no GLPI: descarta leituras em cache de chamados e da agenda. */
+    private function invalidate(): void
+    {
+        $this->allTicketsMemo = null;
+        GlpiCache::flush('tickets', 'planning');
     }
 
     public function timeline(int|string $id): Collection
+    {
+        return GlpiCache::remember('tickets', GlpiCache::scope().':timeline:'.(int) $id, 30,
+            fn () => $this->loadTimeline($id));
+    }
+
+    private function loadTimeline(int|string $id): Collection
     {
         $resp = $this->client()->get("/Ticket/{$id}/ITILFollowup", ['expand_dropdowns' => 'true']);
 
@@ -300,9 +344,16 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
         }
 
         $this->client()->post('/ITILFollowup', ['input' => $input])->throw();
+        $this->invalidate();
     }
 
     public function attachments(int|string $ticketId): Collection
+    {
+        return GlpiCache::remember('tickets', GlpiCache::scope().':attachments:'.(int) $ticketId, 120,
+            fn () => $this->loadAttachments($ticketId));
+    }
+
+    private function loadAttachments(int|string $ticketId): Collection
     {
         $links = $this->client()->get("/Ticket/{$ticketId}/Document_Item");
         if (! $links->successful() || ! is_array($links->json())) {
@@ -358,6 +409,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             ->attach('filename[0]', file_get_contents($path), $safe)
             ->post('/Document', ['uploadManifest' => $manifest])
             ->throw();
+        $this->invalidate();
     }
 
     public function downloadAttachment(int $documentId): array
@@ -414,15 +466,16 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
 
     private function client(): PendingRequest
     {
-        return Http::baseUrl($this->apiUrl)
-            ->acceptJson()
-            ->withHeaders(array_filter([
-                'Session-Token' => $this->session(),
-                'App-Token' => $this->appToken ?: null,
-            ]));
+        $userToken = session('glpi_token');
+        if (is_string($userToken) && $userToken !== '') {
+            return GlpiCache::client($this->apiUrl, $this->appToken, $userToken);
+        }
+
+        return GlpiCache::client($this->apiUrl, $this->appToken, $this->session(),
+            fn () => $this->session(fresh: true));
     }
 
-    private function session(): string
+    private function session(bool $fresh = false): string
     {
         // Usuário logado via GLPI: usa o token DELE (isolamento nativo por entidade).
         $userToken = session('glpi_token');
@@ -430,23 +483,14 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             return $userToken;
         }
 
-        if ($this->sessionToken !== null) {
+        if ($this->sessionToken !== null && ! $fresh) {
             return $this->sessionToken;
         }
 
-        $resp = Http::baseUrl($this->apiUrl)
-            ->acceptJson()
-            ->withBasicAuth($this->user, $this->password)
-            ->withHeaders(array_filter(['App-Token' => $this->appToken ?: null]))
-            ->get('/initSession');
-        $resp->throw();
-
-        $token = $resp->json('session_token');
-        if (! $token) {
-            throw new RuntimeException('GLPI initSession não retornou session_token.');
-        }
-
-        return $this->sessionToken = $token;
+        // Conta de serviço: token reaproveitado entre requisições (cache).
+        return $this->sessionToken = GlpiCache::serviceToken(
+            $this->apiUrl, $this->user, $this->password, $this->appToken, fresh: $fresh,
+        );
     }
 
     // ----------------------------------------------------------------
@@ -482,15 +526,15 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
      */
     private function allTicketActors(): array
     {
-        $resp = $this->client()->get('/Ticket_User', ['range' => '0-999']);
-        if (! $resp->successful() || ! is_array($resp->json())) {
+        $links = GlpiCache::fetchAll($this->client(), '/Ticket_User');
+        if ($links === []) {
             return [];
         }
 
         $userMap = $this->userMap();
         $actorsByTicket = [];
 
-        foreach ($resp->json() as $link) {
+        foreach ($links as $link) {
             $ticketId = (int) ($link['tickets_id'] ?? 0);
             $uid = (int) ($link['users_id'] ?? 0);
             $type = (int) ($link['type'] ?? 0);
@@ -575,20 +619,19 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             return $this->userMap;
         }
 
-        $resp = $this->client()->get('/User', ['range' => '0-999']);
-        if (! $resp->successful() || ! is_array($resp->json())) {
-            return $this->userMap = [];
-        }
-
-        $map = [];
-        foreach ($resp->json() as $u) {
-            $name = trim((string) ($u['realname'] ?? '')) ?: (string) ($u['name'] ?? '');
-            if ($name !== '') {
-                $map[(int) ($u['id'] ?? 0)] = $name;
+        // Lista de usuários muda pouco: cache de 10 min por escopo (invalidado
+        // pelas escritas do diretório).
+        return $this->userMap = GlpiCache::remember('directory', GlpiCache::scope().':usermap', 600, function () {
+            $map = [];
+            foreach (GlpiCache::fetchAll($this->client(), '/User') as $u) {
+                $name = trim((string) ($u['realname'] ?? '')) ?: (string) ($u['name'] ?? '');
+                if ($name !== '') {
+                    $map[(int) ($u['id'] ?? 0)] = $name;
+                }
             }
-        }
 
-        return $this->userMap = $map;
+            return $map;
+        }) ?? [];
     }
 
     /** Com expand_dropdowns, FKs viram nomes; 0/"" significam "nenhum". */

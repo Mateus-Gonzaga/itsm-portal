@@ -2,10 +2,10 @@
 
 namespace App\Repositories\Glpi;
 
+use App\Repositories\Glpi\Support\GlpiCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
@@ -47,15 +47,19 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
 
     public function assets(): Collection
     {
+        // 11 tipos = 11 chamadas ao GLPI: cache de 2 min por escopo de entidade,
+        // invalidado em qualquer criação/edição/movimentação/exclusão.
+        return GlpiCache::remember('inventory', $this->scopeKey().':assets', 120, fn () => $this->loadAssets());
+    }
+
+    private function loadAssets(): Collection
+    {
         $out = collect();
+        $client = $this->client();
 
         foreach (self::TYPES as $itemtype => $cfg) {
-            $resp = $this->client()->get("/{$itemtype}", ['range' => '0-499', 'expand_dropdowns' => 'true']);
-            if (! $resp->successful() || ! is_array($resp->json())) {
-                continue;
-            }
-
-            foreach ($resp->json() as $a) {
+            // Paginado: sem o antigo teto de 500 itens por tipo.
+            foreach (GlpiCache::fetchAll($client, "/{$itemtype}", ['expand_dropdowns' => 'true']) as $a) {
                 $out->push([
                     'id' => (int) ($a['id'] ?? 0),
                     'type' => $cfg['label'],
@@ -102,6 +106,8 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         $resp = $this->client()->post("/{$itemtype}", ['input' => $input]);
         $resp->throw();
 
+        GlpiCache::flush('inventory');
+
         $newId = $resp->json('id') ?? $resp->json('0.id');
         if (! $newId) {
             throw new RuntimeException('O GLPI não retornou o ID do ativo criado.');
@@ -147,6 +153,7 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         if (! empty($data['entities_id']) && (int) $data['entities_id'] > 0 && $itemtype === 'Computer') {
             $this->moveConnectedItems($id, (int) $data['entities_id']);
         }
+        GlpiCache::flush('inventory');
     }
 
     public function deleteAsset(string $itemtype, int $id): void
@@ -157,6 +164,7 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
 
         // DELETE sem force_purge => vai para a lixeira do GLPI (reversível).
         $this->client()->delete("/{$itemtype}/{$id}")->throw();
+        GlpiCache::flush('inventory');
     }
 
     public function moveAsset(string $itemtype, int $id, int $entityId): void
@@ -177,6 +185,7 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         if ($itemtype === 'Computer') {
             $this->moveConnectedItems($id, $entityId);
         }
+        GlpiCache::flush('inventory');
     }
 
     public function setInfocomValue(string $itemtype, int $id, ?float $value): void
@@ -198,6 +207,7 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
         } else {
             $this->client()->post('/Infocom', ['input' => $input])->throw();
         }
+        GlpiCache::flush('inventory');
     }
 
     public function assetDetails(string $itemtype, int $id): ?array
@@ -392,12 +402,17 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
 
     private function client(): PendingRequest
     {
-        return Http::baseUrl($this->apiUrl)
-            ->acceptJson()
-            ->withHeaders(array_filter([
-                'Session-Token' => $this->session(),
-                'App-Token' => $this->appToken ?: null,
-            ]));
+        $token = $this->session();
+
+        // Sem escopo válido (fail-closed) não há token a renovar.
+        return GlpiCache::client($this->apiUrl, $this->appToken, $token,
+            $token === '' ? null : fn () => $this->session(fresh: true));
+    }
+
+    /** Chave do escopo de entidade da sessão (o cache nunca mistura entidades). */
+    private function scopeKey(): string
+    {
+        return 'e'.(string) session('glpi_entity', 'none').'-r'.((bool) session('glpi_entity_recursive') ? 1 : 0);
     }
 
     /**
@@ -406,9 +421,9 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
      * logado via changeActiveEntities — o GLPI então só devolve os ativos
      * daquela entidade (cliente vê só a sua; gestor vê CLIENTES recursivo).
      */
-    private function session(): string
+    private function session(bool $fresh = false): string
     {
-        if ($this->sessionToken !== null) {
+        if ($this->sessionToken !== null && ! $fresh) {
             return $this->sessionToken;
         }
 
@@ -427,32 +442,12 @@ class ApiGlpiInventoryRepository implements GlpiInventoryRepositoryInterface
             return '';
         }
 
-        $resp = Http::baseUrl($this->apiUrl)
-            ->acceptJson()
-            ->withBasicAuth($this->user, $this->password)
-            ->withHeaders(array_filter(['App-Token' => $this->appToken ?: null]))
-            ->get('/initSession');
-        $resp->throw();
-
-        $token = $resp->json('session_token');
-        if (! $token) {
-            throw new RuntimeException('GLPI initSession não retornou session_token.');
-        }
-
-        $scoped = Http::baseUrl($this->apiUrl)
-            ->acceptJson()
-            ->withHeaders(array_filter(['Session-Token' => $token, 'App-Token' => $this->appToken ?: null]))
-            ->post('/changeActiveEntities', [
-                'entities_id' => (int) $entity,
-                'is_recursive' => (bool) session('glpi_entity_recursive'),
-            ]);
-        if (! $scoped->successful()) {
-            throw new RuntimeException('Falha ao aplicar o isolamento por entidade no GLPI.');
-        }
-
-        $this->sessionToken = $token;
-
-        return $this->sessionToken;
+        // Token já escopado (changeActiveEntities) reaproveitado entre requisições;
+        // o cache é por entidade+recursividade, então escopos nunca se misturam.
+        return $this->sessionToken = GlpiCache::serviceToken(
+            $this->apiUrl, $this->user, $this->password, $this->appToken,
+            entity: (int) $entity, recursive: $recursive, fresh: $fresh,
+        );
     }
 
     /** Localiza ou cria um fabricante (marca) no GLPI pelo nome e retorna seu ID. */
