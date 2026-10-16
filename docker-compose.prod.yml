@@ -11,6 +11,14 @@ services:
       - .:/var/www/html
     depends_on:
       - db
+      - redis
+
+  # Cache do portal (leituras do GLPI). Só memória, com limite e descarte LRU:
+  # não cresce sem fim e, se reiniciar, o cache simplesmente recomeça vazio.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
 
   web:
     image: nginx:alpine
@@ -44,6 +52,7 @@ services:
     depends_on:
       - app
       - db
+      - redis
     command: ["php", "artisan", "schedule:work"]
 
 volumes:

@@ -6,6 +6,12 @@ FROM php:8.4-fpm-alpine
 RUN apk add --no-cache git libpq-dev oniguruma-dev libzip-dev \
     && docker-php-ext-install pdo pdo_pgsql bcmath mbstring zip opcache
 
+# Redis (cache do portal) via extensão nativa phpredis.
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del .build-deps
+
 # OPcache de produção (código pré-compilado em memória).
 COPY docker/opcache.ini /usr/local/etc/php/conf.d/zz-opcache.ini
 
