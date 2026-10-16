@@ -2,6 +2,14 @@
 
 Histórico cronológico (nunca apagar).
 
+## 2026-10-16 (5) — Dashboards
+- **Ruído separado**: problemas cujo nome casa com `zabbix.noise_patterns` (`ZABBIX_NOISE`, padrão GoogleUpdater, edgeupdate, gupdate…) ficam ocultos por padrão, fora do KPI "Problemas ativos" (que mostra "+N de ruído ocultos"), da rosca de severidade e dos alertas da saúde por cliente.
+- **Lista de problemas** (`partials/problems`): agrupa problemas iguais ("12 hosts", expansível), busca, filtro de severidade, alternar ruído, filtros lembrados entre as atualizações automáticas, e botão **"Abrir chamado"** que abre `/tickets/create` com título e descrição do alerta (`?titulo=&descricao=`).
+- **Hosts** (`partials/hosts`): busca e ordenação por coluna; hosts sem interface aparecem como "Monitoramento web" (portal/GLPI) e hosts sem agente como "Sem agente", com "—" em vez de 0%; rosca de disponibilidade com fatia "Monitoramento web".
+- **Desempenho**: leituras `*.get` do Zabbix em cache (`ZABBIX_CACHE_TTL`, 30 s) e login (`user.login`) reaproveitado por 15 min com renovação automática.
+- **Fix `/saude`**: o teste de cache usava número (Redis devolve string) → falso alerta "cache (Redis) indisponível".
+- **`monitor:zabbix-extra --silenciar-servicos=GoogleUpdater,... [--so-silenciar]`**: acrescenta serviços à macro `{$SERVICE.NAME.NOT_MATCHES}` dos templates Windows (para de gerar o alerta na origem).
+
 ## 2026-10-16 (4) — Relatórios
 - **Módulo de Relatórios refeito** (`ReportsController`, `modules/reports.blade.php`): filtros de período (30 dias, este mês, mês passado, 90 dias, ano, tudo, personalizado), cliente (empresa), técnico, categoria e situação; indicadores do recorte (total, abertos, resolvidos, atrasados, **tempo médio de solução**, **SLA cumprido**); abas Visão geral (gráfico abertos × resolvidos por dia/semana/mês, situação, prioridade, tipo, top clientes), Por cliente, Por técnico, Por categoria (tabelas com % resolvidos, tempo médio e SLA), Chamados (lista paginada com situação de SLA) e Marcas (inventário). Cada aba só calcula o que mostra.
 - **Exportar Excel** (`/relatorios/exportar?tipo=chamados|clientes|tecnicos|categorias`, CSV `;` com BOM).

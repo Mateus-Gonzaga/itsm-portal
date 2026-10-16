@@ -31,9 +31,11 @@ class HealthController extends Controller
         $out = [
             'db' => $this->check(fn () => DB::select('select 1')),
             'cache' => $this->check(function () {
-                Cache::put('saude:ping', 1, 60);
+                // Texto (não número): o Redis devolve números como string.
+                $marca = 'ok-'.now()->timestamp;
+                Cache::put('saude:ping', $marca, 60);
 
-                return Cache::get('saude:ping') === 1 ?: throw new \RuntimeException('cache');
+                return Cache::get('saude:ping') === $marca ?: throw new \RuntimeException('cache');
             }),
             'glpi' => 0,
             'glpi_fila_pendentes' => -1,

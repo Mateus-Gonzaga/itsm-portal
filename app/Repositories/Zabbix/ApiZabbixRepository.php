@@ -4,6 +4,7 @@ namespace App\Repositories\Zabbix;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -66,7 +67,7 @@ class ApiZabbixRepository implements ZabbixRepositoryInterface
             return collect();
         }
 
-        $params = ['output' => ['hostid', 'name', 'status', 'active_available'], 'sortfield' => 'name'];
+        $params = ['output' => ['hostid', 'name', 'status', 'active_available'], 'sortfield' => 'name', 'selectInterfaces' => ['type']];
         if ($groupIds !== null) {
             $params['groupids'] = array_values($groupIds);
         }
@@ -85,6 +86,8 @@ class ApiZabbixRepository implements ZabbixRepositoryInterface
                 'name' => (string) ($h['name'] ?? '?'),
                 'enabled' => (int) ($h['status'] ?? 0) === 0,
                 'available' => (int) ($h['active_available'] ?? 0),
+                // Sem interface = monitorado só por cenário web (portal, GLPI…), não "desconhecido".
+                'webOnly' => empty($h['interfaces'] ?? []),
                 'cpu' => $m['cpu'] ?? null,
                 'ram' => $m['ram'] ?? null,
                 'disk' => $m['disk'] ?? null,
@@ -182,16 +185,18 @@ class ApiZabbixRepository implements ZabbixRepositoryInterface
         return collect($problems)->map(function (array $p) use ($hostByTrigger) {
             $sev = (int) ($p['severity'] ?? 0);
             [$label, $color] = self::SEVERITY[$sev] ?? ['?', 'secondary'];
+            $name = (string) ($p['name'] ?? '—');
 
             return [
                 'severity' => $sev,
                 'severityLabel' => $label,
                 'color' => $color,
-                'name' => (string) ($p['name'] ?? '—'),
+                'name' => $name,
                 'host' => $hostByTrigger[(string) ($p['objectid'] ?? '')] ?? '—',
                 'since' => CarbonImmutable::createFromTimestamp((int) ($p['clock'] ?? time())),
+                'noise' => self::isNoise($name),
             ];
-        })->sortByDesc('severity')->values();
+        })->sortBy([['severity', 'desc'], ['since', 'desc']])->values();
     }
 
     public function clientsHealth(array $clientGroups): Collection
@@ -245,7 +250,7 @@ class ApiZabbixRepository implements ZabbixRepositoryInterface
         // Alertas por cliente: reaproveita problems() (problem.get + trigger.get) e mapeia pelo host.
         foreach ($this->problems($allIds) as $p) {
             $cliente = $hostClient[(string) $p['host']] ?? null;
-            if ($cliente !== null) {
+            if ($cliente !== null && ! $p['noise']) {
                 $health[$cliente]['alertas']++;
             }
         }
@@ -483,18 +488,55 @@ class ApiZabbixRepository implements ZabbixRepositoryInterface
         return $out;
     }
 
+    /** Problema de "ruído" (ex.: serviço GoogleUpdater parado) — ver zabbix.noise_patterns. */
+    public static function isNoise(string $name): bool
+    {
+        foreach ((array) config('zabbix.noise_patterns', []) as $p) {
+            if ($p !== '' && stripos($name, $p) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function call(string $method, array $params): array
     {
-        $resp = Http::asJson()
+        // Leituras em cache curto: o Dashboards se atualiza a cada 60 s e várias
+        // telas pedem as mesmas listas — evita repetir dezenas de chamadas ao Zabbix.
+        $ttl = (int) config('zabbix.cache_ttl', 30);
+        if ($ttl > 0 && str_ends_with($method, '.get')) {
+            return Cache::remember('zbx:'.md5($this->url.$method.json_encode($params)), $ttl, fn () => $this->send($method, $params, true));
+        }
+
+        return $this->send($method, $params, true);
+    }
+
+    private function send(string $method, array $params, bool $retry): array
+    {
+        $resp = Http::asJson()->timeout(20)
             ->withHeaders(['Authorization' => 'Bearer '.$this->token()])
             ->post($this->url, ['jsonrpc' => '2.0', 'method' => $method, 'params' => $params, 'id' => 1]);
 
         $json = $resp->json();
         if (isset($json['error'])) {
-            throw new RuntimeException('Zabbix API '.$method.': '.($json['error']['data'] ?? $json['error']['message'] ?? 'erro'));
+            // Sessão expirada no Zabbix: renova o login uma vez.
+            $msg = (string) ($json['error']['data'] ?? $json['error']['message'] ?? 'erro');
+            if ($retry && preg_match('/session|re-?login|not authori[sz]ed/i', $msg)) {
+                Cache::forget($this->tokenKey());
+                $this->token = null;
+
+                return $this->send($method, $params, false);
+            }
+            throw new RuntimeException('Zabbix API '.$method.': '.$msg);
         }
 
         return $json['result'] ?? [];
+    }
+
+    private function tokenKey(): string
+    {
+        return 'zbx:token:'.md5($this->url.'|'.$this->user);
     }
 
     private function token(): string
@@ -503,17 +545,20 @@ class ApiZabbixRepository implements ZabbixRepositoryInterface
             return $this->token;
         }
 
-        $resp = Http::asJson()->post($this->url, [
-            'jsonrpc' => '2.0',
-            'method' => 'user.login',
-            'params' => ['username' => $this->user, 'password' => $this->password],
-            'id' => 1,
-        ]);
-        $token = $resp->json('result');
-        if (! $token) {
-            throw new RuntimeException('Zabbix user.login falhou: '.json_encode($resp->json('error')));
-        }
+        // Reaproveita o login entre requisições (antes: user.login a cada página).
+        return $this->token = Cache::remember($this->tokenKey(), 900, function () {
+            $resp = Http::asJson()->timeout(20)->post($this->url, [
+                'jsonrpc' => '2.0',
+                'method' => 'user.login',
+                'params' => ['username' => $this->user, 'password' => $this->password],
+                'id' => 1,
+            ]);
+            $token = $resp->json('result');
+            if (! is_string($token) || $token === '') {
+                throw new RuntimeException('Zabbix user.login falhou: '.json_encode($resp->json('error')));
+            }
 
-        return $this->token = $token;
+            return $token;
+        });
     }
 }

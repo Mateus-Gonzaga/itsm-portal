@@ -29,6 +29,8 @@ class ZabbixMonitorExtra extends Command
         {--vm=* : nome:ip de VM com Zabbix Agent (pode repetir)}
         {--certificado= : Domínio HTTPS para vigiar o vencimento do certificado}
         {--cert-agente=127.0.0.1 : IP do Zabbix Agent 2 que testa o certificado}
+        {--silenciar-servicos= : Serviços do Windows a ignorar no Zabbix, separados por vírgula (ex.: GoogleUpdater,edgeupdate)}
+        {--so-silenciar : Executa só o --silenciar-servicos (não mexe no resto)}
         {--group=Portal FOURLINE : Grupo de hosts (o mesmo da ação de aviso)}
         {--dry-run : Só mostra o que faria}';
 
@@ -46,6 +48,15 @@ class ZabbixMonitorExtra extends Command
         $this->info('Zabbix: '.$zbx->url().($this->dry ? '  (simulação)' : ''));
 
         try {
+            if ($servicos = (string) $this->option('silenciar-servicos')) {
+                $this->silenciarServicos($zbx, $servicos);
+            }
+            if ($this->option('so-silenciar')) {
+                $this->info($this->dry ? 'Simulação concluída.' : 'Concluído.');
+
+                return self::SUCCESS;
+            }
+
             $groupId = $this->ensureGroup($zbx, (string) $this->option('group'));
 
             $this->glpi($zbx, $groupId);
@@ -215,6 +226,61 @@ class ZabbixMonitorExtra extends Command
             'templates' => [['templateid' => $tpl['templateid']]],
             'macros' => [['macro' => '{$CERT.WEBSITE.HOSTNAME}', 'value' => $dominio]],
         ]);
+    }
+
+    // --------------------------------------------- serviços do Windows (ruído)
+
+    /**
+     * Acrescenta serviços à lista de exclusão {$SERVICE.NAME.NOT_MATCHES} dos
+     * templates Windows — o Zabbix para de criar alertas "serviço X parado" para eles
+     * (os itens já descobertos somem na próxima descoberta).
+     */
+    private function silenciarServicos(ZabbixApi $zbx, string $lista): void
+    {
+        $nomes = collect(explode(',', $lista))->map(fn ($s) => trim($s))->filter()->values();
+        if ($nomes->isEmpty()) {
+            return;
+        }
+        $this->line('— Silenciar serviços do Windows: '.$nomes->implode(', '));
+
+        $templates = $zbx->call('template.get', [
+            'output' => ['templateid', 'host'],
+            'filter' => ['host' => ['Windows by Zabbix agent', 'Windows by Zabbix agent active']],
+        ]);
+        if (! $templates) {
+            $this->warn('• Templates Windows by Zabbix agent não encontrados');
+
+            return;
+        }
+
+        foreach ($templates as $t) {
+            $macro = $zbx->call('usermacro.get', [
+                'output' => ['hostmacroid', 'value'],
+                'hostids' => [$t['templateid']],
+                'filter' => ['macro' => '{$SERVICE.NAME.NOT_MATCHES}'],
+            ])[0] ?? null;
+            if (! $macro) {
+                $this->warn("• {$t['host']}: macro {\$SERVICE.NAME.NOT_MATCHES} não encontrada — pulando");
+
+                continue;
+            }
+
+            $valor = (string) $macro['value'];
+            $faltando = $nomes->reject(fn ($n) => stripos($valor, $n) !== false);
+            if ($faltando->isEmpty()) {
+                $this->line("• {$t['host']}: já ignora esses serviços");
+
+                continue;
+            }
+            $extra = $faltando->map(fn ($n) => preg_quote($n, '/').'.*')->implode('|');
+            // Padrão do template: ^(?:A|B|C)$ — insere antes do fechamento.
+            $novo = preg_match('/^\^\(\?:(.*)\)\$$/s', $valor, $m)
+                ? '^(?:'.$m[1].'|'.$extra.')$'
+                : '(?:'.$valor.')|^(?:'.$extra.')$';
+
+            $this->line("• {$t['host']}: ignorar ".$faltando->implode(', '));
+            $this->dry || $zbx->call('usermacro.update', ['hostmacroid' => $macro['hostmacroid'], 'value' => $novo]);
+        }
     }
 
     // ------------------------------------------------------------- helpers

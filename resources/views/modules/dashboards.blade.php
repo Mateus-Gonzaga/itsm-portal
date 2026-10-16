@@ -9,10 +9,11 @@
         $c = $v >= 90 ? 'danger' : ($v >= 75 ? 'warning' : 'success');
         return '<span class="badge bg-'.$c.'-subtle text-'.$c.'-emphasis">'.$v.'%</span>';
     };
-    $avail = function ($a) {
+    $avail = function ($a, $webOnly = false) {
+        if ($webOnly) return '<span class="dot bg-primary"></span><span title="Monitorado por cenário web (sem agente)">Monitoramento web</span>';
         if ($a === 1) return '<span class="dot bg-success"></span>Disponível';
         if ($a === 2) return '<span class="dot bg-danger"></span>Indisponível';
-        return '<span class="dot bg-secondary"></span><span class="text-muted">Desconhecido</span>';
+        return '<span class="dot bg-secondary"></span><span class="text-muted" title="Agente sem comunicar ou não instalado">Sem agente</span>';
     };
 @endphp
 
@@ -90,7 +91,7 @@
         <div class="col-sm-3 col-6"><div class="mon-card"><div class="ic ic-green"><i class="bi bi-hdd-stack"></i></div><div><div class="v">{{ $overview['hosts'] }}</div><div class="l">Hosts monitorados</div></div></div></div>
         <div class="col-sm-3 col-6"><div class="mon-card"><div class="ic ic-green"><i class="bi bi-check-circle"></i></div><div><div class="v">{{ $overview['disponiveis'] }}</div><div class="l">Disponíveis</div></div></div></div>
         <div class="col-sm-3 col-6"><div class="mon-card"><div class="ic ic-gray"><i class="bi bi-question-circle"></i></div><div><div class="v">{{ $overview['indisponiveis'] }}</div><div class="l">Indisponíveis</div></div></div></div>
-        <div class="col-sm-3 col-6"><div class="mon-card"><div class="ic ic-red"><i class="bi bi-exclamation-triangle"></i></div><div><div class="v">{{ $overview['problemas'] }}</div><div class="l">Problemas ativos</div></div></div></div>
+        <div class="col-sm-3 col-6"><div class="mon-card"><div class="ic ic-red"><i class="bi bi-exclamation-triangle"></i></div><div><div class="v">{{ $overview['problemas'] }}</div><div class="l">Problemas ativos @if (! empty($overview['ruido']))<span class="d-block" title="Avisos sem importância (ex.: GoogleUpdater parado), escondidos da lista">+{{ $overview['ruido'] }} de ruído ocultos</span>@endif</div></div></div></div>
     </div>
 
     {{-- Saúde por cliente — panorama escaneável de todas as unidades (assinatura) --}}
@@ -151,7 +152,7 @@
         <div class="col-lg-4">
             <div class="card">
                 <div class="card-header bg-transparent fw-semibold"><i class="bi bi-reception-4 me-1"></i> Disponibilidade</div>
-                <div class="card-body"><div id="availDonut" data-on="{{ $overview['disponiveis'] }}" data-off="{{ $overview['indisponiveis'] }}" data-unk="{{ max(0, $overview['hosts'] - $overview['disponiveis'] - $overview['indisponiveis']) }}"></div></div>
+                <div class="card-body"><div id="availDonut" data-on="{{ $overview['disponiveis'] }}" data-off="{{ $overview['indisponiveis'] }}" data-unk="{{ max(0, $overview['hosts'] - $overview['disponiveis'] - $overview['indisponiveis'] - ($overview['web'] ?? 0)) }}" data-web="{{ $overview['web'] ?? 0 }}"></div></div>
             </div>
         </div>
     </div>
@@ -179,7 +180,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-transparent fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i> Problemas ativos</div>
-                <div class="card-body">@include('modules.partials.problems', ['problems' => $problems])</div>
+                <div class="card-body">@include('modules.partials.problems', ['problems' => $problems, 'pid' => 'geral'])</div>
             </div>
         </div>
     </div>
@@ -260,7 +261,7 @@
         <div class="card-body">
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="t-serv">@include('modules.partials.hosts', ['hosts' => $servidores, 'metric' => $metric, 'avail' => $avail])</div>
-                <div class="tab-pane fade" id="t-resumo">@include('modules.partials.problems', ['problems' => $problems])</div>
+                <div class="tab-pane fade" id="t-resumo">@include('modules.partials.problems', ['problems' => $problems, 'pid' => 'cliente', 'cliente' => $selected])</div>
                 <div class="tab-pane fade" id="t-caixas">@include('modules.partials.hosts', ['hosts' => $caixas, 'metric' => $metric, 'avail' => $avail])</div>
             </div>
         </div>
@@ -335,12 +336,12 @@
     // ---- Disponibilidade (rosca) ----
     var availEl = document.getElementById('availDonut');
     if (availEl) {
-        var on = +availEl.dataset.on || 0, off = +availEl.dataset.off || 0, unk = +availEl.dataset.unk || 0;
-        if (on + off + unk > 0) {
+        var on = +availEl.dataset.on || 0, off = +availEl.dataset.off || 0, unk = +availEl.dataset.unk || 0, web = +availEl.dataset.web || 0;
+        if (on + off + unk + web > 0) {
             new ApexCharts(availEl, {
                 chart: { type: 'donut', height: 250 },
-                series: [on, off, unk], labels: ['Disponível', 'Indisponível', 'Desconhecido'],
-                colors: ['#0a9d5a', '#dc3545', '#9aa1a8'], legend: { position: 'bottom' }, stroke: { width: 0 },
+                series: [on, off, unk, web], labels: ['Disponível', 'Indisponível', 'Sem agente / desconhecido', 'Monitoramento web'],
+                colors: ['#0a9d5a', '#dc3545', '#9aa1a8', '#3b82f6'], legend: { position: 'bottom' }, stroke: { width: 0 },
                 dataLabels: { enabled: true, formatter: function (val, o) { return o.w.config.series[o.seriesIndex]; } },
                 plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Hosts' } } } } },
             }).render();

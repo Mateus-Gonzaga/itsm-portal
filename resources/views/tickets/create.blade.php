@@ -18,7 +18,8 @@
                     @endif
                     <div class="mb-3">
                         <label class="form-label">Título</label>
-                        <input type="text" name="title" value="{{ old('title', ! empty($asset) ? $asset['name'].' — ' : '') }}"
+                        {{-- Pré-preenchido a partir de um equipamento (?ativo=) ou de um alerta do Dashboards (?titulo=&descricao=). --}}
+                        <input type="text" name="title" value="{{ old('title', ! empty($asset) ? $asset['name'].' — ' : \Illuminate\Support\Str::limit((string) request('titulo', ''), 250, '')) }}"
                                class="form-control @error('title') is-invalid @enderror" required>
                         @error('title') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
@@ -114,7 +115,7 @@
                     <div class="mb-3">
                         <label class="form-label">Descrição</label>
                         <textarea name="description" rows="5"
-                                  class="form-control @error('description') is-invalid @enderror" required>{{ old('description') }}</textarea>
+                                  class="form-control @error('description') is-invalid @enderror" required>{{ old('description', \Illuminate\Support\Str::limit((string) request('descricao', ''), 2000, '')) }}</textarea>
                         @error('description') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
                     <div class="mb-3">

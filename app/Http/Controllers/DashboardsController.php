@@ -63,12 +63,22 @@ class DashboardsController extends Controller
             if ($selected === null) {
                 // Visão Geral (todos).
                 $clientGroups = collect($map)->map(fn (array $m) => $m['all'])->all();
+                $problems = $zabbix->problems();
+                $hosts = $zabbix->hosts();
+
+                // Contagens sem o "ruído" (ex.: GoogleUpdater parado) e sem hosts só-web.
+                $overview = $zabbix->overview();
+                $real = $problems->reject(fn ($p) => $p['noise'] ?? false);
+                $overview['problemas'] = $real->count();
+                $overview['ruido'] = $problems->count() - $real->count();
+                $overview['porSeveridade'] = $real->groupBy('severityLabel')->map->count()->all();
+                $overview['web'] = $hosts->where('webOnly', true)->count();
 
                 return view('modules.dashboards', [
                     'mode' => 'geral', 'clientes' => $clientes, 'selected' => null, 'error' => null,
-                    'overview' => $zabbix->overview(),
-                    'hosts' => $zabbix->hosts(),
-                    'problems' => $zabbix->problems(),
+                    'overview' => $overview,
+                    'hosts' => $hosts,
+                    'problems' => $problems,
                     'clientesSaude' => $clientGroups ? $zabbix->clientsHealth($clientGroups) : collect(),
                     'trend' => $zabbix->problemTrend(null, 24),
                 ]);
@@ -89,7 +99,7 @@ class DashboardsController extends Controller
                     'servOff' => $serv->where('available', 2)->count(),
                     'caixaOn' => $caixa->where('available', 1)->count(),
                     'caixaOff' => $caixa->where('available', 2)->count(),
-                    'alertas' => $prob->count(),
+                    'alertas' => $prob->reject(fn ($p) => $p['noise'] ?? false)->count(),
                 ],
             ]);
         } catch (RuntimeException $e) {
