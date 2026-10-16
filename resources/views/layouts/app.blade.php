@@ -37,25 +37,48 @@
             </nav>
 
             {{-- Chip de usuário --}}
+            @php
+                // Login do GLPI ("mateus.fourline") vira "Mateus"; nomes com espaço ficam como estão.
+                $rawName = trim((string) $u->name);
+                $displayName = str_contains($rawName, ' ') || ! str_contains($rawName, '.')
+                    ? $rawName
+                    : \Illuminate\Support\Str::title(\Illuminate\Support\Str::before($rawName, '.'));
+                $parts = preg_split('/[\s._-]+/u', $rawName, -1, PREG_SPLIT_NO_EMPTY) ?: [$rawName];
+                $initials = mb_strtoupper(mb_substr($parts[0], 0, 1).(isset($parts[1]) ? mb_substr($parts[1], 0, 1) : ''));
+                $showEmail = $u->email && ! str_ends_with((string) $u->email, '@glpi.local');
+                $roleIcon = match ($u->role->value) { 'gestor' => 'bi-shield-check', 'tecnico' => 'bi-tools', default => 'bi-person' };
+            @endphp
             <div class="dropdown dropup sidebar-user-wrap">
-                <a href="#" class="sidebar-user dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="avatar">{{ mb_substr($u->name, 0, 1) }}</span>
+                <button type="button" class="sidebar-user" data-bs-toggle="dropdown" data-bs-offset="0,10"
+                        aria-expanded="false" aria-label="Menu do usuário {{ $displayName }}" title="{{ $rawName }}">
+                    <span class="avatar">{{ $initials }}<span class="presence" aria-hidden="true"></span></span>
                     <span class="info">
-                        <span class="name">{{ $u->name }}</span>
-                        <span class="role">{{ $u->role->label() }}</span>
+                        <span class="name">{{ $displayName }}</span>
+                        <span class="role"><i class="bi {{ $roleIcon }}"></i> {{ $u->role->label() }}</span>
                     </span>
-                    <i class="bi bi-chevron-right"></i>
-                </a>
-                <ul class="dropdown-menu w-100">
-                    <li class="dropdown-header small text-truncate">{{ $u->email }}</li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
+                    <i class="bi bi-three-dots-vertical more" aria-hidden="true"></i>
+                </button>
+                <div class="dropdown-menu user-menu">
+                    <div class="user-menu-head">
+                        <span class="avatar lg">{{ $initials }}</span>
+                        <div class="min-w-0">
+                            <div class="fw-semibold text-truncate">{{ $displayName }}</div>
+                            <div class="small text-truncate opacity-75">{{ $showEmail ? $u->email : $rawName }}</div>
+                            <span class="role-pill"><i class="bi {{ $roleIcon }}"></i> {{ $u->role->label() }}</span>
+                        </div>
+                    </div>
+                    <div class="user-menu-body">
+                        <a class="dropdown-item" href="{{ route('modules.settings') }}"><i class="bi bi-gear"></i> Configurações</a>
+                        <button type="button" class="dropdown-item" onclick="toggleTheme()"><i class="bi bi-circle-half"></i> Alternar tema claro/escuro</button>
+                        <button type="button" class="dropdown-item d-none d-lg-flex" onclick="toggleSidebar()"><i class="bi bi-layout-sidebar-inset"></i> Recolher / expandir menu</button>
+                    </div>
+                    <div class="user-menu-foot">
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right me-1"></i> Sair</button>
+                            <button type="submit" class="dropdown-item text-danger-emphasis logout"><i class="bi bi-box-arrow-right"></i> Sair</button>
                         </form>
-                    </li>
-                </ul>
+                    </div>
+                </div>
             </div>
         </aside>
 
