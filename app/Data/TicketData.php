@@ -34,6 +34,9 @@ final class TicketData
         // ID do solicitante no GLPI — usado no controle de acesso do cliente
         // (comparação por ID é confiável; o nome pode variar realname × login).
         public readonly ?int $requesterGlpiId = null,
+        // ID do técnico atribuído no GLPI — agrupa chamados por técnico sem
+        // uma busca por técnico (tela Técnicos).
+        public readonly ?int $technicianGlpiId = null,
     ) {
     }
 

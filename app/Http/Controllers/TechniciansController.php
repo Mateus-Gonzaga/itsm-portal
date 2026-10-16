@@ -50,9 +50,16 @@ class TechniciansController extends Controller
         $now = CarbonImmutable::now();
         $closed = [TicketStatus::Solved, TicketStatus::Closed];
 
-        $mapUser = function (array $t) use ($tickets, $events, $now, $closed) {
+        // Carrega os chamados UMA vez (atores em lote) e agrupa por técnico —
+        // antes era uma busca + leitura de cada chamado por técnico (~20–30 s).
+        $allTickets = $tickets->all();
+
+        $mapUser = function (array $t) use ($allTickets, $events, $now, $closed) {
             $glpiId = (int) $t['id'];
-            $tk = $glpiId > 0 ? $tickets->all(['technician_glpi_id' => $glpiId]) : collect();
+            $tk = $glpiId > 0
+                ? $allTickets->filter(fn (TicketData $x) => $x->technicianGlpiId === $glpiId
+                    || ($x->technicianGlpiId === null && $x->technicianName !== null && $x->technicianName === $t['name']))
+                : collect();
 
             return [
                 'id' => $glpiId,

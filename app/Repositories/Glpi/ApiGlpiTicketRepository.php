@@ -472,6 +472,7 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             dueDate: ! empty($t['time_to_resolve']) ? $this->date($t['time_to_resolve']) : null,
             updatedAt: ! empty($t['date_mod']) ? $this->date($t['date_mod']) : null,
             requesterGlpiId: $actors['requester_id'] ?? null,
+            technicianGlpiId: $actors['technician_id'] ?? null,
         );
     }
 
@@ -500,6 +501,9 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
 
             if ($type === 1 && $uid > 0) {
                 $actorsByTicket[$ticketId]['requester_id'] = $uid;
+            }
+            if ($type === 2 && $uid > 0) {
+                $actorsByTicket[$ticketId]['technician_id'] = $uid;
             }
 
             $name = null;
@@ -545,6 +549,9 @@ class ApiGlpiTicketRepository implements GlpiTicketRepositoryInterface
             // depende deste ID, então ele não pode ficar de fora.
             if ($type === 1 && $uid > 0) {
                 $actors['requester_id'] = $uid;
+            }
+            if ($type === 2 && $uid > 0) {
+                $actors['technician_id'] = $uid;
             }
 
             $name = $this->userMap()[$uid] ?? null;
