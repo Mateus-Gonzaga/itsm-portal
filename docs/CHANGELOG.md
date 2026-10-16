@@ -2,6 +2,15 @@
 
 Histórico cronológico (nunca apagar).
 
+## 2026-10-16 (2)
+- **Monitoramento do portal no Zabbix** — comando `php artisan monitor:zabbix-portal [--url=] [--usergroup=] [--dry-run]` (idempotente): grupo + host `portal-fourline-connect`, cenário web "Portal - login" (1 min, HTTP 200 + texto FOURLINE), triggers "fora do ar" (alta, 2 falhas seguidas) e "lento >5 s" (média 5 min), ação que avisa o grupo de usuários por todas as mídias (queda e retorno). Exige usuário Zabbix com escrita. `app/Console/Commands/ZabbixPortalMonitor.php`.
+- **Aviso de erros por e-mail** (`app/Support/ErrorAlert.php`, `bootstrap/app.php`): erros reportáveis em produção enviam e-mail (destino `ERROR_ALERT_EMAIL`, padrão `MAIL_FROM_ADDRESS`, `off` desliga) com página, usuário, IP e resumo do rastreamento; mesmo erro 1x/30 min, máx. 20/h; envio após a resposta.
+- **Inventário paginado no servidor**: busca, entidade e tipo filtrados no controller; 50 itens por página; cards contam conforme entidade+busca; busca envia sozinha após a digitação. A página deixa de trazer todos os ativos (~1,2 MB).
+- **Redis para o cache**: serviço `redis` (só memória, 256 MB, LRU) no `docker-compose.prod.yml`; extensão phpredis no `docker/Dockerfile` (exige rebuild); `.env.prod.example` com `CACHE_STORE=redis`. Sessão e fila seguem no banco.
+- **Ativo ↔ chamado**: no detalhe do ativo, histórico de chamados do equipamento (Item_Ticket, 20 mais recentes) e botão "Abrir chamado para este equipamento" (`/tickets/create?ativo=Tipo:ID`); o chamado criado é vinculado no GLPI (`linkTicket`, só se o ativo for visível ao usuário) e o detalhe do chamado mostra o equipamento. Métodos `assetTickets`/`linkTicket`/`ticketAssets` na interface + Api + Fake.
+- **Painel com gráficos (equipe)**: abertos × resolvidos por mês, SLA cumprido (rosca + %), chamados por cliente (top 10) e tempo médio de solução por mês (Chart.js), últimos 6 meses. Novo `TicketData::solvedAt` (GLPI `solvedate`/`closedate`).
+- **PWA**: `manifest.webmanifest` (atalhos Abrir chamado/Meus chamados), ícones em `public/icons/`, `sw.js` (páginas sempre da rede + página offline; estáticos em cache), `offline.html`; nginx sem cache longo para o `sw.js`. O service worker só ativa em HTTPS.
+
 ## 2026-10-16
 - **Fix desempenho — tela Técnicos (20–30 s → ~2 s esperado).** Fazia `all(['technician_glpi_id'])` por técnico (busca + `find()` de cada chamado). Agora `all()` uma vez (atores em lote via `/Ticket_User`) e agrupa por `TicketData::technicianGlpiId` (novo campo, preenchido em `allTicketActors`/`ticketActors`; fallback por nome no driver Fake). Arquivos: `app/Data/TicketData.php`, `app/Repositories/Glpi/ApiGlpiTicketRepository.php`, `app/Http/Controllers/TechniciansController.php`.
 - **Menu lateral:** removida a barra lime à esquerda do item ativo (`public/css/brand.css`).
