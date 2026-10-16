@@ -158,9 +158,10 @@ class ZabbixPortalMonitor extends Command
 
     private function ensureTrigger(string $hostId, string $description, string $expression, int $priority, string $comments, bool $dry): void
     {
-        $existing = $dry && $hostId === '0' ? null : ($this->api('trigger.get', [
-            'output' => ['triggerid'], 'hostids' => [$hostId], 'filter' => ['description' => [$description]],
-        ])[0] ?? null);
+        // Compara pelo nome em PHP (o filtro exato da API falhou com "(>5 s)").
+        $existing = $dry && $hostId === '0' ? null : collect($this->api('trigger.get', [
+            'output' => ['triggerid', 'description'], 'hostids' => [$hostId],
+        ]))->first(fn (array $t) => mb_strtolower(trim((string) ($t['description'] ?? ''))) === mb_strtolower($description));
 
         if ($existing) {
             $this->line("• Trigger \"{$description}\" já existe");
