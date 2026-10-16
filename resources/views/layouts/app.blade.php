@@ -6,7 +6,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
-    <link rel="apple-touch-icon" href="{{ asset('favicon.svg') }}">
+    {{-- PWA: instalar como aplicativo no celular/computador --}}
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <meta name="theme-color" content="#033d22">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FOURLINE">
+    <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
     <title>@yield('title', 'FOURLINE — Central de Chamados')</title>
     <script>
         document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'light');
@@ -210,5 +217,11 @@
 </script>
 @endauth
 @stack('scripts')
+<script>
+    // PWA: o navegador só ativa o service worker em HTTPS (ou localhost).
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+        window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+    }
+</script>
 </body>
 </html>
