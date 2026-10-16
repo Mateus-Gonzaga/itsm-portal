@@ -66,8 +66,8 @@ h1,h2,h3,h4,h5,h6 { font-family:'Rajdhani','Inter',sans-serif; }
   transition:background .12s ease, color .12s ease, transform .12s ease;
 }
 .sidebar-nav .nav-link:hover { color:#fff; background:rgba(255,255,255,.08); transform:translateX(2px); }
-/* Item ativo: fundo + barra lime à esquerda via inset (não vaza -> sem scroll lateral) */
-.sidebar-nav .nav-link.active { color:#fff; background:var(--sidebar-active); font-weight:600; box-shadow:inset 3px 0 0 var(--fl-green-light, #A8CF45), 0 2px 10px rgba(0,0,0,.18); }
+/* Item ativo: fundo destacado (sem a barra lime à esquerda, removida a pedido) */
+.sidebar-nav .nav-link.active { color:#fff; background:var(--sidebar-active); font-weight:600; box-shadow:0 2px 10px rgba(0,0,0,.18); }
 .sidebar-nav .nav-link i { font-size:1.15rem; width:22px; text-align:center; color:rgba(168,207,69,.8); transition:color .12s ease; }
 .sidebar-nav .nav-link:hover i,
 .sidebar-nav .nav-link.active i { color:var(--fl-green-light, #A8CF45); }
