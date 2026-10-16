@@ -3,39 +3,42 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Relatório de atendimento — {{ $f['cliente'] }} — FOURLINE</title>
+    <title>Relatório de Atendimento — {{ $f['cliente'] }} — FOURLINE</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; margin: 0; padding: 32px 40px; font-size: 13px; }
-        .toolbar { margin-bottom: 20px; display: flex; gap: 8px; }
+        .toolbar { margin-bottom: 20px; }
         .btn { display: inline-block; padding: 8px 16px; border-radius: 8px; border: 1px solid #067a45; background: #0a9d5a; color: #fff; cursor: pointer; font-size: 13px; text-decoration: none; }
         .btn.sec { background: #fff; color: #067a45; }
         header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0a9d5a; padding-bottom: 12px; margin-bottom: 18px; }
         header .brand { font-size: 22px; font-weight: 800; color: #067a45; letter-spacing: .5px; }
         header .brand small { display: block; font-size: 12px; font-weight: 500; color: #666; letter-spacing: normal; }
         header .meta { text-align: right; font-size: 12px; color: #444; }
-        h1 { font-size: 18px; margin: 0 0 2px; }
-        h2 { font-size: 14px; margin: 22px 0 8px; color: #05502e; }
+        h1 { font-size: 16px; margin: 0 0 4px; }
+        h2 { font-size: 13px; margin: 18px 0 6px; color: #05502e; text-transform: uppercase; letter-spacing: .3px; }
         .sub { color: #555; margin: 0 0 16px; }
-        .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 8px; }
-        .kpi { border: 1px solid #d9e6dd; border-radius: 10px; padding: 10px 12px; background: #f6fbf7; }
-        .kpi .v { font-size: 20px; font-weight: 800; color: #05502e; }
-        .kpi .l { font-size: 11px; color: #555; }
+        .info { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 14px; font-size: 12px; }
+        .info b { color: #067a45; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-        th, td { border: 1px solid #cfcfcf; padding: 5px 7px; text-align: left; vertical-align: top; }
-        th { background: #eef7f0; color: #05502e; font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; }
+        th, td { border: 1px solid #cfcfcf; padding: 6px 8px; text-align: left; vertical-align: top; }
+        th { background: #eef7f0; color: #05502e; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
         td.num, th.num { text-align: right; white-space: nowrap; }
         tbody tr:nth-child(even) { background: #fafafa; }
-        .ok { color: #067a45; font-weight: 600; } .bad { color: #b42318; font-weight: 600; } .muted { color: #777; }
-        .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .note { font-size: 11px; color: #555; margin-top: 14px; }
-        footer { margin-top: 32px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 8px; }
-        @media (max-width: 800px) { .kpis { grid-template-columns: repeat(2, 1fr); } .two { grid-template-columns: 1fr; } body { padding: 16px; } }
+        tfoot td { font-weight: 700; background: #eef7f0; }
+        .resumo { display: flex; gap: 20px; }
+        .resumo > div { flex: 1; min-width: 0; }
+        .sign { display: flex; gap: 60px; margin-top: 64px; page-break-inside: avoid; }
+        .sign .box { flex: 1; text-align: center; }
+        .sign .line { border-top: 1px solid #333; margin-bottom: 6px; padding-top: 6px; }
+        .sign .role { font-weight: 700; }
+        .sign .hint { font-size: 11px; color: #666; }
+        footer { margin-top: 40px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 8px; }
+        @media (max-width: 800px) { body { padding: 16px; } .resumo { flex-direction: column; } .sign { gap: 24px; } }
         @media print {
             body { padding: 0; }
             .toolbar { display: none; }
-            @page { margin: 16mm 12mm; }
-            th, .kpi { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            @page { margin: 18mm 14mm; }
+            th, tfoot td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             tr { break-inside: avoid; }
         }
     </style>
@@ -48,83 +51,113 @@
 
     <header>
         <div class="brand">FOURLINE<small>Connect · Relatório de Atendimento</small></div>
-        <div class="meta">Gerado em {{ now()->format('d/m/Y H:i') }}<br>por {{ $geradoPor }}</div>
+        <div class="meta">
+            Gerado em {{ now()->format('d/m/Y H:i') }}<br>
+            por {{ $geradoPor }}
+        </div>
     </header>
 
-    <h1>{{ $f['cliente'] }}</h1>
+    <h1>Relatório de Atendimento</h1>
     <p class="sub">
+        Cliente: {{ $f['cliente'] }} ·
         Período: {{ $f['periodo'] === 'tudo' ? 'todo o histórico' : $f['de']->format('d/m/Y').' a '.$f['ate']->format('d/m/Y') }}
         @if ($f['tecnico']) · Técnico: {{ $f['tecnico'] }}@endif
         @if ($f['categoria']) · Categoria: {{ $f['categoria'] }}@endif
     </p>
 
-    <div class="kpis">
-        <div class="kpi"><div class="v">{{ $kpi['total'] }}</div><div class="l">Chamados abertos no período</div></div>
-        <div class="kpi"><div class="v">{{ $kpi['resolvidos'] }}</div><div class="l">Resolvidos ({{ $kpi['resolucao'] }}%)</div></div>
-        <div class="kpi"><div class="v">{{ $kpi['abertos'] }}</div><div class="l">Em andamento</div></div>
-        <div class="kpi"><div class="v">{{ $kpi['tempo'] }}</div><div class="l">Tempo médio de solução</div></div>
-        <div class="kpi"><div class="v">{{ $kpi['sla'] === null ? '—' : $kpi['sla'].'%' }}</div><div class="l">Resolvidos dentro do prazo</div></div>
-        <div class="kpi"><div class="v">{{ $kpi['atrasados'] }}</div><div class="l">Em atraso</div></div>
+    <div class="info">
+        <div><b>Chamados no período:</b> {{ $kpi['total'] }}</div>
+        <div><b>Resolvidos:</b> {{ $kpi['resolvidos'] }} ({{ $kpi['resolucao'] }}%)</div>
+        <div><b>Em andamento:</b> {{ $kpi['abertos'] }}</div>
+        <div><b>Tempo médio de solução:</b> {{ $kpi['tempo'] }}</div>
+        @if ($kpi['sla'] !== null)<div><b>Resolvidos no prazo:</b> {{ $kpi['sla'] }}%</div>@endif
+        @if ($kpi['atrasados'] > 0)<div><b>Em atraso:</b> {{ $kpi['atrasados'] }}</div>@endif
     </div>
 
-    <div class="two">
-        <div>
-            <h2>Por unidade / filial</h2>
-            <table>
-                <thead><tr><th>Unidade</th><th class="num">Chamados</th><th class="num">Resolvidos</th><th class="num">Tempo médio</th></tr></thead>
-                <tbody>
-                    @forelse ($porFilial as $r)
-                        <tr><td>{{ $r['nome'] }}</td><td class="num">{{ $r['total'] }}</td><td class="num">{{ $r['resolvidos'] }}</td><td class="num">{{ $r['tempo'] }}</td></tr>
-                    @empty
-                        <tr><td colspan="4" class="muted">Sem chamados no período.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        <div>
-            <h2>Por tipo de demanda</h2>
-            <table>
-                <thead><tr><th>Categoria</th><th class="num">Chamados</th><th class="num">Resolvidos</th><th class="num">Tempo médio</th></tr></thead>
-                <tbody>
-                    @forelse ($porCategoria as $r)
-                        <tr><td>{{ $r['nome'] }}</td><td class="num">{{ $r['total'] }}</td><td class="num">{{ $r['resolvidos'] }}</td><td class="num">{{ $r['tempo'] }}</td></tr>
-                    @empty
-                        <tr><td colspan="4" class="muted">Sem chamados no período.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <h2>Chamados do período</h2>
     <table>
         <thead>
-            <tr><th style="width:52px">Nº</th><th>Assunto</th><th>Unidade</th><th>Solicitante</th><th>Situação</th><th class="num">Aberto em</th><th class="num">Solucionado</th><th>Prazo</th></tr>
+            <tr>
+                <th style="width:34px">#</th>
+                <th style="width:60px">Nº</th>
+                <th>Assunto</th>
+                <th>Unidade</th>
+                <th>Solicitante</th>
+                <th>Situação</th>
+                <th class="num">Aberto em</th>
+                <th class="num">Solucionado em</th>
+            </tr>
         </thead>
         <tbody>
-            @forelse ($chamados as $t)
-                @php $s = $slaLabel($t); @endphp
+            @forelse ($chamados as $i => $t)
                 <tr>
-                    <td class="num">#{{ $t->id }}</td>
+                    <td class="num">{{ $i + 1 }}</td>
+                    <td>#{{ $t->id }}</td>
                     <td>{{ $t->title }}</td>
                     <td>{{ $filial($t) ?: '—' }}</td>
                     <td>{{ $t->requesterName }}</td>
                     <td>{{ $t->status->label() }}</td>
                     <td class="num">{{ $t->createdAt->format('d/m/Y H:i') }}</td>
                     <td class="num">{{ $t->solvedAt?->format('d/m/Y H:i') ?? '—' }}</td>
-                    <td class="{{ in_array($s, ['No prazo'], true) ? 'ok' : (in_array($s, ['Fora do prazo', 'Atrasado'], true) ? 'bad' : 'muted') }}">{{ $s }}</td>
                 </tr>
             @empty
-                <tr><td colspan="8" class="muted" style="text-align:center;padding:20px">Nenhum chamado no período.</td></tr>
+                <tr><td colspan="8" style="text-align:center;color:#999;padding:24px">Nenhum chamado no período.</td></tr>
             @endforelse
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="7" class="num">Total de chamados</td>
+                <td class="num">{{ $kpi['total'] }}</td>
+            </tr>
+        </tfoot>
     </table>
 
-    <p class="note">
-        "Tempo médio de solução" considera do registro do chamado até a solução. "Resolvidos dentro do prazo" considera os chamados
-        resolvidos que tinham prazo de atendimento (SLA) definido.
+    @if ($kpi['total'] > 0)
+        <div class="resumo">
+            <div>
+                <h2>Resumo por unidade</h2>
+                <table>
+                    <thead><tr><th>Unidade</th><th class="num">Chamados</th><th class="num">Resolvidos</th><th class="num">Tempo médio</th></tr></thead>
+                    <tbody>
+                        @foreach ($porFilial as $r)
+                            <tr><td>{{ $r['nome'] }}</td><td class="num">{{ $r['total'] }}</td><td class="num">{{ $r['resolvidos'] }}</td><td class="num">{{ $r['tempo'] }}</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <h2>Resumo por tipo de demanda</h2>
+                <table>
+                    <thead><tr><th>Categoria</th><th class="num">Chamados</th><th class="num">Resolvidos</th><th class="num">Tempo médio</th></tr></thead>
+                    <tbody>
+                        @foreach ($porCategoria as $r)
+                            <tr><td>{{ $r['nome'] }}</td><td class="num">{{ $r['total'] }}</td><td class="num">{{ $r['resolvidos'] }}</td><td class="num">{{ $r['tempo'] }}</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
+    <p style="font-size:11px;color:#555;margin-top:18px">
+        Declaramos que os atendimentos relacionados acima foram registrados na central de chamados da FOURLINE no período informado.<br>
+        O tempo de solução é contado do registro do chamado até a sua solução.
     </p>
 
-    <footer>FOURLINE Connect — documento gerado eletronicamente em {{ now()->format('d/m/Y H:i') }}.</footer>
+    <div class="sign">
+        <div class="box">
+            <div class="line"></div>
+            <div class="role">FOURLINE</div>
+            <div class="hint">Responsável técnico · {{ $geradoPor }}</div>
+        </div>
+        <div class="box">
+            <div class="line"></div>
+            <div class="role">Cliente</div>
+            <div class="hint">Nome / assinatura · {{ $f['cliente'] }}</div>
+        </div>
+    </div>
+
+    <footer>
+        FOURLINE Connect — documento gerado eletronicamente em {{ now()->format('d/m/Y H:i') }}.
+    </footer>
 </body>
 </html>
