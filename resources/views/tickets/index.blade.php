@@ -8,15 +8,15 @@
     <div class="d-flex align-items-center gap-2 flex-wrap">
         @if ($canFilterMine)
             {{-- Equipe: alterna entre todos os chamados e só os atribuídos a quem está logado --}}
-            <div class="btn-group btn-group-sm" role="group" aria-label="Quais chamados mostrar">
+            <div class="btn-group mine-toggle" role="group" aria-label="Quais chamados mostrar">
                 <a href="{{ request()->fullUrlWithQuery(['meus' => 0, 'page' => 1]) }}"
-                   class="btn {{ $onlyMine ? 'btn-outline-secondary' : 'btn-success' }}">
-                    <i class="bi bi-people me-1"></i>Todos
+                   class="btn {{ $onlyMine ? 'btn-outline-primary' : 'btn-primary' }}" @if (! $onlyMine) aria-current="true" @endif>
+                    <i class="bi bi-people me-1"></i> Todos
                 </a>
                 <a href="{{ request()->fullUrlWithQuery(['meus' => 1, 'page' => 1]) }}"
-                   class="btn {{ $onlyMine ? 'btn-success' : 'btn-outline-secondary' }}">
-                    <i class="bi bi-person-check me-1"></i>Atribuídos a mim
-                    @if ($mineCount !== null)<span class="badge {{ $onlyMine ? 'bg-light text-success' : 'bg-success-subtle text-success-emphasis' }} ms-1">{{ $mineCount }}</span>@endif
+                   class="btn {{ $onlyMine ? 'btn-primary' : 'btn-outline-primary' }}" @if ($onlyMine) aria-current="true" @endif>
+                    <i class="bi bi-person-check me-1"></i> Atribuídos a mim
+                    @if ($mineCount !== null)<span class="badge rounded-pill {{ $onlyMine ? 'bg-white text-success' : 'bg-success-subtle text-success-emphasis' }} ms-1">{{ $mineCount }}</span>@endif
                 </a>
             </div>
         @endif
@@ -143,6 +143,9 @@
 </div>
 
 <style>
+    /* Alternância Todos | Atribuídos a mim no padrão do botão "Abrir chamado" (verde da marca). */
+    .mine-toggle .btn { font-weight:600; }
+    .mine-toggle .btn-outline-primary { --bs-btn-color:var(--fl-green); --bs-btn-border-color:var(--fl-green); --bs-btn-hover-bg:var(--fl-green); --bs-btn-hover-border-color:var(--fl-green); --bs-btn-hover-color:#fff; --bs-btn-active-bg:var(--fl-green-dark); --bs-btn-active-border-color:var(--fl-green-dark); }
     .tickets-pagination nav > div.d-none.d-sm-flex > div:first-child { display: none !important; }
     .tickets-pagination .pagination { margin-bottom: 0; }
 </style>
