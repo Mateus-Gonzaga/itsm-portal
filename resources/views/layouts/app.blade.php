@@ -76,6 +76,7 @@
                     </div>
                     <div class="user-menu-body">
                         <a class="dropdown-item" href="{{ route('modules.settings') }}"><i class="bi bi-gear"></i> Configurações</a>
+                        <button type="button" class="dropdown-item" onclick="window.abrirNovidades && abrirNovidades()"><i class="bi bi-stars"></i> Novidades do portal</button>
                         <button type="button" class="dropdown-item" onclick="toggleTheme()"><i class="bi bi-circle-half"></i> Alternar tema claro/escuro</button>
                         <button type="button" class="dropdown-item d-none d-lg-flex" onclick="toggleSidebar()"><i class="bi bi-layout-sidebar-inset"></i> Recolher / expandir menu</button>
                     </div>
@@ -159,6 +160,7 @@
     }
 </script>
 @auth
+@include('partials.novidades')
 <style>.notif-item:hover { background: rgba(6,138,79,.08); }</style>
 <script>
 (function () {
