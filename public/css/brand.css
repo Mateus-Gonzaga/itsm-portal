@@ -135,14 +135,46 @@ h1,h2,h3,h4,h5,h6 { font-family:'Rajdhani','Inter',sans-serif; }
 .card { background:var(--surface); border:1px solid var(--border-c); border-radius:var(--radius); box-shadow:var(--shadow); }
 .card-header { background:transparent; border-bottom:1px solid var(--border-c); font-weight:600; }
 
-/* ===== Botões ===== */
-.btn-primary {
-  --bs-btn-bg:var(--fl-green); --bs-btn-border-color:var(--fl-green);
-  --bs-btn-hover-bg:var(--fl-green-dark); --bs-btn-hover-border-color:var(--fl-green-dark);
-  --bs-btn-active-bg:var(--fl-green-dark); --bs-btn-active-border-color:var(--fl-green-dark);
-  --bs-btn-disabled-bg:var(--fl-green); --bs-btn-disabled-border-color:var(--fl-green);
-  font-weight:600;
+/* ===== Botões =====
+   Padrão único do portal = o botão "Abrir chamado": verde da marca, texto em
+   negrito, cantos arredondados. Vale para TODOS os botões (inclusive os que no
+   HTML usam btn-success / btn-outline-success / btn-outline-primary, que antes
+   saíam no verde ou azul padrão do Bootstrap). */
+.btn { font-weight:600; border-radius:var(--radius-sm); }
+.btn-sm { border-radius:7px; }
+
+/* Ação principal (cheio): primary e success são o mesmo verde da marca. */
+.btn-primary, .btn-success {
+  --bs-btn-color:#fff; --bs-btn-bg:var(--fl-green); --bs-btn-border-color:var(--fl-green);
+  --bs-btn-hover-color:#fff; --bs-btn-hover-bg:var(--fl-green-dark); --bs-btn-hover-border-color:var(--fl-green-dark);
+  --bs-btn-active-color:#fff; --bs-btn-active-bg:var(--fl-green-dark); --bs-btn-active-border-color:var(--fl-green-dark);
+  --bs-btn-disabled-color:#fff; --bs-btn-disabled-bg:var(--fl-green); --bs-btn-disabled-border-color:var(--fl-green);
+  --bs-btn-focus-shadow-rgb:6,138,79;
 }
+
+/* Ação secundária (contorno): verde da marca no lugar do azul/verde do Bootstrap. */
+.btn-outline-primary, .btn-outline-success {
+  --bs-btn-color:var(--fl-green); --bs-btn-border-color:var(--fl-green);
+  --bs-btn-hover-color:#fff; --bs-btn-hover-bg:var(--fl-green); --bs-btn-hover-border-color:var(--fl-green);
+  --bs-btn-active-color:#fff; --bs-btn-active-bg:var(--fl-green-dark); --bs-btn-active-border-color:var(--fl-green-dark);
+  --bs-btn-disabled-color:var(--fl-green); --bs-btn-disabled-border-color:var(--fl-green);
+  --bs-btn-focus-shadow-rgb:6,138,79;
+}
+[data-bs-theme="dark"] .btn-outline-primary, [data-bs-theme="dark"] .btn-outline-success {
+  --bs-btn-color:var(--fl-green-light); --bs-btn-border-color:var(--fl-green-light);
+}
+
+/* Neutro (Cancelar, Voltar, ações de linha): cinza discreto, hover com toque da marca. */
+.btn-outline-secondary {
+  --bs-btn-color:var(--text-c); --bs-btn-border-color:var(--border-c);
+  --bs-btn-hover-color:var(--fl-green-dark); --bs-btn-hover-bg:rgba(6,138,79,.08); --bs-btn-hover-border-color:rgba(6,138,79,.45);
+  --bs-btn-active-color:var(--fl-green-dark); --bs-btn-active-bg:rgba(6,138,79,.14); --bs-btn-active-border-color:var(--fl-green);
+}
+[data-bs-theme="dark"] .btn-outline-secondary { --bs-btn-hover-color:var(--fl-green-light); --bs-btn-active-color:var(--fl-green-light); }
+
+/* Destrutivo continua vermelho, só com o mesmo arredondamento/peso. */
+.btn-link { font-weight:500; }
+
 .btn-cta { box-shadow:0 6px 16px rgba(6,138,79,.28); }
 .text-primary { color:var(--fl-green)!important; }
 .badge.bg-primary { background-color:var(--fl-green)!important; }

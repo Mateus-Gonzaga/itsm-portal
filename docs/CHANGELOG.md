@@ -6,7 +6,7 @@ Histórico cronológico (nunca apagar).
 - **Lista de chamados — coluna Cliente enxuta**: mostra só o último nível da entidade (ex.: "FL 08 - Guará 1"); o caminho completo fica no tooltip e no detalhe do chamado.
 - **"Atribuídos a mim"** (técnico/gestor): alternância Todos | Atribuídos a mim na lista de chamados, com contador; filtra pelo técnico do chamado (`technicianGlpiId`, com fallback pelo nome) e a escolha fica lembrada na sessão (`?meus=1/0`).
 - **Título da aba do navegador** = só o nome do módulo (sem "— FOURLINE Connect"); padrão "FOURLINE Connect".
-- Alternância "Todos | Atribuídos a mim" no padrão visual do botão "Abrir chamado" (tamanho normal, verde da marca).
+- **Padrão único de botões** (brand.css): todos seguem o "Abrir chamado" — verde da marca (btn-success = btn-primary; outline-success/outline-primary em verde, não mais verde/azul do Bootstrap), texto 600, cantos 8px; neutro (outline-secondary) com hover verde; alternância "Todos | Atribuídos a mim" em tamanho normal.
 - **Menos RAM na VM compartilhada** (3 GB com Zabbix/MariaDB/Grafana): PHP-FPM `pm=ondemand` (máx. 6 processos, encerra ociosos em 10 s, recicla a cada 500 req — `docker/php-fpm-pool.conf`); OPcache 128→64 MB; PostgreSQL com `shared_buffers=48MB`, `max_connections=30`; Redis 256→64 MB; limites de memória por contêiner (`mem_limit`) e rotação de logs (10 MB × 3). Exige rebuild (`deploy.sh` já faz).
 - **Recursos ajustáveis pelo .env** (sem mudar código): `PHP_FPM_*`, `PHP_OPCACHE_MB`, `PHP_MEMORY_LIMIT`, `PG_*`, `REDIS_MAXMEMORY`, `*_MEM_LIMIT`. Sem nada no .env vale o perfil da VM pequena (padrões no compose e também como `ENV` na imagem); perfil "máquina maior (8 GB+)" pronto e comentado no `.env.prod.example`.
 

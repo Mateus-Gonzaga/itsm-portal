@@ -143,9 +143,6 @@
 </div>
 
 <style>
-    /* Alternância Todos | Atribuídos a mim no padrão do botão "Abrir chamado" (verde da marca). */
-    .mine-toggle .btn { font-weight:600; }
-    .mine-toggle .btn-outline-primary { --bs-btn-color:var(--fl-green); --bs-btn-border-color:var(--fl-green); --bs-btn-hover-bg:var(--fl-green); --bs-btn-hover-border-color:var(--fl-green); --bs-btn-hover-color:#fff; --bs-btn-active-bg:var(--fl-green-dark); --bs-btn-active-border-color:var(--fl-green-dark); }
     .tickets-pagination nav > div.d-none.d-sm-flex > div:first-child { display: none !important; }
     .tickets-pagination .pagination { margin-bottom: 0; }
 </style>
