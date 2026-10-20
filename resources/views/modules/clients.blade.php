@@ -16,17 +16,13 @@
 @endpush
 
 @section('content')
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-        <h1 class="h4 mb-0">Clientes</h1>
-        <p class="text-secondary small mb-0">Entidades, usuários e perfis sincronizados do GLPI.</p>
-    </div>
-    <div class="d-flex gap-2">
+<x-page-header icon="bi-people" title="Clientes" subtitle="Entidades, usuários e perfis sincronizados do GLPI.">
+    <div class="d-flex gap-2 flex-wrap">
         <a href="{{ route('modules.map') }}" class="btn btn-outline-success btn-sm"><i class="bi bi-geo-alt me-1"></i> Mapa</a>
         <button class="btn btn-outline-primary btn-sm" onclick="openEntity()"><i class="bi bi-diagram-3 me-1"></i> Nova entidade</button>
         <button class="btn btn-primary btn-sm" onclick="openUser()"><i class="bi bi-person-plus me-1"></i> Novo usuário</button>
     </div>
-</div>
+</x-page-header>
 
 <div class="row g-3 mb-3">
     <div class="col-sm-4"><div class="stat-card"><div class="ic"><i class="bi bi-building"></i></div><div><div class="v">{{ $stats['clientes'] }}</div><div class="l">Clientes / filiais</div></div></div></div>

@@ -12,13 +12,9 @@
 @endpush
 
 @section('content')
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-        <h1 class="h4 mb-0">Mapa de Clientes</h1>
-        <p class="text-secondary small mb-0">Localização dos clientes/vizinhos no mapa.</p>
-    </div>
+<x-page-header icon="bi-geo-alt" title="Mapa de clientes" subtitle="Localização dos clientes/vizinhos no mapa.">
     <a href="{{ route('modules.clients') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar para Clientes</a>
-</div>
+</x-page-header>
 
 <div class="card">
     <div class="card-body">

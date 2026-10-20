@@ -134,13 +134,8 @@
 @endpush
 
 @section('content')
-<div class="d-flex align-items-center gap-2 mb-3">
-    <span class="agenda-hero-ic"><i class="bi bi-calendar-week"></i></span>
-    <div>
-        <h1 class="h4 mb-0">Agenda</h1>
-        <p class="text-secondary small mb-0">Chamados, prazos (SLA) e tarefas da equipe num só lugar. Clique num dia para lançar uma tarefa.</p>
-    </div>
-</div>
+<x-page-header icon="bi-calendar-week" title="Agenda"
+    subtitle="Chamados, prazos (SLA) e tarefas da equipe num só lugar. Clique num dia para lançar uma tarefa." />
 
 {{-- ===================== QUADRO KANBAN DA EQUIPE ===================== --}}
 <style>

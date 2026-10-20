@@ -13,13 +13,9 @@
 @endpush
 
 @section('content')
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-        <h1 class="h4 mb-0">Técnicos</h1>
-        <p class="text-secondary small mb-0">Equipe de atendimento e carga de trabalho (dados do GLPI).</p>
-    </div>
+<x-page-header icon="bi-person-badge" title="Técnicos" subtitle="Equipe de atendimento e carga de trabalho (dados do GLPI).">
     <button class="btn btn-primary btn-sm" onclick="openTech()"><i class="bi bi-person-plus me-1"></i> Adicionar técnico</button>
-</div>
+</x-page-header>
 
 <div class="row g-3 mb-3">
     <div class="col-sm col-6"><div class="stat-card"><div class="ic"><i class="bi bi-person-badge"></i></div><div><div class="v">{{ $stats['tecnicos'] }}</div><div class="l">Técnicos</div></div></div></div>

@@ -98,6 +98,13 @@
                 <button class="sidebar-toggle d-none d-lg-inline-flex" onclick="toggleSidebar()" title="Recolher / expandir menu">
                     <i class="bi bi-list"></i>
                 </button>
+                @if ($u->role->isStaff())
+                    <button type="button" class="global-search-btn" onclick="abrirBusca()" aria-label="Buscar chamado, cliente ou equipamento (Ctrl+K)">
+                        <i class="bi bi-search"></i>
+                        <span class="d-none d-md-inline text-truncate">Buscar chamado, cliente ou equipamento…</span>
+                        <kbd class="d-none d-md-inline">Ctrl K</kbd>
+                    </button>
+                @endif
                 <div class="ms-auto d-flex align-items-center gap-2">
                     <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema claro/escuro">
                         <i class="bi bi-circle-half"></i>
@@ -114,7 +121,12 @@
                                 <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="notifMarkRead">Marcar como lidas</button>
                             </div>
                             <div id="notifList" style="max-height: 360px; overflow-y: auto">
-                                <div class="px-3 py-4 text-center text-muted small">Carregando…</div>
+                                @for ($i = 0; $i < 3; $i++)
+                                    <div class="d-flex gap-2 px-3 py-2 border-bottom" aria-hidden="true">
+                                        <span class="skeleton" style="width:18px;height:18px;border-radius:50%"></span>
+                                        <span class="flex-grow-1"><span class="skeleton skeleton-line" style="width:70%"></span><span class="skeleton skeleton-line" style="width:45%"></span></span>
+                                    </div>
+                                @endfor
                             </div>
                         </div>
                     </div>
@@ -122,27 +134,53 @@
             </header>
 
             <main class="page">
-                @if (session('status'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle me-1"></i> {{ session('status') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                    </div>
-                @endif
-                @if (session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="bi bi-exclamation-triangle me-1"></i> {{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-                    </div>
-                @endif
                 @yield('content')
             </main>
+
+            {{-- Avisos flutuantes (salvo / erro): somem sozinhos; o de erro fica mais tempo. --}}
+            <div class="toast-container position-fixed bottom-0 end-0 p-3 fl-toasts" id="flToasts" aria-live="polite">
+                @foreach (['status' => 'success', 'error' => 'danger'] as $chave => $tom)
+                    @if (session($chave))
+                        <div class="toast fl-toast fl-toast-{{ $tom }}" role="{{ $tom === 'danger' ? 'alert' : 'status' }}"
+                             data-bs-delay="{{ $tom === 'danger' ? 9000 : 5000 }}">
+                            <div class="d-flex align-items-start gap-2 p-3">
+                                <i class="bi {{ $tom === 'danger' ? 'bi-exclamation-octagon-fill' : 'bi-check-circle-fill' }} fl-toast-ic"></i>
+                                <div class="flex-grow-1 small">{{ session($chave) }}</div>
+                                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="toast" aria-label="Fechar"></button>
+                            </div>
+                        </div>
+                    @endif
+                @endforeach
+            </div>
         </div>
+
+        @if ($u->role->isStaff())
+            {{-- Busca global (Ctrl+K) --}}
+            <div class="modal fade" id="buscaModal" tabindex="-1" aria-label="Busca global" aria-hidden="true">
+                <div class="modal-dialog modal-lg busca-dialog">
+                    <div class="modal-content busca">
+                        <div class="busca-input">
+                            <i class="bi bi-search"></i>
+                            <input type="search" id="buscaQ" class="form-control border-0 shadow-none" autocomplete="off"
+                                   placeholder="Nº do chamado, título, cliente, equipamento ou tela…" aria-label="Termo de busca">
+                            <kbd>Esc</kbd>
+                        </div>
+                        <div class="busca-resultados" id="buscaRes" role="listbox">
+                            <div class="busca-dica">Digite ao menos 2 letras, ou o número do chamado.</div>
+                        </div>
+                        <div class="busca-rodape"><span><kbd>↑</kbd><kbd>↓</kbd> navegar</span><span><kbd>Enter</kbd> abrir</span><span><kbd>Ctrl</kbd><kbd>K</kbd> abrir a busca</span></div>
+                    </div>
+                </div>
+            </div>
+        @endif
     </div>
 @else
     <div class="auth-wrap">
-        <div class="w-100" style="max-width: 420px">
+        <div class="auth-glow" aria-hidden="true"></div>
+        <div class="w-100 position-relative" style="max-width: 420px">
             @yield('content')
         </div>
+        <div class="auth-foot">© {{ date('Y') }} FOURLINE · Suporte e infraestrutura de TI</div>
     </div>
 @endauth
 
@@ -216,7 +254,95 @@
     load();
     setInterval(load, 60000);
 })();
+
+// Avisos flutuantes (toasts) vindos do servidor.
+document.querySelectorAll('#flToasts .toast').forEach(function (t) { bootstrap.Toast.getOrCreateInstance(t).show(); });
+
+// Tabelas em cartões no celular: cada célula recebe o nome da coluna (usado pelo CSS).
+document.querySelectorAll('table.table-cards').forEach(function (tb) {
+    var heads = Array.from(tb.querySelectorAll('thead th')).map(function (th) { return th.textContent.trim(); });
+    tb.querySelectorAll('tbody tr').forEach(function (tr) {
+        Array.from(tr.children).forEach(function (td, i) {
+            if (!td.hasAttribute('colspan') && heads[i]) td.setAttribute('data-label', heads[i]);
+        });
+    });
+});
 </script>
+@if ($u->role->isStaff())
+<script>
+(function () {
+    const modalEl = document.getElementById('buscaModal');
+    if (!modalEl) return;
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    const input = document.getElementById('buscaQ');
+    const box = document.getElementById('buscaRes');
+    const URL_BUSCA = "{{ route('search') }}";
+    let timer = null, ctrl = null, ativo = -1;
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = (s == null ? '' : s); return d.innerHTML; }
+    function itens() { return Array.from(box.querySelectorAll('.busca-item')); }
+    function marcar(i) {
+        const lista = itens();
+        lista.forEach(function (el, k) { el.classList.toggle('active', k === i); el.setAttribute('aria-selected', k === i ? 'true' : 'false'); });
+        ativo = i;
+        if (lista[i]) lista[i].scrollIntoView({ block: 'nearest' });
+    }
+    function esqueleto() {
+        box.innerHTML = [1, 2, 3, 4].map(function () {
+            return '<div class="busca-item" aria-hidden="true"><span class="skeleton" style="width:30px;height:30px;border-radius:8px"></span>'
+                + '<span class="flex-grow-1"><span class="skeleton skeleton-line" style="width:60%"></span><span class="skeleton skeleton-line" style="width:35%"></span></span></div>';
+        }).join('');
+    }
+    function render(data, termo) {
+        const grupos = (data && data.grupos) || [];
+        if (!grupos.length) {
+            box.innerHTML = '<div class="busca-dica"><i class="bi bi-search d-block fs-3 mb-1 opacity-50"></i>Nada encontrado para “' + esc(termo) + '”.</div>';
+            ativo = -1; return;
+        }
+        box.innerHTML = grupos.map(function (g) {
+            return '<div class="busca-grupo">' + esc(g.nome) + '</div>' + g.itens.map(function (i) {
+                return '<a class="busca-item" role="option" href="' + esc(i.url) + '">'
+                    + '<span class="busca-item-ic"><i class="bi ' + esc(i.icone) + '"></i></span>'
+                    + '<span class="min-w-0 flex-grow-1"><span class="d-block text-truncate fw-semibold">' + esc(i.titulo) + '</span>'
+                    + '<span class="d-block text-truncate small text-secondary">' + esc(i.detalhe) + '</span></span>'
+                    + '<i class="bi bi-arrow-return-left busca-enter"></i></a>';
+            }).join('');
+        }).join('');
+        marcar(0);
+    }
+    function buscar() {
+        const termo = input.value.trim();
+        if (termo.length < 2 && !/^#?\d+$/.test(termo)) {
+            box.innerHTML = '<div class="busca-dica">Digite ao menos 2 letras, ou o número do chamado.</div>';
+            ativo = -1; return;
+        }
+        esqueleto();
+        if (ctrl) ctrl.abort();
+        ctrl = new AbortController();
+        fetch(URL_BUSCA + '?q=' + encodeURIComponent(termo), { headers: { 'Accept': 'application/json' }, signal: ctrl.signal })
+            .then(function (r) { return r.ok ? r.json() : { grupos: [] }; })
+            .then(function (d) { render(d, termo); })
+            .catch(function (e) { if (e.name !== 'AbortError') box.innerHTML = '<div class="busca-dica text-danger">Não foi possível buscar agora. Tente de novo.</div>'; });
+    }
+
+    window.abrirBusca = function () { modal.show(); };
+    modalEl.addEventListener('shown.bs.modal', function () { input.focus(); input.select(); });
+    input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(buscar, 250); });
+    input.addEventListener('keydown', function (e) {
+        const lista = itens();
+        if (e.key === 'ArrowDown' && lista.length) { e.preventDefault(); marcar(Math.min(ativo + 1, lista.length - 1)); }
+        else if (e.key === 'ArrowUp' && lista.length) { e.preventDefault(); marcar(Math.max(ativo - 1, 0)); }
+        else if (e.key === 'Enter' && lista[ativo]) { e.preventDefault(); location.href = lista[ativo].href; }
+    });
+    document.addEventListener('keydown', function (e) {
+        const tag = (e.target.tagName || '').toLowerCase();
+        const digitando = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); modal.show(); }
+        else if (e.key === '/' && !digitando) { e.preventDefault(); modal.show(); }
+    });
+})();
+</script>
+@endif
 @endauth
 @stack('scripts')
 <script>

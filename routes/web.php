@@ -28,6 +28,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/notificacoes', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notificacoes/ler', [NotificationController::class, 'markRead'])->name('notifications.read');
 
+    // Busca global (Ctrl+K) da equipe: chamados, clientes, equipamentos e telas.
+    Route::get('/busca', \App\Http\Controllers\SearchController::class)->middleware(['role:tecnico,gestor', 'throttle:120,1'])->name('search');
+
     // Módulos futuros (placeholders — estrutura preparada / "em construção")
     Route::middleware('role:gestor')->group(function () {
         Route::get('/dashboard-analitico', [DashboardsController::class, 'index'])->name('modules.analytics');

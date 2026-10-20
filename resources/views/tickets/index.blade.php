@@ -3,8 +3,8 @@
 @section('content')
 @php use App\Enums\UserRole; @endphp
 
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <h1 class="h3 mb-0">{{ $heading }}</h1>
+<x-page-header icon="bi-card-list" :title="$heading"
+    :subtitle="$onlyMine ? 'Chamados em que você é o técnico responsável.' : 'Acompanhe, filtre e abra chamados.'">
     <div class="d-flex align-items-center gap-2 flex-wrap">
         @if ($canFilterMine)
             {{-- Equipe: alterna entre todos os chamados e só os atribuídos a quem está logado --}}
@@ -24,7 +24,7 @@
             <i class="bi bi-plus-circle me-1"></i> Abrir chamado
         </a>
     </div>
-</div>
+</x-page-header>
 
 <div class="card">
     <div class="card-body">
@@ -66,7 +66,7 @@
         </div>
 
         <div class="table-wrap">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 table-cards">
                 <thead>
                     <tr>
                         <th>#</th><th>Título</th><th>Cliente</th><th>Técnico</th>
@@ -104,7 +104,22 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="text-center text-muted py-4">Nenhum chamado encontrado.</td></tr>
+                        <tr><td colspan="8" class="p-0 border-0">
+                            @if (filled($q) || ! in_array((string) $currentStatus, ['', 'all'], true))
+                                <x-empty-state icon="bi-search" title="Nenhum chamado encontrado"
+                                    text="Nada corresponde à busca ou ao filtro de situação. Tente outro termo ou veja todos.">
+                                    <a href="{{ route('tickets.index', $onlyMine ? ['meus' => 1] : []) }}" class="btn btn-sm btn-outline-secondary">Limpar filtros</a>
+                                </x-empty-state>
+                            @elseif ($onlyMine)
+                                <x-empty-state icon="bi-person-check" title="Nenhum chamado atribuído a você"
+                                    text="Quando você assumir um chamado ou alguém atribuir a você, ele aparece aqui." />
+                            @else
+                                <x-empty-state icon="bi-inbox" title="Nenhum chamado por aqui"
+                                    text="Os chamados abertos aparecem nesta lista, com situação, prioridade e técnico.">
+                                    <a href="{{ route('tickets.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle me-1"></i> Abrir chamado</a>
+                                </x-empty-state>
+                            @endif
+                        </td></tr>
                     @endforelse
                 </tbody>
             </table>

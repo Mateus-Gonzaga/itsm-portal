@@ -30,8 +30,6 @@
     <a href="{{ route('modules.clients') }}" class="btn btn-link btn-sm text-decoration-none px-0"><i class="bi bi-arrow-left me-1"></i>Voltar aos clientes</a>
 </div>
 
-@if (session('status'))<div class="alert alert-success py-2 small">{{ session('status') }}</div>@endif
-@if (session('error'))<div class="alert alert-danger py-2 small">{{ session('error') }}</div>@endif
 @if ($errors->any())
     <div class="alert alert-danger py-2 small"><ul class="mb-0">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
 @endif

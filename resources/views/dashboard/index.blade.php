@@ -29,19 +29,14 @@
 @section('content')
 @php use App\Enums\UserRole; @endphp
 
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <div>
-        <h1 class="h3 mb-0">Olá, {{ auth()->user()->name }} 👋</h1>
-        <p class="text-muted mb-0">{{ $subtitle }} · {{ now()->locale('pt_BR')->translatedFormat('l, d \d\e F') }}</p>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="{{ route('tickets.create') }}" class="btn btn-primary btn-cta"><i class="bi bi-plus-circle me-1"></i> Abrir chamado</a>
-        @if ($role === UserRole::Gestor)
-            <a href="{{ route('agenda.index') }}" class="btn btn-outline-secondary"><i class="bi bi-calendar3 me-1"></i> Agenda</a>
-            <a href="{{ route('modules.reports') }}" class="btn btn-outline-secondary"><i class="bi bi-bar-chart me-1"></i> Relatórios</a>
-        @endif
-    </div>
-</div>
+<x-page-header icon="bi-house-door" :title="'Olá, '.auth()->user()->name.' 👋'"
+    :subtitle="$subtitle.' · '.now()->locale('pt_BR')->translatedFormat('l, d \d\e F')">
+    <a href="{{ route('tickets.create') }}" class="btn btn-primary btn-cta"><i class="bi bi-plus-circle me-1"></i> Abrir chamado</a>
+    @if ($role === UserRole::Gestor)
+        <a href="{{ route('agenda.index') }}" class="btn btn-outline-secondary"><i class="bi bi-calendar3 me-1"></i> Agenda</a>
+        <a href="{{ route('modules.reports') }}" class="btn btn-outline-secondary"><i class="bi bi-bar-chart me-1"></i> Relatórios</a>
+    @endif
+</x-page-header>
 
 {{-- KPIs --}}
 <div class="row g-3 mb-4">
@@ -79,19 +74,35 @@
         <div class="card h-100">
             <div class="card-header fw-semibold"><i class="bi bi-stopwatch me-1 text-success"></i>SLA cumprido</div>
             <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                @php
+                    // Com menos de 5 chamados com prazo o percentual não diz nada (1 atraso = 0%):
+                    // mostra neutro, com a explicação, em vez de um vermelho alarmante.
+                    $slaBase = (int) $charts['sla']['ok'] + (int) $charts['sla']['late'];
+                    $slaPouco = $slaBase < 5;
+                    $slaCor = $slaPouco ? 'text-secondary' : ($charts['sla']['pct'] >= 90 ? 'text-success' : ($charts['sla']['pct'] >= 70 ? 'text-warning' : 'text-danger'));
+                @endphp
                 @if ($charts['sla']['pct'] === null)
-                    <p class="text-secondary small text-center mb-0">Ainda não há chamados resolvidos com prazo definido.</p>
+                    <div class="empty-state py-3">
+                        <span class="empty-state-ic"><i class="bi bi-stopwatch"></i></span>
+                        <div class="empty-state-title">Sem prazos definidos</div>
+                        <p class="empty-state-text">Defina o <strong>Prazo (SLA)</strong> ao abrir ou atender os chamados para acompanhar este indicador.</p>
+                    </div>
                 @else
                     <div style="height:170px;width:170px;position:relative">
                         <canvas id="chSla" aria-label="Percentual de SLA cumprido" role="img"></canvas>
                         <div class="position-absolute top-50 start-50 translate-middle text-center">
-                            <div class="fw-bold fs-3" style="font-family:'Rajdhani',sans-serif">{{ $charts['sla']['pct'] }}%</div>
+                            <div class="fw-bold fs-3 {{ $slaCor }}" style="font-family:'Rajdhani',sans-serif">{{ $charts['sla']['pct'] }}%</div>
                         </div>
                     </div>
                     <div class="small text-secondary mt-2">
-                        <span class="me-2"><i class="bi bi-circle-fill text-success"></i> {{ $charts['sla']['ok'] }} no prazo</span>
-                        <span><i class="bi bi-circle-fill text-danger"></i> {{ $charts['sla']['late'] }} fora</span>
+                        <span class="me-2"><i class="bi bi-circle-fill {{ $slaPouco ? 'text-secondary opacity-75' : 'text-success' }}"></i> {{ $charts['sla']['ok'] }} no prazo</span>
+                        <span><i class="bi bi-circle-fill {{ $slaPouco ? 'text-secondary opacity-50' : 'text-danger' }}"></i> {{ $charts['sla']['late'] }} fora</span>
                     </div>
+                    @if ($slaPouco)
+                        <p class="small text-secondary text-center mt-2 mb-0" style="max-width:260px">
+                            <i class="bi bi-info-circle me-1"></i>Amostra pequena: só {{ $slaBase }} {{ $slaBase === 1 ? 'chamado' : 'chamados' }} com prazo em 6 meses. Defina o prazo (SLA) nos chamados para o indicador valer.
+                        </p>
+                    @endif
                 @endif
                 <div class="mt-3 text-center">
                     <div class="small text-secondary">Tempo médio de solução</div>
@@ -127,7 +138,9 @@
     const data = @json($charts);
     const C = FLCharts.cores;
     FLCharts.abertosResolvidos('chMonthly', data.months, data.opened, data.solved);
-    FLCharts.rosca('chSla', ['No prazo', 'Fora do prazo'], [data.sla.ok, data.sla.late], [C.resolvidos, C.perigo]);
+    const slaPouco = (Number(data.sla.ok) + Number(data.sla.late)) < 5;
+    FLCharts.rosca('chSla', ['No prazo', 'Fora do prazo'], [data.sla.ok, data.sla.late],
+        slaPouco ? ['#94a3b8', '#cbd5e1'] : [C.resolvidos, C.perigo]);
     FLCharts.linha('chAvg', data.months, data.avgHours, 'Tempo médio', ' h');
 })();
 </script>

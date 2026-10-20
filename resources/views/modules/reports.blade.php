@@ -64,11 +64,7 @@
     </div>
 </div>
 
-<div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-    <div>
-        <h1 class="h4 mb-0">Relatórios</h1>
-        <p class="text-secondary small mb-0">Atendimento e infraestrutura · {{ $periodoTxt }}</p>
-    </div>
+<x-page-header icon="bi-bar-chart" title="Relatórios" :subtitle="'Atendimento e infraestrutura · '.$periodoTxt">
     <div class="d-flex flex-wrap gap-2 no-print">
         @if ($f['cliente'] !== '')
             <a href="{{ route('reports.client', $q) }}" target="_blank" class="btn btn-outline-success">
@@ -84,7 +80,7 @@
             <i class="bi bi-printer me-1"></i> Imprimir / PDF
         </button>
     </div>
-</div>
+</x-page-header>
 
 {{-- Filtros --}}
 <form method="GET" action="{{ route('modules.reports') }}" class="card mb-3 no-print filters">

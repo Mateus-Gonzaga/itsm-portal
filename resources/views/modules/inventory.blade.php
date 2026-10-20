@@ -14,19 +14,8 @@
 @endpush
 
 @section('content')
-<div class="mb-3">
-    <h1 class="h4 mb-0">Inventário</h1>
-    <p class="text-secondary small mb-0">
-        Ativos do GLPI @if ($isManager) de todos os clientes @else da sua entidade @endif (inventariados pelo GLPI Agent).
-    </p>
-</div>
-
-@if (session('status'))
-    <div class="alert alert-success py-2 small">{{ session('status') }}</div>
-@endif
-@if (session('error'))
-    <div class="alert alert-danger py-2 small">{{ session('error') }}</div>
-@endif
+<x-page-header icon="bi-pc-display" title="Inventário"
+    :subtitle="'Ativos do GLPI '.($isManager ? 'de todos os clientes' : 'da sua entidade').' (inventariados pelo GLPI Agent).'" />
 
 @php
     // Monta a URL do inventário mantendo os filtros atuais (sem a página).
@@ -94,7 +83,7 @@
             @endif
         </div>
         <div class="table-wrap">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 table-cards">
                 <thead>
                     <tr><th>Etiqueta</th><th>Tipo</th><th>Nome</th><th>Entidade</th><th>Modelo</th><th>Marca</th><th>Nº de série</th><th>Status</th><th class="text-nowrap">Adicionado em</th>@if ($canSeeValues)<th class="text-end">Valor</th>@endif @if ($isManager)<th class="text-end">Ações</th>@endif</tr>
                 </thead>
@@ -147,12 +136,15 @@
                             @endif
                         </tr>
                     @empty
-                        <tr><td colspan="{{ 9 + ($canSeeValues ? 1 : 0) + ($isManager ? 1 : 0) }}" class="text-center text-muted py-5">
-                            <i class="bi bi-pc-display d-block fs-2 mb-2 opacity-50"></i>
+                        <tr><td colspan="{{ 9 + ($canSeeValues ? 1 : 0) + ($isManager ? 1 : 0) }}" class="p-0 border-0">
                             @if ($filters['q'] !== '' || $filters['entidade'] !== '' || $filters['tipo'] !== '')
-                                Nenhum ativo encontrado com estes filtros.
+                                <x-empty-state icon="bi-search" title="Nenhum ativo encontrado"
+                                    text="Nenhum equipamento corresponde aos filtros aplicados. Tente outro termo ou limpe os filtros.">
+                                    <a href="{{ route('modules.inventory') }}" class="btn btn-sm btn-outline-secondary">Limpar filtros</a>
+                                </x-empty-state>
                             @else
-                                Nenhum ativo inventariado ainda.<br><span class="small">Os equipamentos aparecem aqui conforme o GLPI Agent faz o inventário das máquinas.</span>
+                                <x-empty-state icon="bi-pc-display" title="Nenhum ativo inventariado ainda"
+                                    text="Os equipamentos aparecem aqui conforme o GLPI Agent faz o inventário das máquinas, ou cadastre um manualmente." />
                             @endif
                         </td></tr>
                     @endforelse
@@ -335,8 +327,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div id="pcLoading" class="text-center text-muted py-4">
-                    <div class="spinner-border spinner-border-sm me-2"></div> Carregando detalhes…
+                <div id="pcLoading" aria-label="Carregando detalhes" role="status">
+                    @foreach ([38, 55, 30, 48, 42, 60] as $w)
+                        <div class="row py-1">
+                            <div class="col-sm-4"><span class="skeleton skeleton-line" style="width:70%"></span></div>
+                            <div class="col-sm-8"><span class="skeleton skeleton-line" style="width:{{ $w + 25 }}%"></span></div>
+                        </div>
+                    @endforeach
                 </div>
                 <div id="pcError" class="alert alert-warning py-2 small d-none"></div>
                 <dl id="pcBody" class="row mb-0 d-none"></dl>

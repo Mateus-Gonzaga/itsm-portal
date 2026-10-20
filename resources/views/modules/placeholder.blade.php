@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', $title)
 @section('content')
-<h1 class="h3 mb-4">{{ $title }}</h1>
+<x-page-header :icon="$icon" :title="$title" />
 <div class="card">
     <div class="card-body text-center py-5">
         <i class="bi {{ $icon }} text-muted" style="font-size: 3rem"></i>

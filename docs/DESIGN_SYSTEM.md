@@ -39,6 +39,12 @@ Títulos: **Rajdhani**. Texto: **Inter**. (Google Fonts via CDN.)
 - **Tabela:** envolver em `.table-wrap` (scroll + cabeçalho fixo via `position: sticky`); `.table-hover` para hover nas linhas. Busca + filtros rápidos (`.filter-chip`) + paginação (`->links()`, Bootstrap 5 via `Paginator::useBootstrapFive()`).
 - **Filter chip:** `.filter-chip` (pílula); ativo = verde.
 - **Badges de status/prioridade:** `bg-{cor}` / `bg-{cor}-subtle text-{cor}-emphasis` (cores vêm de `TicketStatus`/`TicketPriority`).
+- **Cabeçalho de tela:** `<x-page-header icon="bi-..." title="..." subtitle="...">ações</x-page-header>` (ícone em quadro verde, título, subtítulo e botões à direita). Toda tela nova usa este componente.
+- **Tela/lista vazia:** `<x-empty-state icon="bi-..." title="..." text="...">botão opcional</x-empty-state>`; dentro de tabela, numa linha `<td colspan class="p-0 border-0">`.
+- **Avisos:** `session('status')` / `session('error')` viram toasts no canto inferior direito (layout); não repetir alertas de sessão nas telas.
+- **Tabela no celular:** classe `.table-cards` na `<table>`; abaixo de 768px cada linha vira cartão e os rótulos vêm do `<thead>` (script do layout).
+- **Carregando:** `.skeleton` / `.skeleton-line` (blocos com brilho) no lugar de spinners e "Carregando…".
+- **Busca global:** botão na barra superior + Ctrl+K ou `/` (equipe); rota `GET /busca` (`SearchController`) lê das listas em cache do GLPI.
 
 ## Sidebar (menu por perfil)
 Fonte: `App\Enums\UserRole::menu()`. Itens: `{route, label, icon}`. Módulos futuros já presentes como placeholders: Inventário, Base de conhecimento, Dashboard, Monitoramento, Automações.

@@ -2,6 +2,16 @@
 
 Histórico cronológico (nunca apagar).
 
+## 2026-10-20 (2) — Melhorias visuais
+- **Cabeçalho padrão** (`components/page-header`) em todas as telas de módulo: ícone da marca, título, subtítulo e ações.
+- **SLA no Painel**: com menos de 5 chamados com prazo, o gráfico fica neutro (cinza) com o aviso "amostra pequena"; sem prazos, tela vazia orientando a definir o SLA. Com amostra suficiente, o % fica verde (≥90), amarelo (≥70) ou vermelho.
+- **Avisos flutuantes (toasts)** no canto inferior direito no lugar dos alertas de sessão; removidos os alertas duplicados do Inventário e do Perfil do cliente.
+- **Busca global (Ctrl+K ou /)** para a equipe: chamados (nº, título, cliente, solicitante), clientes (abre o perfil), equipamentos (nome, série, modelo) e telas; `GET /busca` (`SearchController`, `role:tecnico,gestor`), sem consultas extras ao GLPI (usa o cache das listas).
+- **Carregamento em esqueleto** no sino, na busca e no detalhe do equipamento.
+- **Tabelas em cartões no celular** (`.table-cards`): chamados, inventário e auditoria.
+- **Telas vazias com orientação** (`components/empty-state`): chamados (busca/filtro, "atribuídos a mim", sem chamados), inventário, base de conhecimento, auditoria.
+- **Login** com fundo da marca, campos com ícones, mostrar/ocultar senha e rodapé.
+
 ## 2026-10-20
 - **Pop-up "Novidades do portal"** (`partials/novidades`, conteúdo em `config/novidades.php`): abre uma vez por usuário (localStorage `novidades:<id do usuário>`) quando o `id` da primeira entrada muda; itens filtráveis por perfil (`perfis`); reabre pelo menu do usuário › "Novidades do portal". Para anunciar: nova entrada no topo com `id` inédito e `bash deploy.sh`.
 - **Manual técnico v1.1**: 13 telas do sistema (dados de clientes desfocados), destaques em estilo de livro, texto sem travessões; `kb:publicar-manual` com padrão v1.1.

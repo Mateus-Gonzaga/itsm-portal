@@ -15,13 +15,10 @@
 @endpush
 
 @section('content')
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-        <h1 class="h4 mb-0">Base de conhecimento</h1>
-        <p class="text-secondary small mb-0">Informações por cliente/filial: contratos, estimativa de valor dos ativos, infraestrutura e observações.</p>
-    </div>
+<x-page-header icon="bi-journal-text" title="Base de conhecimento"
+    subtitle="Informações por cliente/filial: contratos, estimativa de valor dos ativos, infraestrutura e observações.">
     <button class="btn btn-success btn-sm" onclick="openKb()"><i class="bi bi-plus-lg me-1"></i> Novo registro</button>
-</div>
+</x-page-header>
 
 <div class="row g-3 mb-3">
     <div class="col-sm-6"><div class="kb-stat"><div class="ic"><i class="bi bi-journal-text"></i></div><div><div class="v">{{ $total }}</div><div class="l">Registros na base</div></div></div></div>
@@ -107,9 +104,12 @@
         </div>
     @empty
         <div class="col-12">
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-journal-text d-block fs-1 mb-2 opacity-50"></i>
-                Nenhum registro ainda.<br><span class="small">Clique em <strong>Novo registro</strong> para cadastrar o primeiro (ex.: contrato de um cliente).</span>
+            <div class="card">
+                <x-empty-state icon="bi-journal-text" title="Nenhum registro por aqui"
+                    text="Guarde contratos, acessos, links de internet e documentos de cada cliente. Se aplicou um filtro, tente limpar a busca.">
+                    <button class="btn btn-sm btn-success" onclick="openKb()"><i class="bi bi-plus-lg me-1"></i> Novo registro</button>
+                    <a href="{{ route('modules.kb') }}" class="btn btn-sm btn-outline-secondary">Limpar filtros</a>
+                </x-empty-state>
             </div>
         </div>
     @endforelse

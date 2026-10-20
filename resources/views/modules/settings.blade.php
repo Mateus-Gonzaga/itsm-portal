@@ -3,10 +3,7 @@
 @section('content')
 @php $u = auth()->user(); $glpiDriver = config('glpi.driver'); @endphp
 
-<div class="mb-4">
-    <h1 class="h3 mb-0">Configurações</h1>
-    <p class="text-muted mb-0">Preferências e parâmetros do portal.</p>
-</div>
+<x-page-header icon="bi-gear" title="Configurações" subtitle="Preferências e parâmetros do portal." />
 
 <div class="row g-4">
     <div class="col-lg-6">

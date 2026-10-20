@@ -3,7 +3,8 @@
 @section('content')
 <div class="row justify-content-center">
     <div class="col-lg-8">
-        <h1 class="h3 mb-3">Abrir chamado</h1>
+        <x-page-header icon="bi-plus-circle" title="Abrir chamado"
+            subtitle="Descreva o problema com detalhes; a equipe é avisada na hora." />
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <form method="POST" action="{{ route('tickets.store') }}" enctype="multipart/form-data">

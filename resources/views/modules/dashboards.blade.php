@@ -44,14 +44,9 @@
 @endpush
 
 @section('content')
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-        <h1 class="h4 mb-0">Dashboards — Monitoramento
-            @if ($selected)<span class="text-secondary">› {{ $selected }}</span>@endif
-        </h1>
-        <p class="text-secondary small mb-0">Status dos hosts e alertas em tempo real (Zabbix).</p>
-    </div>
-    <div class="d-flex gap-2 align-items-center">
+<x-page-header icon="bi-grid-1x2" title="Dashboards"
+    :subtitle="'Status dos hosts e alertas em tempo real (Zabbix)'.($selected ? ' · '.$selected : '')">
+    <div class="d-flex gap-2 align-items-center flex-wrap">
         <a href="{{ route('modules.analytics') }}" class="btn btn-sm {{ ($mode ?? '') === 'geral' ? 'btn-primary' : 'btn-outline-secondary' }}"><i class="bi bi-grid me-1"></i> Visão Geral</a>
         <a href="{{ route('modules.analytics', ['view' => 'preventivo']) }}" class="btn btn-sm {{ ($mode ?? '') === 'preventivo' ? 'btn-primary' : 'btn-outline-secondary' }}"><i class="bi bi-shield-check me-1"></i> Preventivo</a>
         @if (!empty($clientes))
@@ -66,7 +61,7 @@
             </div>
         @endif
     </div>
-</div>
+</x-page-header>
 
 <div class="d-flex align-items-center gap-2 mb-3 small text-secondary">
     <i class="bi bi-arrow-repeat"></i>
