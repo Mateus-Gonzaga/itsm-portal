@@ -8,6 +8,7 @@ Histórico cronológico (nunca apagar).
 - **Título da aba do navegador** = só o nome do módulo (sem "— FOURLINE Connect"); padrão "FOURLINE Connect".
 - Alternância "Todos | Atribuídos a mim" no padrão visual do botão "Abrir chamado" (tamanho normal, verde da marca).
 - **Menos RAM na VM compartilhada** (3 GB com Zabbix/MariaDB/Grafana): PHP-FPM `pm=ondemand` (máx. 6 processos, encerra ociosos em 10 s, recicla a cada 500 req — `docker/php-fpm-pool.conf`); OPcache 128→64 MB; PostgreSQL com `shared_buffers=48MB`, `max_connections=30`; Redis 256→64 MB; limites de memória por contêiner (`mem_limit`) e rotação de logs (10 MB × 3). Exige rebuild (`deploy.sh` já faz).
+- **Recursos ajustáveis pelo .env** (sem mudar código): `PHP_FPM_*`, `PHP_OPCACHE_MB`, `PHP_MEMORY_LIMIT`, `PG_*`, `REDIS_MAXMEMORY`, `*_MEM_LIMIT`. Sem nada no .env vale o perfil da VM pequena (padrões no compose e também como `ENV` na imagem); perfil "máquina maior (8 GB+)" pronto e comentado no `.env.prod.example`.
 
 ## 2026-10-16 (5) — Dashboards
 - **Ruído separado**: problemas cujo nome casa com `zabbix.noise_patterns` (`ZABBIX_NOISE`, padrão GoogleUpdater, edgeupdate, gupdate…) ficam ocultos por padrão, fora do KPI "Problemas ativos" (que mostra "+N de ruído ocultos"), da rosca de severidade e dos alertas da saúde por cliente.

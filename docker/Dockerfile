@@ -12,6 +12,16 @@ RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
     && docker-php-ext-enable redis \
     && apk del .build-deps
 
+# Padrões de recursos (perfil VM pequena) — o docker-compose/.env pode sobrescrever.
+# Ficam na imagem para o PHP nunca ler esses valores vazios (nem durante o build).
+ENV PHP_FPM_PM=ondemand \
+    PHP_FPM_MAX_CHILDREN=6 \
+    PHP_FPM_START_SERVERS=2 \
+    PHP_FPM_MIN_SPARE=1 \
+    PHP_FPM_MAX_SPARE=3 \
+    PHP_OPCACHE_MB=64 \
+    PHP_MEMORY_LIMIT=192M
+
 # OPcache de produção (código pré-compilado em memória).
 COPY docker/opcache.ini /usr/local/etc/php/conf.d/zz-opcache.ini
 
