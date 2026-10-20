@@ -2,6 +2,11 @@
 
 Histórico cronológico (nunca apagar).
 
+## 2026-10-20
+- **Lista de chamados — coluna Cliente enxuta**: mostra só o último nível da entidade (ex.: "FL 08 - Guará 1"); o caminho completo fica no tooltip e no detalhe do chamado.
+- **"Atribuídos a mim"** (técnico/gestor): alternância Todos | Atribuídos a mim na lista de chamados, com contador; filtra pelo técnico do chamado (`technicianGlpiId`, com fallback pelo nome) e a escolha fica lembrada na sessão (`?meus=1/0`).
+- **Título da aba do navegador** = só o nome do módulo (sem "— FOURLINE Connect"); padrão "FOURLINE Connect".
+
 ## 2026-10-16 (5) — Dashboards
 - **Ruído separado**: problemas cujo nome casa com `zabbix.noise_patterns` (`ZABBIX_NOISE`, padrão GoogleUpdater, edgeupdate, gupdate…) ficam ocultos por padrão, fora do KPI "Problemas ativos" (que mostra "+N de ruído ocultos"), da rosca de severidade e dos alertas da saúde por cliente.
 - **Lista de problemas** (`partials/problems`): agrupa problemas iguais ("12 hosts", expansível), busca, filtro de severidade, alternar ruído, filtros lembrados entre as atualizações automáticas, e botão **"Abrir chamado"** que abre `/tickets/create` com título e descrição do alerta (`?titulo=&descricao=`).

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Chamado #'.$ticket->id.' — FOURLINE')
+@section('title', 'Chamado #'.$ticket->id)
 @section('content')
 @php use App\Enums\UserRole; use App\Enums\TicketStatus; $u = auth()->user(); @endphp
 

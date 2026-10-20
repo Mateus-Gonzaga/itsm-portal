@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Mapa de Clientes — FOURLINE Connect')
+@section('title', 'Mapa de Clientes')
 
 @push('head')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"

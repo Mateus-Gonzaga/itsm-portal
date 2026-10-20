@@ -1,13 +1,29 @@
 @extends('layouts.app')
-@section('title', $heading.' — FOURLINE')
+@section('title', $heading)
 @section('content')
 @php use App\Enums\UserRole; @endphp
 
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h1 class="h3 mb-0">{{ $heading }}</h1>
-    <a href="{{ route('tickets.create') }}" class="btn btn-primary btn-cta">
-        <i class="bi bi-plus-circle me-1"></i> Abrir chamado
-    </a>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        @if ($canFilterMine)
+            {{-- Equipe: alterna entre todos os chamados e só os atribuídos a quem está logado --}}
+            <div class="btn-group btn-group-sm" role="group" aria-label="Quais chamados mostrar">
+                <a href="{{ request()->fullUrlWithQuery(['meus' => 0, 'page' => 1]) }}"
+                   class="btn {{ $onlyMine ? 'btn-outline-secondary' : 'btn-success' }}">
+                    <i class="bi bi-people me-1"></i>Todos
+                </a>
+                <a href="{{ request()->fullUrlWithQuery(['meus' => 1, 'page' => 1]) }}"
+                   class="btn {{ $onlyMine ? 'btn-success' : 'btn-outline-secondary' }}">
+                    <i class="bi bi-person-check me-1"></i>Atribuídos a mim
+                    @if ($mineCount !== null)<span class="badge {{ $onlyMine ? 'bg-light text-success' : 'bg-success-subtle text-success-emphasis' }} ms-1">{{ $mineCount }}</span>@endif
+                </a>
+            </div>
+        @endif
+        <a href="{{ route('tickets.create') }}" class="btn btn-primary btn-cta">
+            <i class="bi bi-plus-circle me-1"></i> Abrir chamado
+        </a>
+    </div>
 </div>
 
 <div class="card">
@@ -18,6 +34,7 @@
                 <form method="GET" class="d-flex gap-2" style="max-width: 360px; flex: 1 1 250px">
                     @if ($currentStatus)<input type="hidden" name="status" value="{{ $currentStatus }}">@endif
                     @if ($perPage !== 10)<input type="hidden" name="per_page" value="{{ $perPage }}">@endif
+                    @if ($onlyMine)<input type="hidden" name="meus" value="1">@endif
                     <div class="input-group input-group-sm">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Buscar por título, entidade ou nº...">
@@ -65,7 +82,12 @@
                                 {{ $ticket->title }}
                                 @if ($ticket->isOverdue())<span class="badge bg-danger ms-1">atrasado</span>@endif
                             </td>
-                            <td>{{ $reqEntities[$ticket->requesterGlpiId] ?? $ticket->entity }}</td>
+                            @php
+                                // Só o último nível (ex.: "FL 08 - Guará 1"); o caminho completo fica no tooltip e no chamado.
+                                $entFull = (string) ($reqEntities[$ticket->requesterGlpiId] ?? $ticket->entity);
+                                $entShort = trim((string) \Illuminate\Support\Arr::last(preg_split('/\s*[>›]\s*/u', $entFull) ?: [$entFull]));
+                            @endphp
+                            <td class="text-nowrap" title="{{ html_entity_decode($entFull, ENT_QUOTES | ENT_HTML5, 'UTF-8') }}">{{ html_entity_decode($entShort ?: '—', ENT_QUOTES | ENT_HTML5, 'UTF-8') }}</td>
                             <td>{{ $ticket->technicianName ?? '—' }}</td>
                             <td><span class="badge bg-{{ $ticket->priority->color() }}-subtle text-{{ $ticket->priority->color() }}-emphasis">{{ $ticket->priority->label() }}</span></td>
                             <td><span class="badge bg-{{ $ticket->status->color() }}">{{ $ticket->status->label() }}</span></td>

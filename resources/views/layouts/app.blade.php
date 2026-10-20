@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FOURLINE">
     <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
-    <title>@yield('title', 'FOURLINE — Central de Chamados')</title>
+    <title>@yield('title', 'FOURLINE Connect')</title>
     <script>
         document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') || 'light');
         if (localStorage.getItem('sidebar') === 'collapsed') document.documentElement.classList.add('sidebar-collapsed');

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Abrir chamado — FOURLINE')
+@section('title', 'Abrir chamado')
 @section('content')
 <div class="row justify-content-center">
     <div class="col-lg-8">

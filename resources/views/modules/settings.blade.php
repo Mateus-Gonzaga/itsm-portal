@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Configurações — FOURLINE')
+@section('title', 'Configurações')
 @section('content')
 @php $u = auth()->user(); $glpiDriver = config('glpi.driver'); @endphp
 

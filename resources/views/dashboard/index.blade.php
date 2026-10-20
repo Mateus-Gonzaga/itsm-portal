@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Painel — FOURLINE')
+@section('title', 'Painel')
 
 @push('head')
 <style>

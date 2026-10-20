@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Agenda — FOURLINE Connect')
+@section('title', 'Agenda')
 
 @push('head')
 <style>

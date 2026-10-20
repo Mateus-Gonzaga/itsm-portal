@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Auditoria — FOURLINE Connect')
+@section('title', 'Auditoria')
 
 @section('content')
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">

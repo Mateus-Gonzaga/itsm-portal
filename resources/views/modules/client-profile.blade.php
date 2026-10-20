@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Perfil do Cliente — FOURLINE Connect')
+@section('title', 'Perfil do Cliente')
 
 @php
     $inf = $profile->infrastructure;

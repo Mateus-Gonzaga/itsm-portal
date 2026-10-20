@@ -530,6 +530,21 @@ class TicketController extends Controller
             $all = $all->reject(fn (TicketData $t) => $t->status === TicketStatus::Closed)->values();
         }
 
+        // Equipe: "Atribuídos a mim" (técnico do chamado = usuário logado). A escolha
+        // fica lembrada na sessão até ele voltar para "Todos".
+        $user = $request->user();
+        $canFilterMine = $user->role !== UserRole::Cliente;
+        if ($request->has('meus')) {
+            session(['tickets_meus' => $request->boolean('meus')]);
+        }
+        $onlyMine = $canFilterMine && (bool) session('tickets_meus', false);
+        $isMine = fn (TicketData $t) => ($user->glpi_id && $t->technicianGlpiId === (int) $user->glpi_id)
+            || ($t->technicianGlpiId === null && $t->technicianName !== null && $t->technicianName === $user->name);
+        $mineCount = $canFilterMine ? $all->filter($isMine)->count() : null;
+        if ($onlyMine) {
+            $all = $all->filter($isMine)->values();
+        }
+
         $reqEntities = $this->requesterEntityMap($dir);
 
         $q = trim((string) $request->string('q'));
@@ -588,8 +603,11 @@ class TicketController extends Controller
             'q' => $q,
             'perPage' => $perPage,
             'perPageOptions' => $perPageOptions,
-            'heading' => $heading,
+            'heading' => $onlyMine ? 'Atribuídos a mim' : $heading,
             'reqEntities' => $reqEntities,
+            'canFilterMine' => $canFilterMine,
+            'onlyMine' => $onlyMine,
+            'mineCount' => $mineCount,
         ]);
     }
 }

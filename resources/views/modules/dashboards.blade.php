@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboards — Monitoramento')
+@section('title', 'Dashboards')
 
 @php
     // Render de uma tabela de hosts (nome, disponibilidade, CPU/RAM/Disco).

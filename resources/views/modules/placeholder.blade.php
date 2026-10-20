@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', $title.' — FOURLINE')
+@section('title', $title)
 @section('content')
 <h1 class="h3 mb-4">{{ $title }}</h1>
 <div class="card">

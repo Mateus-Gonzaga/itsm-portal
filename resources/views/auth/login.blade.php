@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Entrar — FOURLINE')
+@section('title', 'Entrar')
 @section('content')
 <div class="card auth-card border-0" style="border-top: 4px solid var(--fl-green-light) !important">
     <div class="card-body p-4">

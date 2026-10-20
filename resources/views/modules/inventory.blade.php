@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Inventário — FOURLINE Connect')
+@section('title', 'Inventário')
 
 @push('head')
 <style>

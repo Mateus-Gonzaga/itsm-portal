@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Base de Conhecimento — FOURLINE Connect')
+@section('title', 'Base de Conhecimento')
 
 @push('head')
 <style>
