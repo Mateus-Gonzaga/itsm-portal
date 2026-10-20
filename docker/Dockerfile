@@ -15,6 +15,9 @@ RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
 # OPcache de produção (código pré-compilado em memória).
 COPY docker/opcache.ini /usr/local/etc/php/conf.d/zz-opcache.ini
 
+# PHP-FPM sob demanda (encerra processos ociosos — economiza RAM).
+COPY docker/php-fpm-pool.conf /usr/local/etc/php-fpm.d/zz-pool.conf
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html

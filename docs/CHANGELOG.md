@@ -6,6 +6,8 @@ Histórico cronológico (nunca apagar).
 - **Lista de chamados — coluna Cliente enxuta**: mostra só o último nível da entidade (ex.: "FL 08 - Guará 1"); o caminho completo fica no tooltip e no detalhe do chamado.
 - **"Atribuídos a mim"** (técnico/gestor): alternância Todos | Atribuídos a mim na lista de chamados, com contador; filtra pelo técnico do chamado (`technicianGlpiId`, com fallback pelo nome) e a escolha fica lembrada na sessão (`?meus=1/0`).
 - **Título da aba do navegador** = só o nome do módulo (sem "— FOURLINE Connect"); padrão "FOURLINE Connect".
+- Alternância "Todos | Atribuídos a mim" no padrão visual do botão "Abrir chamado" (tamanho normal, verde da marca).
+- **Menos RAM na VM compartilhada** (3 GB com Zabbix/MariaDB/Grafana): PHP-FPM `pm=ondemand` (máx. 6 processos, encerra ociosos em 10 s, recicla a cada 500 req — `docker/php-fpm-pool.conf`); OPcache 128→64 MB; PostgreSQL com `shared_buffers=48MB`, `max_connections=30`; Redis 256→64 MB; limites de memória por contêiner (`mem_limit`) e rotação de logs (10 MB × 3). Exige rebuild (`deploy.sh` já faz).
 
 ## 2026-10-16 (5) — Dashboards
 - **Ruído separado**: problemas cujo nome casa com `zabbix.noise_patterns` (`ZABBIX_NOISE`, padrão GoogleUpdater, edgeupdate, gupdate…) ficam ocultos por padrão, fora do KPI "Problemas ativos" (que mostra "+N de ruído ocultos"), da rosca de severidade e dos alertas da saúde por cliente.
