@@ -47,7 +47,7 @@ Títulos: **Rajdhani**. Texto: **Inter**. (Google Fonts via CDN.)
 - **Busca global:** botão na barra superior + Ctrl+K ou `/` (equipe); rota `GET /busca` (`SearchController`) lê das listas em cache do GLPI.
 
 ## Sidebar (menu por perfil)
-Fonte: `App\Enums\UserRole::menu()`. Itens: `{route, label, icon}`. Módulos futuros já presentes como placeholders: Inventário, Base de conhecimento, Dashboard, Monitoramento, Automações.
+Fonte: `App\Enums\UserRole::menu()`. Itens: `{route, label, icon, group?}`. Com `group`, o menu mostra títulos de seção (gestor: Atendimento, Gestão, Cadastros, Sistema; no menu recolhido viram linhas divisórias); o cliente fica sem seções. Módulos futuros já presentes como placeholders: Inventário, Base de conhecimento, Dashboard, Monitoramento, Automações.
 
 ## Como usar / estender
 - Novas telas: estender `layouts.app`, usar `.card`, escala de espaçamento e `.btn-primary.btn-cta` no botão principal.

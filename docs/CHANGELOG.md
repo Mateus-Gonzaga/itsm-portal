@@ -3,6 +3,7 @@
 Histórico cronológico (nunca apagar).
 
 ## 2026-10-20 (2) — Melhorias visuais
+- **Menu lateral em seções** (gestor): Atendimento (Painel, Chamados, Agenda), Gestão (Dashboards, Relatórios, Inventário), Cadastros (Clientes, Base de conhecimento, Técnicos) e Sistema (Auditoria, Configurações); campo `group` em `UserRole::menu()`. Logo e itens levemente compactados para tudo caber sem rolagem em ~800 px de altura; recolhido, as seções viram linhas divisórias.
 - **Cabeçalho padrão** (`components/page-header`) em todas as telas de módulo: ícone da marca, título, subtítulo e ações.
 - **SLA no Painel**: com menos de 5 chamados com prazo, o gráfico fica neutro (cinza) com o aviso "amostra pequena"; sem prazos, tela vazia orientando a definir o SLA. Com amostra suficiente, o % fica verde (≥90), amarelo (≥70) ou vermelho.
 - **Avisos flutuantes (toasts)** no canto inferior direito no lugar dos alertas de sessão; removidos os alertas duplicados do Inventário e do Perfil do cliente.

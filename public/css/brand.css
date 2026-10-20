@@ -71,6 +71,15 @@ h1,h2,h3,h4,h5,h6 { font-family:'Rajdhani','Inter',sans-serif; }
 .sidebar-nav .nav-link i { font-size:1.15rem; width:22px; text-align:center; color:rgba(168,207,69,.8); transition:color .12s ease; }
 .sidebar-nav .nav-link:hover i,
 .sidebar-nav .nav-link.active i { color:var(--fl-green-light, #A8CF45); }
+/* Seções do menu (Atendimento, Gestão, Cadastros, Sistema) */
+.sidebar-nav .nav-group { font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:rgba(255,255,255,.42);
+  padding:0 var(--sp-3) 4px; margin-top:10px; white-space:nowrap; user-select:none; }
+.sidebar-nav .nav-group.first { margin-top:0; }
+/* Menu com seções: itens e logo um pouco mais compactos para tudo caber numa tela de notebook (~800 px) */
+.sidebar-nav .nav-group ~ .nav-link { padding-top:6px; padding-bottom:6px; font-size:.88rem; }
+.sidebar-nav .nav-link .label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sidebar:has(.nav-group) .sidebar-brand { min-height:0; padding:var(--sp-1) var(--sp-1) var(--sp-4); }
+.sidebar:has(.nav-group) .sidebar-brand img.brand-full { height:62px; }
 .sidebar-foot { color:rgba(255,255,255,.5); font-size:.75rem; padding-top:var(--sp-4); margin-top:var(--sp-2); border-top:1px solid rgba(255,255,255,.08); }
 
 .content { margin-left:var(--sidebar-w); flex:1; min-width:0; display:flex; flex-direction:column; transition:margin-left .18s ease; }
@@ -212,6 +221,9 @@ a { color:var(--fl-green); } a:hover { color:var(--fl-green-dark); }
   html.sidebar-collapsed .sidebar-brand .brand-mini { display:flex; }
   html.sidebar-collapsed .sidebar-nav .nav-link { justify-content:center; padding-left:0; padding-right:0; }
   html.sidebar-collapsed .sidebar-nav .nav-link .label { display:none; }
+  /* Recolhido: o título da seção vira uma linha divisória */
+  html.sidebar-collapsed .sidebar-nav .nav-group { font-size:0; height:1px; padding:0; margin:var(--sp-2) var(--sp-3); background:rgba(255,255,255,.12); }
+  html.sidebar-collapsed .sidebar-nav .nav-group.first { display:none; }
   html.sidebar-collapsed .sidebar-user { justify-content:center; padding-left:0; padding-right:0; background:transparent; border-color:transparent; }
   html.sidebar-collapsed .sidebar-user .info,
   html.sidebar-collapsed .sidebar-user .more { display:none; }

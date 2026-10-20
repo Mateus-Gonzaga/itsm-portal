@@ -36,7 +36,12 @@
                 <span class="brand-mini">FL</span>
             </div>
             <nav class="sidebar-nav">
+                @php $grupoAtual = null; @endphp
                 @foreach ($u->role->menu() as $item)
+                    @if (($item['group'] ?? null) && $item['group'] !== $grupoAtual)
+                        @php $grupoAtual = $item['group']; @endphp
+                        <div class="nav-group {{ $loop->first ? 'first' : '' }}" role="presentation">{{ $grupoAtual }}</div>
+                    @endif
                     <a class="nav-link {{ request()->routeIs($item['route']) ? 'active' : '' }}" href="{{ route($item['route']) }}" data-label="{{ $item['label'] }}">
                         <i class="bi {{ $item['icon'] }}"></i> <span class="label">{{ $item['label'] }}</span>
                     </a>
