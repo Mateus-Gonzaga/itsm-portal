@@ -21,6 +21,10 @@ return [
         'titulo' => 'Novidades de outubro',
         'data' => '20/10/2026',
         'itens' => [
+            ['icone' => 'bi-search', 'perfis' => $equipe,
+                'texto' => 'Busca rápida: aperte Ctrl+K (ou /) e encontre chamado, cliente, equipamento ou tela de qualquer lugar.'],
+            ['icone' => 'bi-phone',
+                'texto' => 'No celular, as listas de chamados e do inventário aparecem em cartões, sem rolagem lateral.'],
             ['icone' => 'bi-person-check', 'perfis' => $equipe,
                 'texto' => 'Chamados: botão "Atribuídos a mim" mostra só os chamados em que você é o técnico.'],
             ['icone' => 'bi-building', 'perfis' => $equipe,
