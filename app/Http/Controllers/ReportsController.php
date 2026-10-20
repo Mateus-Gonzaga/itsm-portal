@@ -9,12 +9,12 @@ use App\Enums\TicketType;
 use App\Models\AssetValue;
 use App\Repositories\Glpi\GlpiInventoryRepositoryInterface;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
+use App\Support\ClientName;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -339,15 +339,15 @@ class ReportsController extends Controller
 
     // ------------------------------------------------------------------- apoio
 
-    /** "Drogacei › FL 01" → "Drogacei" (empresa); sem "›" é o próprio nome. */
+    /** Empresa do chamado (regra única em App\Support\ClientName, a mesma do Painel). */
     private function company(TicketData $t): string
     {
-        return trim(Str::before((string) $t->entity, '›')) ?: '—';
+        return ClientName::company($t->entity);
     }
 
     private function branch(TicketData $t): string
     {
-        return str_contains((string) $t->entity, '›') ? trim(Str::after((string) $t->entity, '›')) : '';
+        return ClientName::branch($t->entity);
     }
 
     private function slaLabel(TicketData $t): string

@@ -253,6 +253,14 @@ h1,h2,h3,h4 { letter-spacing:.2px; }
 .btn { transition:background-color .12s ease, border-color .12s ease, box-shadow .12s ease, transform .04s ease; }
 .btn:active { transform:translateY(1px); }
 
+/* Barras horizontais padrão (Painel, Relatórios, partials/bar-list) — mesmo visual em todas as telas */
+.bar-row { display:flex; align-items:center; gap:.75rem; margin-bottom:.6rem; }
+.bar-row .name { width:170px; flex:0 0 auto; font-size:.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bar-track { flex:1 1 auto; background:var(--bs-secondary-bg); border-radius:999px; height:12px; overflow:hidden; }
+.bar-fill { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#068A4F,#A8CF45); min-width:3px; }
+.bar-row .num { width:52px; text-align:right; font-weight:600; font-size:.85rem; }
+@media (max-width:575.98px) { .bar-row .name { width:110px; } }
+
 /* Cabeçalho de tabela mais premium */
 .table thead th { text-transform:uppercase; letter-spacing:.03em; font-size:.75rem; font-weight:700; color:var(--muted-c); }
 

@@ -8,6 +8,7 @@ use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\KanbanCard;
 use App\Repositories\Glpi\GlpiTicketRepositoryInterface;
+use App\Support\ClientName;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -96,7 +97,8 @@ class DashboardController extends Controller
         // Chamados por cliente (top 10, últimos 6 meses).
         $since = $months->first();
         $recent = $list->filter(fn (TicketData $t) => $t->createdAt->gte($since));
-        $byClient = $recent->groupBy(fn (TicketData $t) => $t->entity ?: '—')
+        // Mesmo agrupamento dos Relatórios: por empresa (não por filial/pasta).
+        $byClient = $recent->groupBy(fn (TicketData $t) => ClientName::company($t->entity))
             ->map->count()->sortDesc()->take(10);
 
         // Abertos × resolvidos por mês + tempo médio de solução (horas) por mês.
@@ -108,7 +110,8 @@ class DashboardController extends Controller
             $opened[] = $list->filter(fn (TicketData $t) => $t->createdAt->between($m, $end))->count();
             $solvedInMonth = $list->filter(fn (TicketData $t) => $t->solvedAt !== null && $t->solvedAt->between($m, $end));
             $solved[] = $solvedInMonth->count();
-            $avgHours[] = $solvedInMonth->isEmpty() ? 0
+            // Mês sem chamado resolvido = sem dado (não "0 h", que distorce a linha).
+            $avgHours[] = $solvedInMonth->isEmpty() ? null
                 : round($solvedInMonth->avg(fn (TicketData $t) => max(0, $t->createdAt->diffInMinutes($t->solvedAt)) / 60), 1);
         }
 
@@ -126,7 +129,7 @@ class DashboardController extends Controller
             'opened' => $opened,
             'solved' => $solved,
             'avgHours' => $avgHours,
-            'clients' => ['labels' => $byClient->keys()->values()->all(), 'data' => $byClient->values()->all()],
+            'clients' => $byClient->map(fn ($n, $nome) => ['nome' => (string) $nome, 'total' => $n])->values()->all(),
             'sla' => ['ok' => $slaOk, 'late' => $slaLate,
                 'pct' => $withSla->count() > 0 ? (int) round($slaOk / $withSla->count() * 100) : null],
             'avgAll' => $avgAll === null ? null : $this->humanHours($avgAll),

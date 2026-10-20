@@ -18,11 +18,6 @@
     .ring > div { width:96px; height:96px; border-radius:50%; background:var(--bs-body-bg); display:flex; flex-direction:column; align-items:center; justify-content:center; }
     .ring .pct { font-size:1.7rem; font-weight:700; font-family:'Rajdhani',sans-serif; }
 
-    .bar-row { display:flex; align-items:center; gap:.65rem; margin-bottom:.55rem; }
-    .bar-row .name { width:130px; flex:0 0 auto; font-size:.82rem; }
-    .bar-track { flex:1 1 auto; background:var(--bs-secondary-bg); border-radius:999px; height:12px; overflow:hidden; }
-    .bar-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#0a9d5a,#A8CF45); min-width:3px; }
-    .bar-row .num { width:34px; text-align:right; font-weight:600; font-size:.82rem; }
 
     .kb-mini { display:flex; gap:.6rem; }
     .kb-mini .col { flex:1; text-align:center; border:1px solid var(--bs-border-color); border-radius:12px; padding:.7rem .3rem; }
@@ -107,13 +102,12 @@
     </div>
     <div class="col-lg-7">
         <div class="card h-100">
-            <div class="card-header fw-semibold"><i class="bi bi-buildings me-1 text-success"></i>Chamados por cliente <span class="small text-secondary fw-normal">(top 10)</span></div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold"><i class="bi bi-buildings me-1 text-success"></i>Clientes com mais chamados</span>
+                @if ($role === UserRole::Gestor)<a href="{{ route('modules.reports', ['aba' => 'clientes', 'periodo' => '90d']) }}" class="small">ver todos</a>@endif
+            </div>
             <div class="card-body">
-                @if (empty($charts['clients']['labels']))
-                    <p class="text-secondary small mb-0">Sem chamados no período.</p>
-                @else
-                    <div style="height:{{ max(180, count($charts['clients']['labels']) * 30) }}px"><canvas id="chClients" aria-label="Chamados por cliente" role="img"></canvas></div>
-                @endif
+                @include('partials.bar-list', ['rows' => $charts['clients'], 'empty' => 'Sem chamados no período.'])
             </div>
         </div>
     </div>
@@ -125,50 +119,16 @@
     </div>
 </div>
 
+@include('partials.charts-js')
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 (function () {
-    if (!window.Chart) return;
+    if (!window.FLCharts) return;
     const data = @json($charts);
-    const css = getComputedStyle(document.documentElement);
-    const text = css.getPropertyValue('--muted-c').trim() || '#64748b';
-    const grid = css.getPropertyValue('--border-c').trim() || '#e6eaf0';
-    Chart.defaults.color = text;
-    Chart.defaults.font.family = 'Inter, sans-serif';
-    Chart.defaults.plugins.legend.labels.boxWidth = 12;
-    const GREEN = '#068A4F', LIME = '#A8CF45', RED = '#dc2626';
-    const axes = { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: grid }, ticks: { precision: 0 } } };
-
-    new Chart(document.getElementById('chMonthly'), {
-        type: 'bar',
-        data: { labels: data.months, datasets: [
-            { label: 'Abertos', data: data.opened, backgroundColor: LIME, borderRadius: 6 },
-            { label: 'Resolvidos', data: data.solved, backgroundColor: GREEN, borderRadius: 6 },
-        ] },
-        options: { maintainAspectRatio: false, scales: axes, plugins: { legend: { position: 'bottom' } } },
-    });
-
-    const sla = document.getElementById('chSla');
-    if (sla) new Chart(sla, {
-        type: 'doughnut',
-        data: { labels: ['No prazo', 'Fora do prazo'], datasets: [{ data: [data.sla.ok, data.sla.late], backgroundColor: [GREEN, RED], borderWidth: 0 }] },
-        options: { maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } } },
-    });
-
-    const cl = document.getElementById('chClients');
-    if (cl) new Chart(cl, {
-        type: 'bar',
-        data: { labels: data.clients.labels, datasets: [{ label: 'Chamados', data: data.clients.data, backgroundColor: GREEN, borderRadius: 5 }] },
-        options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } },
-            scales: { x: { beginAtZero: true, grid: { color: grid }, ticks: { precision: 0 } }, y: { grid: { display: false } } } },
-    });
-
-    new Chart(document.getElementById('chAvg'), {
-        type: 'line',
-        data: { labels: data.months, datasets: [{ label: 'Horas', data: data.avgHours, borderColor: GREEN, backgroundColor: 'rgba(6,138,79,.12)', fill: true, tension: .35, pointRadius: 4, pointBackgroundColor: GREEN }] },
-        options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: grid } } } },
-    });
+    const C = FLCharts.cores;
+    FLCharts.abertosResolvidos('chMonthly', data.months, data.opened, data.solved);
+    FLCharts.rosca('chSla', ['No prazo', 'Fora do prazo'], [data.sla.ok, data.sla.late], [C.resolvidos, C.perigo]);
+    FLCharts.linha('chAvg', data.months, data.avgHours, 'Tempo médio', ' h');
 })();
 </script>
 @endpush

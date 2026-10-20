@@ -7,11 +7,6 @@
     .stat-card { border:1px solid var(--bs-border-color); border-radius:14px; padding:.9rem 1.1rem; height:100%; background:var(--surface); }
     .stat-card .v { font-size:1.6rem; font-weight:700; font-family:'Rajdhani',sans-serif; line-height:1.05; }
     .stat-card .l { font-size:.78rem; color:var(--bs-secondary-color); }
-    .bar-row { display:flex; align-items:center; gap:.75rem; margin-bottom:.55rem; }
-    .bar-row .name { width:150px; flex:0 0 auto; font-size:.85rem; }
-    .bar-track { flex:1 1 auto; background:var(--bs-secondary-bg); border-radius:999px; height:12px; overflow:hidden; }
-    .bar-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#0a9d5a,#A8CF45); min-width:2px; display:block; }
-    .bar-row .num { width:50px; text-align:right; font-weight:600; font-size:.85rem; }
     .rep-tabs .nav-link { color:var(--bs-secondary-color); font-weight:500; border:none; border-bottom:2px solid transparent; padding:.6rem 1rem; }
     .rep-tabs .nav-link:hover { color:#067a45; border-bottom-color:rgba(6,122,69,.3); }
     .rep-tabs .nav-link.active { font-weight:600; color:#067a45; border-bottom-color:#067a45; background:transparent; }
@@ -182,8 +177,9 @@
     <div class="row g-3">
         <div class="col-lg-8">
             <div class="card h-100">
-                <div class="card-header bg-transparent d-flex justify-content-between">
-                    <span class="fw-semibold">Abertos × resolvidos</span><span class="small text-secondary">{{ $serie['unidade'] }}</span>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold"><i class="bi bi-graph-up me-1 text-success"></i>Abertos × resolvidos</span>
+                    <span class="small text-secondary">{{ $serie['unidade'] }}</span>
                 </div>
                 <div class="card-body">
                     @if (array_sum($serie['abertos']) + array_sum($serie['resolvidos']) === 0)
@@ -196,7 +192,7 @@
         </div>
         <div class="col-lg-4">
             <div class="card h-100">
-                <div class="card-header bg-transparent fw-semibold">Por situação</div>
+                <div class="card-header fw-semibold"><i class="bi bi-flag me-1 text-success"></i>Por situação</div>
                 <div class="card-body">
                     @forelse ($byStatus as $r)
                         <div class="bar-row">
@@ -228,43 +224,28 @@
         </div>
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">Clientes com mais chamados</span>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold"><i class="bi bi-buildings me-1 text-success"></i>Clientes com mais chamados</span>
                     <a href="{{ route('modules.reports', $q + ['aba' => 'clientes']) }}" class="small no-print">ver todos</a>
                 </div>
                 <div class="card-body">
-                    @forelse ($topClientes as $r)
-                        <div class="bar-row">
-                            <span class="name text-truncate" title="{{ $r['nome'] }}">{{ $r['nome'] }}</span>
-                            <span class="bar-track"><span class="bar-fill" style="width: {{ round($r['total'] / max(1, $topClientes->max('total')) * 100) }}%"></span></span>
-                            <span class="num">{{ $r['total'] }}</span>
-                        </div>
-                    @empty
-                        <p class="text-muted small mb-0">Sem chamados no período.</p>
-                    @endforelse
+                    @include('partials.bar-list', [
+                        'rows' => $topClientes->map(fn ($r) => ['nome' => $r['nome'], 'total' => $r['total']])->all(),
+                        'empty' => 'Sem chamados no período.',
+                        'link' => fn ($nome) => route('modules.reports', array_merge($q, ['cliente' => $nome, 'aba' => 'chamados'])),
+                    ])
                 </div>
             </div>
         </div>
     </div>
 
+    @include('partials.charts-js')
     @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
     (function () {
-        const el = document.getElementById('repSerie');
-        if (!el || !window.Chart) return;
+        if (!window.FLCharts) return;
         const s = @json($serie);
-        const css = getComputedStyle(document.documentElement);
-        Chart.defaults.color = css.getPropertyValue('--muted-c').trim() || '#64748b';
-        new Chart(el, {
-            type: 'bar',
-            data: { labels: s.labels, datasets: [
-                { label: 'Abertos', data: s.abertos, backgroundColor: '#A8CF45', borderRadius: 5 },
-                { label: 'Resolvidos', data: s.resolvidos, backgroundColor: '#068A4F', borderRadius: 5 },
-            ] },
-            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } },
-                scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: css.getPropertyValue('--border-c').trim() || '#e6eaf0' } } } },
-        });
+        FLCharts.abertosResolvidos('repSerie', s.labels, s.abertos, s.resolvidos);
     })();
     </script>
     @endpush
