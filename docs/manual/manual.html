@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Manual Técnico — FOURLINE Connect</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm;
+    @bottom-left { content: "FOURLINE Connect · Manual Técnico de Usabilidade e Funcionalidades · v1.0"; font: 7.5pt 'Segoe UI', Arial, sans-serif; color: #8a948f; }
+    @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 7.5pt 'Segoe UI', Arial, sans-serif; color: #8a948f; }
+  }
+  @page :first { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+
+  :root { --g:#068A4F; --gd:#045c34; --gx:#033d22; --lime:#A8CF45; --ink:#1b2420; --mut:#5b6b63; --line:#dbe5df; --soft:#f3f8f5; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: 'Segoe UI', 'Inter', Arial, sans-serif; color: var(--ink); font-size: 9.6pt; line-height: 1.48; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* ---------- Capa ---------- */
+  /* Capa clara: o logo oficial (texto "CONNECT" em preto) é feito para fundo branco. */
+  .cover { height: 297mm; width: 210mm; position: relative; overflow: hidden; background: #fff; color: var(--ink); page-break-after: always; }
+  .cover .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 9mm; background: linear-gradient(180deg, var(--lime) 0%, var(--g) 55%, var(--gx) 100%); }
+  .cover .glow { position: absolute; right: -40mm; top: -40mm; width: 150mm; height: 150mm; border-radius: 50%; background: radial-gradient(circle, rgba(168,207,69,.18) 0, rgba(168,207,69,0) 65%); }
+  .cover .inner { position: relative; padding: 26mm 22mm 0 30mm; height: 100%; display: flex; flex-direction: column; }
+  .cover .logo img { height: 34mm; width: auto; margin-left: -6mm; }
+  .cover .kicker { margin-top: 48mm; font-size: 10pt; letter-spacing: 3px; text-transform: uppercase; color: var(--g); font-weight: 700; }
+  .cover h1 { font-size: 34pt; line-height: 1.08; margin: 6mm 0 5mm; font-weight: 800; color: var(--gx); }
+  .cover .sub { font-size: 13pt; color: var(--mut); max-width: 150mm; }
+  .cover .rule { width: 34mm; height: 3px; background: var(--lime); margin: 9mm 0; border-radius: 2px; }
+  .cover .meta { margin: auto -22mm 0 -30mm; padding: 9mm 22mm 12mm 30mm; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6mm; background: linear-gradient(120deg, var(--gd) 0%, var(--gx) 100%); }
+  .cover .meta div { font-size: 8pt; color: rgba(255,255,255,.65); text-transform: uppercase; letter-spacing: 1px; }
+  .cover .meta b { display: block; font-size: 10.5pt; color: #fff; text-transform: none; letter-spacing: 0; margin-top: 1.5mm; font-weight: 600; }
+  .doc-logo { height: 15mm; width: auto; margin: -2mm 0 4mm -2.5mm; display: block; }
+
+  /* ---------- Conteúdo ---------- */
+  .page-break { page-break-before: always; }
+  .flow { margin-top: 9mm; }
+  h2.sec { font-size: 17pt; color: var(--gx); margin: 0 0 4mm; padding-bottom: 3mm; border-bottom: 2px solid var(--g); display: flex; align-items: baseline; gap: 4mm; break-after: avoid; }
+  h2.sec .n { font-size: 11pt; font-weight: 800; color: #fff; background: var(--g); border-radius: 6px; padding: 1mm 2.6mm; }
+  h3 { font-size: 11.5pt; color: var(--gd); margin: 6mm 0 2mm; break-after: avoid; }
+  h4 { font-size: 10pt; margin: 3mm 0 1mm; color: var(--ink); break-after: avoid; }
+  p { margin: 0 0 2.6mm; text-align: justify; }
+  .lead { font-size: 10.8pt; color: #33423b; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; } li { margin: .8mm 0; }
+  strong { color: #11201a; }
+  code, .k { font-family: Consolas, 'Cascadia Mono', monospace; font-size: 8.8pt; background: #eef4f0; border: 1px solid #dfe9e3; padding: 0 1.2mm; border-radius: 3px; color: #0f3a24; }
+  .ui { font-weight: 600; color: var(--gd); background: #e9f4ee; border-radius: 3px; padding: 0 1.2mm; white-space: nowrap; }
+
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9pt; }
+  th { background: var(--gx); color: #fff; text-align: left; font-weight: 600; padding: 2mm 2.5mm; font-size: 8.4pt; letter-spacing: .3px; }
+  td { border-bottom: 1px solid var(--line); padding: 1.5mm 2.4mm; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fbf9; }
+  tr { break-inside: avoid; }
+  td.c, th.c { text-align: center; }
+  .yes { color: var(--g); font-weight: 800; } .no { color: #b3bdb7; } .part { color: #b7791f; font-weight: 700; }
+
+  .box { border: 1px solid var(--line); border-left: 4px solid var(--g); background: var(--soft); border-radius: 6px; padding: 3mm 4mm; margin: 3mm 0 4mm; break-inside: avoid; }
+  .box.warn { border-left-color: #d69e2e; background: #fffaf0; }
+  .box.info { border-left-color: #2b6cb0; background: #f2f7fd; }
+  .box .t { font-weight: 700; font-size: 9pt; text-transform: uppercase; letter-spacing: .6px; color: var(--gd); margin-bottom: 1mm; }
+  .box.warn .t { color: #975a16; } .box.info .t { color: #2c5282; }
+  .box p:last-child, .box ul:last-child { margin-bottom: 0; }
+
+  .steps { counter-reset: s; list-style: none; padding: 0; }
+  .steps > li { counter-increment: s; position: relative; padding-left: 9mm; margin: 2mm 0; }
+  .steps > li::before { content: counter(s); position: absolute; left: 0; top: .2mm; width: 6mm; height: 6mm; border-radius: 50%; background: var(--g); color: #fff; font-weight: 700; font-size: 8.5pt; display: flex; align-items: center; justify-content: center; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; margin: 3mm 0 4mm; }
+  .card { border: 1px solid var(--line); border-radius: 7px; padding: 3mm; break-inside: avoid; background: #fff; }
+  .card .h { font-weight: 700; color: var(--gx); font-size: 9.6pt; margin-bottom: 1mm; }
+  .card p { font-size: 8.8pt; color: var(--mut); margin: 0; text-align: left; }
+
+  .toc { columns: 2; column-gap: 10mm; font-size: 10pt; padding: 0; list-style: none; }
+  .toc li { break-inside: avoid; padding: 1.4mm 0; border-bottom: 1px dotted #c9d6ce; display: flex; gap: 3mm; }
+  .toc .n { color: var(--g); font-weight: 800; min-width: 7mm; }
+
+  .figure { border: 1px solid var(--line); border-radius: 8px; padding: 3mm; margin: 3mm 0 4mm; background: #fff; break-inside: avoid; }
+  .figure .cap { font-size: 8pt; color: var(--mut); text-align: center; margin-top: 1.5mm; }
+  .badge { display: inline-block; font-size: 7.8pt; font-weight: 700; padding: .3mm 1.8mm; border-radius: 3px; color: #fff; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .doc-ctl td:first-child { width: 42mm; font-weight: 600; color: var(--gd); }
+</style>
+</head>
+<body>
+
+<!-- ======================= CAPA ======================= -->
+<section class="cover">
+  <div class="stripe"></div><div class="glow"></div>
+  <div class="inner">
+    <div class="logo"><img src="logo-fourline.png" alt="FOURLINE Connect"></div>
+    <div class="kicker">Manual Técnico</div>
+    <h1>Usabilidade e<br>Funcionalidades do Portal</h1>
+    <div class="sub">Guia de referência da Central de Chamados FOURLINE Connect — operação diária, módulos, perfis de acesso, integrações e boas práticas de atendimento.</div>
+    <div class="rule"></div>
+    <div class="meta">
+      <div>Versão<b>1.0</b></div>
+      <div>Data<b>Outubro de 2026</b></div>
+      <div>Público<b>Equipe técnica e gestão</b></div>
+      <div>Classificação<b>Uso interno</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= CONTROLE / SUMÁRIO ======================= -->
+<section>
+  <img class="doc-logo" src="logo-fourline.png" alt="FOURLINE Connect">
+  <h2 class="sec">Controle do documento</h2>
+  <table class="doc-ctl">
+    <tr><td>Título</td><td>Manual Técnico de Usabilidade e Funcionalidades — FOURLINE Connect</td></tr>
+    <tr><td>Versão / data</td><td>1.0 — 20/10/2026</td></tr>
+    <tr><td>Elaboração</td><td>Mateus Gonzaga — Desenvolvimento e Infraestrutura</td></tr>
+    <tr><td>Aprovação</td><td>Halley Santos — Gestão FOURLINE</td></tr>
+    <tr><td>Público-alvo</td><td>Novos técnicos (integração) e gestão (visão executiva e operacional)</td></tr>
+    <tr><td>Endereço do portal</td><td><code>http://suporte.fourline.com.br:8083</code></td></tr>
+    <tr><td>Classificação</td><td>Uso interno — não distribuir a clientes</td></tr>
+  </table>
+
+  <h3>Como usar este manual</h3>
+  <p>As seções 1 a 4 explicam <strong>o que é o portal, como ele se conecta ao GLPI e ao Zabbix e quem pode fazer o quê</strong> — leitura obrigatória na integração de um novo técnico. As seções 5 a 15 descrevem <strong>cada módulo</strong>, na ordem do menu lateral. As seções 16 a 18 reúnem <strong>procedimentos padrão de atendimento, operação do sistema e glossário</strong>. Os nomes de botões e telas aparecem destacados assim: <span class="ui">Abrir chamado</span>.</p>
+
+  <h3>Sumário</h3>
+  <ul class="toc">
+    <li><span class="n">1</span>Visão geral</li>
+    <li><span class="n">2</span>Arquitetura e integrações</li>
+    <li><span class="n">3</span>Acesso e perfis</li>
+    <li><span class="n">4</span>Navegação e interface</li>
+    <li><span class="n">5</span>Painel</li>
+    <li><span class="n">6</span>Chamados</li>
+    <li><span class="n">7</span>Agenda e quadros da equipe</li>
+    <li><span class="n">8</span>Inventário de ativos</li>
+    <li><span class="n">9</span>Dashboards (monitoramento)</li>
+    <li><span class="n">10</span>Relatórios</li>
+    <li><span class="n">11</span>Clientes e perfil do cliente</li>
+    <li><span class="n">12</span>Base de conhecimento</li>
+    <li><span class="n">13</span>Técnicos</li>
+    <li><span class="n">14</span>Auditoria</li>
+    <li><span class="n">15</span>Configurações</li>
+    <li><span class="n">16</span>Procedimento padrão de atendimento</li>
+    <li><span class="n">17</span>Operação, monitoramento e segurança</li>
+    <li><span class="n">18</span>Glossário e dúvidas frequentes</li>
+  </ul>
+
+  <div class="box" style="margin-top:6mm"><div class="t">Suporte ao sistema</div>
+    <p>Dúvidas, sugestões ou problemas no portal: registre um chamado interno na categoria de sistemas ou fale com o responsável pelo desenvolvimento (Mateus Gonzaga). Novas funcionalidades são registradas no histórico de versões do projeto e incorporadas às próximas revisões deste manual.</p>
+  </div>
+</section>
+
+<!-- ======================= 1 ======================= -->
+<section class="page-break">
+  <h2 class="sec"><span class="n">1</span>Visão geral</h2>
+  <p class="lead">O <strong>FOURLINE Connect</strong> é a central de chamados e de gestão de clientes da FOURLINE. Ele reúne, numa interface única e simples, o atendimento (chamados), a agenda da equipe, o inventário de equipamentos dos clientes, o monitoramento de servidores e os indicadores de gestão.</p>
+  <p>O portal <strong>não substitui o GLPI</strong>: ele é a camada de trabalho sobre ele. Chamados, usuários, entidades e ativos continuam gravados no GLPI, que segue sendo a fonte oficial dos dados. O portal acrescenta usabilidade, automações, relatórios e recursos que o GLPI não oferece de forma prática (agenda visual, quadro Kanban, perfil do cliente, base de conhecimento por cliente, painéis de monitoramento).</p>
+
+  <h3>Objetivos</h3>
+  <div class="cards">
+    <div class="card"><div class="h">Atendimento ágil</div><p>Abertura, distribuição e acompanhamento de chamados em poucos cliques, inclusive em nome do cliente.</p></div>
+    <div class="card"><div class="h">Visão do cliente</div><p>Tudo sobre cada cliente num lugar: contatos, links, contratos, equipamentos e histórico.</p></div>
+    <div class="card"><div class="h">Gestão por indicadores</div><p>Tempo de solução, SLA, volume por cliente e por técnico, exportáveis e prontos para apresentar.</p></div>
+    <div class="card"><div class="h">Prevenção</div><p>Monitoramento dos servidores e caixas dos clientes, com alerta antes que o problema vire chamado.</p></div>
+    <div class="card"><div class="h">Transparência</div><p>O cliente acompanha os próprios chamados e recebe e-mails a cada etapa.</p></div>
+    <div class="card"><div class="h">Rastreabilidade</div><p>Ações críticas registradas em auditoria: quem fez, o quê e quando.</p></div>
+  </div>
+
+  <h3>Módulos</h3>
+  <table>
+    <tr><th style="width:38mm">Módulo</th><th>Finalidade</th></tr>
+    <tr><td><strong>Painel</strong></td><td>Resumo do atendimento: indicadores, gráficos dos últimos 6 meses, chamados recentes e próximos prazos.</td></tr>
+    <tr><td><strong>Chamados</strong></td><td>Lista, abertura, atendimento, anexos, prazos (SLA), mudança de situação e vínculo com equipamentos.</td></tr>
+    <tr><td><strong>Agenda</strong></td><td>Calendário de atendimentos e tarefas da equipe, prazos de SLA e quadros Kanban.</td></tr>
+    <tr><td><strong>Inventário</strong></td><td>Equipamentos dos clientes (computadores, impressoras, nobreaks, DVRs…), com histórico de defeitos.</td></tr>
+    <tr><td><strong>Dashboards</strong></td><td>Monitoramento em tempo real (Zabbix): disponibilidade, uso de recursos e problemas por cliente.</td></tr>
+    <tr><td><strong>Relatórios</strong></td><td>Indicadores por período, cliente, técnico e categoria; exportação em Excel e relatório do cliente em PDF.</td></tr>
+    <tr><td><strong>Clientes</strong></td><td>Cadastro de entidades (empresas e filiais), usuários e perfil completo de cada cliente.</td></tr>
+    <tr><td><strong>Base de conhecimento</strong></td><td>Fichas e documentos por cliente: contratos, acessos, infraestrutura, modelos.</td></tr>
+    <tr><td><strong>Técnicos</strong></td><td>Equipe, carga de trabalho e cadastro de novos técnicos.</td></tr>
+    <tr><td><strong>Auditoria</strong></td><td>Histórico das ações administrativas realizadas no portal.</td></tr>
+  </table>
+</section>
+
+<!-- ======================= 2 ======================= -->
+<section class="flow">
+  <h2 class="sec"><span class="n">2</span>Arquitetura e integrações</h2>
+  <p>O portal é uma aplicação web (Laravel 12 / PHP 8.4) executada em contêineres Docker na VM de monitoramento da FOURLINE. Ele conversa com os demais sistemas exclusivamente por API, e os dados de atendimento permanecem no GLPI.</p>
+
+  <div class="figure">
+    <svg viewBox="0 0 720 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="12">
+      <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5b6b63"/></marker></defs>
+      <rect x="10" y="110" width="130" height="80" rx="10" fill="#f3f8f5" stroke="#068A4F"/>
+      <text x="75" y="142" text-anchor="middle" font-weight="700" fill="#033d22">Usuários</text>
+      <text x="75" y="160" text-anchor="middle" fill="#5b6b63" font-size="10.5">Equipe · Clientes</text>
+      <text x="75" y="176" text-anchor="middle" fill="#5b6b63" font-size="10.5">navegador / celular</text>
+      <rect x="230" y="70" width="230" height="160" rx="12" fill="#033d22"/>
+      <text x="345" y="100" text-anchor="middle" font-weight="800" fill="#fff" font-size="14">FOURLINE Connect</text>
+      <text x="345" y="118" text-anchor="middle" fill="#A8CF45" font-size="10.5">Portal (Laravel · Docker · :8083)</text>
+      <rect x="250" y="132" width="90" height="34" rx="6" fill="#045c34"/><text x="295" y="153" text-anchor="middle" fill="#fff" font-size="10.5">PostgreSQL</text>
+      <rect x="350" y="132" width="90" height="34" rx="6" fill="#045c34"/><text x="395" y="153" text-anchor="middle" fill="#fff" font-size="10.5">Redis (cache)</text>
+      <rect x="250" y="176" width="190" height="34" rx="6" fill="#045c34"/><text x="345" y="197" text-anchor="middle" fill="#fff" font-size="10.5">Agendador (rotinas automáticas)</text>
+      <rect x="560" y="20" width="150" height="62" rx="10" fill="#fff" stroke="#068A4F"/>
+      <text x="635" y="45" text-anchor="middle" font-weight="700" fill="#033d22">GLPI</text>
+      <text x="635" y="63" text-anchor="middle" fill="#5b6b63" font-size="10.5">chamados · ativos · usuários</text>
+      <rect x="560" y="102" width="150" height="62" rx="10" fill="#fff" stroke="#068A4F"/>
+      <text x="635" y="127" text-anchor="middle" font-weight="700" fill="#033d22">Zabbix</text>
+      <text x="635" y="145" text-anchor="middle" fill="#5b6b63" font-size="10.5">monitoramento · alertas</text>
+      <rect x="560" y="184" width="150" height="46" rx="10" fill="#fff" stroke="#068A4F"/>
+      <text x="635" y="212" text-anchor="middle" font-weight="700" fill="#033d22">E-mail (SMTP)</text>
+      <rect x="560" y="246" width="150" height="46" rx="10" fill="#fff" stroke="#9fb3a8" stroke-dasharray="4 3"/>
+      <text x="635" y="274" text-anchor="middle" fill="#5b6b63">Google Agenda</text>
+      <line x1="140" y1="150" x2="228" y2="150" stroke="#5b6b63" stroke-width="1.6" marker-end="url(#a)"/>
+      <line x1="460" y1="110" x2="558" y2="55" stroke="#5b6b63" stroke-width="1.6" marker-end="url(#a)"/>
+      <line x1="460" y1="140" x2="558" y2="133" stroke="#5b6b63" stroke-width="1.6" marker-end="url(#a)"/>
+      <line x1="460" y1="180" x2="558" y2="207" stroke="#5b6b63" stroke-width="1.6" marker-end="url(#a)"/>
+      <line x1="460" y1="210" x2="558" y2="268" stroke="#9fb3a8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#a)"/>
+      <text x="505" y="74" fill="#5b6b63" font-size="9.5">API REST</text>
+      <text x="500" y="128" fill="#5b6b63" font-size="9.5">API</text>
+    </svg>
+    <div class="cap">Figura 1 — Visão de arquitetura. Linha tracejada: integração opcional (desligada por padrão).</div>
+  </div>
+
+  <table>
+    <tr><th style="width:34mm">Sistema</th><th>Papel na solução</th></tr>
+    <tr><td><strong>GLPI</strong></td><td><strong>Fonte oficial dos dados.</strong> Chamados, acompanhamentos, anexos, usuários, entidades (clientes e filiais) e ativos são lidos e gravados no GLPI via API. O login no portal também é validado pelo GLPI. As notificações de resposta, solução e fechamento ao cliente são enviadas pelo próprio GLPI.</td></tr>
+    <tr><td><strong>Zabbix</strong></td><td>Monitoramento dos servidores e caixas dos clientes (aba Dashboards) e do próprio portal e do GLPI, com alertas por e-mail.</td></tr>
+    <tr><td><strong>PostgreSQL</strong></td><td>Dados próprios do portal: perfil do cliente, base de conhecimento, agenda/Kanban, valores e etiquetas de ativos, auditoria e sessões.</td></tr>
+    <tr><td><strong>Redis</strong></td><td>Cache de leituras do GLPI e do Zabbix — torna as telas rápidas sem sobrecarregar os servidores.</td></tr>
+    <tr><td><strong>SMTP</strong></td><td>E-mails do portal: confirmação de abertura de chamado e avisos internos de erro.</td></tr>
+  </table>
+
+  <div class="box info"><div class="t">Atualização dos dados</div>
+    <p>Para ser rápido, o portal guarda as leituras por pouco tempo (cerca de 1 minuto para chamados e agenda, 2 minutos para inventário). <strong>Tudo o que é alterado pelo portal aparece na hora</strong>; alterações feitas diretamente no GLPI aparecem no portal em até 1–2 minutos.</p>
+  </div>
+</section>
+
+<!-- ======================= 3 ======================= -->
+<section class="flow">
+  <h2 class="sec"><span class="n">3</span>Acesso e perfis</h2>
+  <h3>Login</h3>
+  <ol class="steps">
+    <li>Acesse <code>http://suporte.fourline.com.br:8083</code>.</li>
+    <li>Informe o <strong>usuário e a senha FOURLINE</strong> — são os mesmos do GLPI.</li>
+    <li>Marque <span class="ui">Lembrar de mim</span> apenas em computador de uso pessoal.</li>
+  </ol>
+  <p>O perfil do usuário no portal é definido automaticamente pelo perfil que ele tem no GLPI. Por segurança, são permitidas até <strong>5 tentativas de login por minuto</strong>; a sessão expira após <strong>2 horas sem uso</strong>.</p>
+
+  <h3>Perfis de acesso</h3>
+  <div class="cards">
+    <div class="card"><div class="h">Cliente</div><p>Perfil <em>Self-Service</em> do GLPI. Abre e acompanha os próprios chamados e consulta o inventário da sua unidade.</p></div>
+    <div class="card"><div class="h">Equipe técnica</div><p>Perfil <em>Técnico FL</em>. Por decisão da gestão, atua com <strong>acesso completo de gestão</strong> no portal.</p></div>
+    <div class="card"><div class="h">Gestor</div><p>Perfis <em>Gestor</em> / <em>Fourline</em>. Acesso a todos os módulos, cadastros, relatórios e auditoria.</p></div>
+  </div>
+
+  <h3>Matriz de permissões</h3>
+  <table>
+    <tr><th>Funcionalidade</th><th class="c">Cliente</th><th class="c">Equipe / Gestor</th></tr>
+    <tr><td>Abrir chamado (próprio)</td><td class="c yes">●</td><td class="c yes">●</td></tr>
+    <tr><td>Abrir chamado em nome de um cliente e já atribuir técnico</td><td class="c no">—</td><td class="c yes">●</td></tr>
+    <tr><td>Ver chamados</td><td class="c part">Só os seus</td><td class="c yes">Todos</td></tr>
+    <tr><td>Comentar e anexar arquivos</td><td class="c yes">●</td><td class="c yes">●</td></tr>
+    <tr><td>Aprovar solução / reabrir chamado</td><td class="c yes">●</td><td class="c no">—</td></tr>
+    <tr><td>Atribuir técnico, mudar situação, prazo (SLA), trocar cliente, excluir</td><td class="c no">—</td><td class="c yes">●</td></tr>
+    <tr><td>Inventário</td><td class="c part">Só a sua unidade (consulta)</td><td class="c yes">Todos + edição</td></tr>
+    <tr><td>Valores financeiros dos ativos</td><td class="c no">—</td><td class="c yes">●</td></tr>
+    <tr><td>Agenda e quadros Kanban</td><td class="c no">—</td><td class="c yes">●</td></tr>
+    <tr><td>Dashboards, Relatórios, Clientes, Base de conhecimento, Técnicos, Auditoria</td><td class="c no">—</td><td class="c yes">●</td></tr>
+  </table>
+
+  <div class="box"><div class="t">Isolamento entre clientes</div>
+    <p>Um cliente <strong>nunca</strong> enxerga dados de outro: os chamados são lidos com a permissão do próprio usuário no GLPI e o inventário é filtrado pela entidade (filial) dele. Se o usuário estiver cadastrado na entidade errada, o portal não exibe nada em vez de exibir dados indevidos.</p>
+  </div>
+</section>
+
+<!-- ======================= 4 ======================= -->
+<section class="flow">
+  <h2 class="sec"><span class="n">4</span>Navegação e interface</h2>
+  <div class="two">
+    <div>
+      <h4>Menu lateral</h4>
+      <p>Mostra apenas os módulos do seu perfil. O botão <span class="ui">☰</span> no topo recolhe o menu para ganhar espaço (os ícones continuam visíveis, com o nome ao passar o mouse).</p>
+      <h4>Cartão do usuário</h4>
+      <p>No rodapé do menu: nome, perfil e indicador de conexão. Ao clicar, abre o menu com <span class="ui">Configurações</span>, <span class="ui">Alternar tema claro/escuro</span>, <span class="ui">Recolher / expandir menu</span> e <span class="ui">Sair</span>.</p>
+      <h4>Notificações (sino)</h4>
+      <p>Atualiza a cada minuto. A equipe é avisada de <strong>novos chamados</strong>; o cliente, de <strong>respostas e mudanças</strong> nos seus chamados. <span class="ui">Marcar como lidas</span> zera o contador.</p>
+    </div>
+    <div>
+      <h4>Tema claro e escuro</h4>
+      <p>Pelo botão de meia-lua no topo ou no menu do usuário. A preferência fica salva no navegador.</p>
+      <h4>Aplicativo no celular</h4>
+      <p>O portal pode ser instalado como aplicativo (ícone na tela inicial, atalhos <em>Abrir chamado</em> e <em>Meus chamados</em>). No iPhone: Safari › Compartilhar › <em>Adicionar à Tela de Início</em>. No Android, a instalação completa fica disponível após a ativação do HTTPS.</p>
+      <h4>Padrões visuais</h4>
+      <ul>
+        <li><strong>Verde cheio</strong>: ação principal (salvar, abrir, aplicar).</li>
+        <li><strong>Verde contornado</strong>: ação secundária (exportar, editar).</li>
+        <li><strong>Cinza</strong>: ação neutra (cancelar, abrir, mover).</li>
+        <li><strong>Vermelho</strong>: ação destrutiva (excluir) — sempre pede confirmação.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="box info"><div class="t">Dica</div><p>A aba do navegador mostra sempre o nome do módulo aberto (ex.: <em>Agenda</em>, <em>Chamado #170</em>), facilitando o trabalho com várias abas.</p></div>
+
+  <!-- 5 -->
+  <h2 class="sec" style="margin-top:8mm"><span class="n">5</span>Painel</h2>
+  <p>Primeira tela após o login. O conteúdo varia conforme o perfil:</p>
+  <ul>
+    <li><strong>Indicadores</strong>: total de chamados, em aberto, atrasados (SLA) e resolvidos.</li>
+    <li><strong>Gráficos (equipe)</strong>: abertos × resolvidos por mês, SLA cumprido, clientes com mais chamados e tempo médio de solução — sempre dos últimos 6 meses.</li>
+    <li><strong>Chamados recentes</strong>, <strong>próximos prazos</strong>, distribuição por situação e prioridade e resumo do quadro da equipe.</li>
+  </ul>
+  <p>Os gráficos seguem o mesmo padrão visual dos Relatórios: <span class="badge" style="background:#A8CF45;color:#1b2420">Abertos</span> em verde-limão e <span class="badge" style="background:#068A4F">Resolvidos</span> em verde FOURLINE.</p>
+</section>
+
+<!-- ======================= 6 ======================= -->
+<section class="page-break">
+  <h2 class="sec"><span class="n">6</span>Chamados</h2>
+  <h3>6.1 Lista de chamados</h3>
+  <ul>
+    <li><strong>Situação</strong>: <span class="ui">Ativos</span> (padrão — oculta os fechados), <span class="ui">Todos</span> ou uma situação específica.</li>
+    <li><strong>Busca</strong> por título, número ou cliente — sem diferenciar acentos (ex.: <em>formula</em> encontra <em>Fórmula</em>).</li>
+    <li><span class="ui">Todos | Atribuídos a mim</span>: mostra só os chamados em que você é o técnico responsável, com contador. A escolha fica lembrada até você voltar para <em>Todos</em>.</li>
+    <li>Coluna <strong>Cliente</strong> exibe a unidade (ex.: <em>FL 08 - Guará 1</em>); o caminho completo aparece ao passar o mouse e dentro do chamado.</li>
+    <li>Quantidade por página: 10, 25, 50 ou 100.</li>
+  </ul>
+
+  <h3>6.2 Abrir chamado</h3>
+  <table>
+    <tr><th style="width:42mm">Campo</th><th>Orientação</th></tr>
+    <tr><td>Título</td><td>Resumo objetivo do problema (ex.: <em>Impressora fiscal não imprime – caixa 02</em>).</td></tr>
+    <tr><td>Tipo</td><td><strong>Incidente</strong> (algo parou ou está com defeito) ou <strong>Requisição</strong> (pedido de serviço, acesso, instalação).</td></tr>
+    <tr><td>Categoria / Prioridade</td><td>Categoria do GLPI e prioridade: Baixa, Média, Alta ou Urgente.</td></tr>
+    <tr><td>Solicitante (equipe)</td><td>Cliente em nome de quem o chamado é aberto — usado para demandas recebidas por telefone ou WhatsApp. Vazio = você.</td></tr>
+    <tr><td>Técnico responsável</td><td>Opcional: já direciona o chamado a um técnico.</td></tr>
+    <tr><td>E-mail para notificações</td><td>Recebe a confirmação, as respostas e a conclusão. <strong>Ao abrir em nome do cliente, informe o e-mail dele.</strong></td></tr>
+    <tr><td>Prazo (SLA)</td><td>Data-limite de atendimento; aparece na Agenda e alimenta os indicadores de SLA.</td></tr>
+    <tr><td>Descrição / Anexos</td><td>Detalhes e evidências: imagens ou PDF, até 8 MB cada, no máximo 5 arquivos.</td></tr>
+  </table>
+  <div class="box"><div class="t">Atalhos que preenchem o formulário</div>
+    <ul>
+      <li><strong>Pelo equipamento</strong> (Inventário › detalhe › <span class="ui">Abrir chamado para este equipamento</span>): o chamado fica vinculado ao ativo e entra no histórico de defeitos dele.</li>
+      <li><strong>Pelo alerta</strong> (Dashboards › problema › <span class="ui">Chamado</span>): título e descrição chegam preenchidos com host, problema, severidade e horário.</li>
+    </ul>
+  </div>
+
+  <h3>6.3 Atendimento (tela do chamado)</h3>
+  <div class="two">
+    <div>
+      <h4>Painel Atendimento</h4>
+      <ul>
+        <li><span class="ui">Assumir chamado</span> ou <span class="ui">Atribuir a</span> outro técnico.</li>
+        <li><span class="ui">Cliente (solicitante)</span>: troca o cliente e move o chamado para a entidade dele.</li>
+        <li><span class="ui">Mudar status</span> com observação (registrada no acompanhamento).</li>
+        <li><span class="ui">Salvar prazo</span> (SLA) e <span class="ui">Excluir chamado</span> (vai para a lixeira do GLPI — reversível).</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Acompanhamento e detalhes</h4>
+      <ul>
+        <li>Linha do tempo de comentários, com autor e horário.</li>
+        <li>Anexos: imagens e PDF abrem na tela; outros tipos são baixados.</li>
+        <li>Detalhes: solicitante, cliente, técnico, categoria, prioridade, abertura, prazo e <strong>equipamento vinculado</strong>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>6.4 Ciclo de vida</h3>
+  <div class="figure">
+    <svg viewBox="0 0 720 110" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="12">
+      <defs><marker id="b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5b6b63"/></marker></defs>
+      <g font-weight="700" text-anchor="middle">
+        <rect x="5" y="35" width="96" height="38" rx="19" fill="#6c757d"/><text x="53" y="59" fill="#fff">Novo</text>
+        <rect x="125" y="35" width="96" height="38" rx="19" fill="#0dcaf0"/><text x="173" y="59" fill="#063a45">Atribuído</text>
+        <rect x="245" y="35" width="110" height="38" rx="19" fill="#068A4F"/><text x="300" y="59" fill="#fff">Em andamento</text>
+        <rect x="379" y="35" width="96" height="38" rx="19" fill="#ffc107"/><text x="427" y="59" fill="#3d2e00">Pendente</text>
+        <rect x="499" y="35" width="96" height="38" rx="19" fill="#198754"/><text x="547" y="59" fill="#fff">Resolvido</text>
+        <rect x="619" y="35" width="96" height="38" rx="19" fill="#212529"/><text x="667" y="59" fill="#fff">Fechado</text>
+      </g>
+      <g stroke="#5b6b63" stroke-width="1.6" marker-end="url(#b)">
+        <line x1="101" y1="54" x2="123" y2="54"/><line x1="221" y1="54" x2="243" y2="54"/><line x1="355" y1="54" x2="377" y2="54"/><line x1="475" y1="54" x2="497" y2="54"/><line x1="595" y1="54" x2="617" y2="54"/>
+      </g>
+      <path d="M547 75 C 547 102, 300 102, 300 76" fill="none" stroke="#b7791f" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#b)"/>
+      <text x="425" y="104" text-anchor="middle" fill="#975a16" font-size="10">cliente reabre (não aprovado)</text>
+      <text x="427" y="26" text-anchor="middle" fill="#5b6b63" font-size="10">aguardando cliente/terceiro</text>
+    </svg>
+    <div class="cap">Figura 2 — Situações do chamado. Ao ser resolvido, o cliente pode aprovar (fecha) ou reabrir.</div>
+  </div>
+
+  <h3>6.5 Comunicação com o cliente por e-mail</h3>
+  <table>
+    <tr><th style="width:40mm">Momento</th><th>Quem envia</th><th>Destino</th></tr>
+    <tr><td>Abertura</td><td>Portal (identidade FOURLINE, com link do chamado)</td><td>E-mail informado no chamado + alerta à equipe</td></tr>
+    <tr><td>Resposta, solução, fechamento</td><td>GLPI (assunto com prefixo [FOURLINE])</td><td>E-mail informado no chamado</td></tr>
+  </table>
+</section>
+
+<!-- ======================= 7 ======================= -->
+<section class="flow">
+  <h2 class="sec"><span class="n">7</span>Agenda e quadros da equipe</h2>
+  <p>Calendário compartilhado da equipe, com três tipos de evento:</p>
+  <table>
+    <tr><th style="width:40mm">Evento</th><th>Descrição</th></tr>
+    <tr><td><strong>Atendimento</strong></td><td>Visita/tarefa ligada a um chamado (gravada como tarefa no GLPI). Criada em <span class="ui">Novo agendamento</span>, com busca do chamado por número, cliente ou título.</td></tr>
+    <tr><td><strong>Tarefa da equipe</strong></td><td>Compromisso livre (reunião, rotina, preventiva). Pode <span class="ui">Repetir em vários dias</span>; ao editar uma tarefa repetida, é possível aplicar a toda a série.</td></tr>
+    <tr><td><strong>Prazo (SLA)</strong></td><td>Data-limite dos chamados abertos — evento fixo, apenas informativo.</td></tr>
+  </table>
+  <ul>
+    <li><strong>Remarcar</strong>: arraste o evento para outro dia ou horário.</li>
+    <li><strong>Concluir</strong>: marque a tarefa como concluída na janela do evento.</li>
+    <li><strong>Filtrar por técnico</strong> para ver a agenda individual.</li>
+    <li>Chamados resolvidos ou fechados saem da agenda automaticamente.</li>
+  </ul>
+  <h3>Quadros da equipe (Kanban)</h3>
+  <p>Logo abaixo do calendário. Cartões de trabalho interno organizados em colunas, movidos com arrastar e soltar. Use para projetos, implantações e pendências que não são chamados de cliente.</p>
+  <div class="box info"><div class="t">Integração com o Google Agenda</div><p>O portal possui sincronização com o calendário da equipe (<em>fourline.servicos@gmail.com</em>). Quando ativada pela gestão, os agendamentos aparecem também no Google Agenda e vice-versa.</p></div>
+
+  <!-- 8 -->
+  <h2 class="sec" style="margin-top:8mm"><span class="n">8</span>Inventário de ativos</h2>
+  <p>Equipamentos dos clientes, inventariados automaticamente pelo <strong>GLPI Agent</strong> ou cadastrados manualmente.</p>
+  <ul>
+    <li><strong>Cartões por tipo</strong> (Computadores, Monitores, Impressoras, Rede, Periféricos, Telefones, Racks, Nobreaks, TVs, DVRs, Alarmes): clique para filtrar. A contagem acompanha a entidade e a busca.</li>
+    <li><strong>Busca</strong> por nome, série, modelo, marca, etiqueta; filtro por <strong>entidade</strong>; 50 itens por página.</li>
+    <li><strong>Detalhe do equipamento</strong> (clique na linha): processador, memória, disco, sistema, datas de cadastro e último inventário, <strong>histórico de chamados</strong> e botão para abrir chamado vinculado.</li>
+  </ul>
+  <h4>Ações da gestão</h4>
+  <table>
+    <tr><th style="width:36mm">Ação</th><th>Efeito</th></tr>
+    <tr><td><span class="ui">Novo ativo</span></td><td>Cria no GLPI, na entidade escolhida, com marca, modelo, série, etiqueta, valor e observações.</td></tr>
+    <tr><td>Editar (lápis)</td><td>Altera nome, entidade, marca, modelo, série, etiqueta, valor e observações.</td></tr>
+    <tr><td>Mover (setas)</td><td>Transfere para outra entidade; computadores levam junto os itens conectados.</td></tr>
+    <tr><td>Excluir</td><td>Envia para a lixeira do GLPI (reversível).</td></tr>
+    <tr><td><span class="ui">Exportar relatório</span></td><td>Relatório de inventário da entidade, pronto para impressão e assinatura (FOURLINE e cliente).</td></tr>
+  </table>
+</section>
+
+<!-- ======================= 9 ======================= -->
+<section class="page-break">
+  <h2 class="sec"><span class="n">9</span>Dashboards (monitoramento)</h2>
+  <p>Painel em tempo real alimentado pelo Zabbix, atualizado automaticamente a cada 60 segundos.</p>
+  <h3>Visão geral</h3>
+  <ul>
+    <li><strong>Indicadores</strong>: hosts monitorados, disponíveis, indisponíveis e problemas ativos.</li>
+    <li><strong>Saúde por cliente</strong>: percentual de máquinas online e alertas de cada cliente — clique para abrir o painel dele.</li>
+    <li><strong>Hosts</strong>: CPU, RAM e disco, com busca e ordenação por coluna; clique para ver medidores e histórico de 6/12/24 h. Status: <em>Disponível</em>, <em>Indisponível</em>, <em>Sem agente</em> ou <em>Monitoramento web</em>.</li>
+    <li><strong>Problemas ativos</strong>: agrupados (o mesmo problema em vários hosts vira uma linha), com busca e filtro de severidade.</li>
+  </ul>
+  <div class="box"><div class="t">Ruído oculto</div><p>Avisos sem relevância operacional (ex.: serviço <em>GoogleUpdater</em> parado) ficam ocultos por padrão e fora das contagens. Use <span class="ui">Mostrar ruído</span> para exibi-los.</p></div>
+  <h3>Por cliente e Preventivo</h3>
+  <p>No seletor <span class="ui">escolher cliente</span>, o painel separa <strong>Servidores</strong> e <strong>Caixas</strong> daquele cliente. A aba <span class="ui">Preventivo</span> mostra a previsão de disco cheio (dias até 100%), o mapa de horários com mais problemas e o tráfego de rede.</p>
+  <p>A partir de qualquer problema, o botão <span class="ui">Chamado</span> abre um chamado já preenchido.</p>
+
+  <!-- 10 -->
+  <h2 class="sec" style="margin-top:8mm"><span class="n">10</span>Relatórios</h2>
+  <p>Indicadores gerenciais com filtros combináveis:</p>
+  <table>
+    <tr><th style="width:34mm">Filtro</th><th>Opções</th></tr>
+    <tr><td>Período</td><td>Últimos 30 dias (padrão), este mês, mês passado, 90 dias, este ano, todo o período ou datas personalizadas.</td></tr>
+    <tr><td>Cliente / Técnico / Categoria</td><td>Recorta todos os indicadores e listas.</td></tr>
+    <tr><td>Situação</td><td>Em aberto, resolvidos ou atrasados (SLA).</td></tr>
+  </table>
+  <p><strong>Indicadores do recorte</strong>: chamados, em aberto, resolvidos (%), atrasados, <strong>tempo médio de solução</strong> e <strong>SLA cumprido</strong>.</p>
+  <table>
+    <tr><th style="width:34mm">Aba</th><th>Conteúdo</th></tr>
+    <tr><td>Visão geral</td><td>Abertos × resolvidos (por dia, semana ou mês), situação, prioridade, tipo e clientes com mais chamados.</td></tr>
+    <tr><td>Por cliente / técnico / categoria</td><td>Tabela com chamados, abertos, resolvidos, atrasados, % resolvidos, tempo médio e SLA. Clique no nome para ver os chamados.</td></tr>
+    <tr><td>Chamados</td><td>Lista detalhada com a situação de prazo de cada chamado.</td></tr>
+    <tr><td>Marcas</td><td>Distribuição dos equipamentos por fabricante.</td></tr>
+  </table>
+  <div class="box"><div class="t">Saídas</div>
+    <ul>
+      <li><span class="ui">Exportar Excel</span>: a aba atual, com os filtros aplicados.</li>
+      <li><span class="ui">Relatório do cliente (PDF)</span>: documento para enviar ao cliente, com indicadores, lista de chamados, resumo por unidade e por tipo de demanda e campos de assinatura.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================= 11 ======================= -->
+<section class="flow">
+  <h2 class="sec"><span class="n">11</span>Clientes e perfil do cliente</h2>
+  <h3>Cadastro (abas)</h3>
+  <table>
+    <tr><th style="width:30mm">Aba</th><th>Uso</th></tr>
+    <tr><td>Entidades</td><td>Árvore de clientes e filiais (sob <em>CLIENTES</em> no GLPI). Criar e renomear entidades.</td></tr>
+    <tr><td>Usuários</td><td>Criar, editar, ativar/desativar usuários e definir perfil e entidade. <span class="ui">Isolar cliente</span> cria uma entidade própria para o usuário e o move para ela, garantindo que veja apenas os próprios dados.</td></tr>
+    <tr><td>Perfis</td><td>Consulta dos perfis do GLPI e do tipo de interface.</td></tr>
+  </table>
+  <div class="box warn"><div class="t">Proteção contra escalonamento</div><p>Pelo portal só é possível atribuir os perfis <em>Self-Service</em>, <em>Técnico FL</em> e <em>Gestor</em>, e apenas em entidades sob <em>CLIENTES</em>. Perfis administrativos do GLPI não podem ser concedidos por aqui.</p></div>
+  <h3>Perfil do cliente</h3>
+  <p>Ficha completa de cada entidade, consultada antes de qualquer atendimento:</p>
+  <div class="cards">
+    <div class="card"><div class="h">Dados gerais</div><p>Razão social, CNPJ, endereço e contato da loja.</p></div>
+    <div class="card"><div class="h">Contatos</div><p>Responsáveis, cargos, telefone, WhatsApp e e-mail.</p></div>
+    <div class="card"><div class="h">Internet e rede</div><p>Links principal e de contingência, operadora, IP e dados técnicos.</p></div>
+    <div class="card"><div class="h">Contratos</div><p>Vigência, valores e documentos.</p></div>
+    <div class="card"><div class="h">Infraestrutura</div><p>Servidores, rede local, equipamentos críticos.</p></div>
+    <div class="card"><div class="h">Operacional</div><p>Horários, regras de atendimento e observações.</p></div>
+  </div>
+
+  <!-- 12 -->
+  <h2 class="sec" style="margin-top:6mm"><span class="n">12</span>Base de conhecimento</h2>
+  <p>Repositório de fichas e documentos, organizado por cliente e categoria: <em>Contrato, Internet, Documentos / Modelos, Ativos / Valores, Infraestrutura, Contatos, Acessos</em> e <em>Geral</em>. Cada registro aceita texto, valor e anexos (PDF e imagens, até 15 MB). Há busca por título, cliente ou conteúdo. Este manual está publicado aqui, na categoria <em>Documentos / Modelos</em>.</p>
+
+  <!-- 13/14/15 -->
+  <h2 class="sec" style="margin-top:6mm"><span class="n">13</span>Técnicos</h2>
+  <p>Visão da equipe técnica e da gestão: chamados atribuídos, em aberto e resolvidos, agendamentos futuros e status de cada pessoa. O botão <span class="ui">Adicionar técnico</span> cadastra um novo membro já com o perfil correto.</p>
+  <h2 class="sec" style="margin-top:6mm"><span class="n">14</span>Auditoria</h2>
+  <p>Histórico das ações administrativas: criação, edição, movimentação e exclusão de ativos, alterações de cadastro, exclusões na base de conhecimento, entre outras — com usuário, data, hora e IP.</p>
+  <h2 class="sec" style="margin-top:6mm"><span class="n">15</span>Configurações</h2>
+  <p>Tema da interface, dados da conta, situação da integração com o GLPI e das notificações (e-mail na abertura e sino do portal).</p>
+</section>
+
+<!-- ======================= 16 ======================= -->
+<section class="page-break">
+  <h2 class="sec"><span class="n">16</span>Procedimento padrão de atendimento</h2>
+  <p class="lead">Sequência que todo técnico deve seguir, garantindo indicadores confiáveis e boa comunicação com o cliente.</p>
+  <ol class="steps">
+    <li><strong>Registrar toda demanda.</strong> Pedido recebido por telefone ou WhatsApp vira chamado em nome do cliente, com o e-mail dele no campo de notificações.</li>
+    <li><strong>Classificar corretamente</strong>: tipo (incidente/requisição), categoria, prioridade e, quando houver, o <strong>equipamento</strong> afetado.</li>
+    <li><strong>Assumir</strong> o chamado (<span class="ui">Assumir chamado</span>) antes de começar — ele passa a aparecer em <em>Atribuídos a mim</em>.</li>
+    <li><strong>Definir o prazo (SLA)</strong> combinado com o cliente.</li>
+    <li><strong>Agendar visitas</strong> pela Agenda, vinculadas ao chamado.</li>
+    <li><strong>Registrar o andamento</strong> em acompanhamentos objetivos e anexar evidências (fotos, prints, PDFs).</li>
+    <li><strong>Usar Pendente</strong> somente quando depender do cliente ou de terceiros, informando o motivo.</li>
+    <li><strong>Resolver com descrição da solução</strong> — o cliente recebe o e-mail e pode aprovar ou reabrir.</li>
+    <li><strong>Revisar diariamente</strong> a sua fila em <em>Atribuídos a mim</em> e os próximos prazos no Painel.</li>
+  </ol>
+  <div class="box"><div class="t">Rotina da gestão</div>
+    <ul>
+      <li><strong>Diária</strong>: Dashboards (problemas ativos e clientes com máquinas offline) e chamados atrasados.</li>
+      <li><strong>Semanal</strong>: Relatórios › Por técnico (carga e tempo de solução) e Por categoria (problemas recorrentes).</li>
+      <li><strong>Mensal</strong>: Relatório do cliente (PDF) para os contratos e Inventário assinado quando houver mudanças.</li>
+    </ul>
+  </div>
+
+  <h2 class="sec" style="margin-top:8mm"><span class="n">17</span>Operação, monitoramento e segurança</h2>
+  <h3>Monitoramento do próprio sistema</h3>
+  <p>O Zabbix vigia o portal e o GLPI a cada minuto e avisa a equipe por e-mail em caso de: portal ou GLPI fora do ar ou lentos, falha de banco ou cache, perda de conexão com o GLPI, <strong>envio de e-mails do GLPI parado</strong>, agendador parado e disco quase cheio. Erros inesperados do portal também geram e-mail automático para a equipe.</p>
+  <h3>Publicação de atualizações (TI)</h3>
+  <table>
+    <tr><th style="width:44mm">Etapa</th><th>Comando</th></tr>
+    <tr><td>Enviar o código (WSL)</td><td><code>cd ~/itsm-portal &amp;&amp; git push origin main</code></td></tr>
+    <tr><td>Publicar (VM do portal)</td><td><code>bash deploy.sh</code> — atualiza, reconstrói, aplica migrações, limpa caches, reinicia e confere o portal; silencia os alertas do Zabbix durante a janela.</td></tr>
+    <tr><td>Ver logs de erro</td><td><code>docker compose -f docker-compose.prod.yml logs app --tail=50</code></td></tr>
+    <tr><td>Uso de memória</td><td><code>docker stats --no-stream</code></td></tr>
+  </table>
+  <h3>Boas práticas de segurança</h3>
+  <ul>
+    <li>Não compartilhe usuário e senha; cada técnico usa a própria conta (as ações são auditadas).</li>
+    <li>Saia do portal (<span class="ui">Sair</span>) em computadores de terceiros.</li>
+    <li>Nunca envie prints contendo senhas ou o arquivo <code>.env</code>.</li>
+    <li>Anexe documentos de clientes somente na Base de conhecimento ou no próprio chamado.</li>
+  </ul>
+</section>
+
+<!-- ======================= 18 ======================= -->
+<section class="flow">
+  <h2 class="sec"><span class="n">18</span>Glossário e dúvidas frequentes</h2>
+  <table>
+    <tr><th style="width:36mm">Termo</th><th>Significado</th></tr>
+    <tr><td>Entidade</td><td>Cliente ou filial no GLPI (ex.: <em>Drogacei › FL 08 - Guará 1</em>). Define o que cada usuário pode ver.</td></tr>
+    <tr><td>Solicitante</td><td>Pessoa/cliente que pediu o atendimento.</td></tr>
+    <tr><td>SLA</td><td>Prazo acordado para resolver o chamado. <em>SLA cumprido</em> = resolvidos dentro do prazo, entre os que tinham prazo.</td></tr>
+    <tr><td>Incidente / Requisição</td><td>Falha ou interrupção / pedido de serviço.</td></tr>
+    <tr><td>Acompanhamento</td><td>Comentário registrado na linha do tempo do chamado.</td></tr>
+    <tr><td>Ativo</td><td>Equipamento inventariado (computador, impressora, nobreak…).</td></tr>
+    <tr><td>Host</td><td>Equipamento monitorado pelo Zabbix.</td></tr>
+    <tr><td>Ruído</td><td>Alerta sem relevância operacional, oculto por padrão nos Dashboards.</td></tr>
+    <tr><td>GLPI Agent</td><td>Programa instalado nas máquinas dos clientes que envia o inventário ao GLPI.</td></tr>
+  </table>
+
+  <h3>Dúvidas frequentes</h3>
+  <h4>Alterei algo direto no GLPI e não apareceu no portal.</h4>
+  <p>As leituras ficam em cache por 1–2 minutos. Aguarde e recarregue a página.</p>
+  <h4>O cliente diz que não recebeu o e-mail de resposta.</h4>
+  <p>Confira o e-mail informado no chamado (no GLPI: Atores › solicitante). Se o alerta <em>“GLPI: envio de e-mails desativado”</em> estiver ativo nos Dashboards, a fila de envio do GLPI precisa ser reativada (Configurar › Ações automáticas › <em>queuednotification</em>).</p>
+  <h4>Um cliente vê o inventário vazio.</h4>
+  <p>O usuário provavelmente está na entidade errada (ex.: raiz). Corrija em Clientes › Usuários ou use <span class="ui">Isolar cliente</span>.</p>
+  <h4>Um gráfico mostra “Sem cliente definido”.</h4>
+  <p>São chamados registrados na raiz ou na pasta CLIENTES do GLPI. Use <span class="ui">Cliente (solicitante)</span> no chamado para movê-lo à entidade correta.</p>
+  <h4>Uma máquina aparece como “Sem agente” nos Dashboards.</h4>
+  <p>O Zabbix Agent não está comunicando: verifique se a máquina está ligada, se o serviço do agente está em execução e se a rede permite a porta 10050.</p>
+</section>
+
+</body>
+</html>
