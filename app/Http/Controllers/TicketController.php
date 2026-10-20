@@ -154,11 +154,20 @@ class TicketController extends Controller
 
         $file = $this->tickets->downloadAttachment($docId);
 
-        return response($file['content'], 200, [
-            'Content-Type' => $file['mime'],
-            'Content-Disposition' => 'inline; filename="'.addslashes($file['filename']).'"',
+        // Só imagem (exceto SVG) e PDF abrem na tela. Qualquer outro tipo — que pode ter
+        // sido anexado direto no GLPI (HTML, SVG…) — vira download e roda isolado, para
+        // não executar script no domínio do portal (XSS).
+        $mime = strtolower((string) $file['mime']);
+        $inline = ($mime !== 'image/svg+xml' && str_starts_with($mime, 'image/')) || $mime === 'application/pdf';
+        $nome = str_replace(['"', "\r", "\n"], '', (string) $file['filename']);
+
+        return response($file['content'], 200, array_filter([
+            'Content-Type' => $inline ? $mime : 'application/octet-stream',
+            'Content-Disposition' => ($inline ? 'inline' : 'attachment').'; filename="'.$nome.'"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => $inline ? null : "sandbox; default-src 'none'",
             'Cache-Control' => 'private, max-age=300',
-        ]);
+        ]));
     }
 
     /** Técnicos/gestores do GLPI, para o seletor "Atribuir a". */
