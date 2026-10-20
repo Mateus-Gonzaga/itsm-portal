@@ -10,17 +10,20 @@ use Illuminate\Support\Facades\Storage;
  * Publica (ou atualiza) o Manual Técnico do portal na Base de Conhecimento,
  * com o PDF anexado. Idempotente: rodar de novo substitui o PDF anterior.
  *
- *   php artisan kb:publicar-manual [--arquivo=docs/manual/Manual-Tecnico-FOURLINE-Connect-v1.0.pdf]
+ *   php artisan kb:publicar-manual [--arquivo=docs/manual/Manual-Tecnico-FOURLINE-Connect-v1.1.pdf]
  */
 class PublicarManualKb extends Command
 {
     protected $signature = 'kb:publicar-manual
-        {--arquivo=docs/manual/Manual-Tecnico-FOURLINE-Connect-v1.0.pdf : PDF do manual (relativo à raiz do projeto)}
-        {--versao=1.0 : Versão exibida no registro}';
+        {--arquivo=docs/manual/Manual-Tecnico-FOURLINE-Connect-v1.1.pdf : PDF do manual (relativo à raiz do projeto)}
+        {--versao=1.1 : Versão exibida no registro}';
 
     protected $description = 'Publica o Manual Técnico do portal na Base de Conhecimento (com o PDF anexado)';
 
-    private const TITULO = 'Manual Técnico — FOURLINE Connect (Usabilidade e Funcionalidades)';
+    private const TITULO = 'Manual Técnico FOURLINE Connect (Usabilidade e Funcionalidades)';
+
+    /** Título usado na v1.0; o registro antigo é reaproveitado em vez de duplicado. */
+    private const TITULO_ANTIGO = 'Manual Técnico — FOURLINE Connect (Usabilidade e Funcionalidades)';
 
     public function handle(): int
     {
@@ -33,7 +36,7 @@ class PublicarManualKb extends Command
         $versao = (string) $this->option('versao');
 
         $conteudo = <<<TXT
-        Manual técnico oficial do portal FOURLINE Connect — versão {$versao}. Público: novos técnicos (integração) e gestão.
+        Manual técnico oficial do portal FOURLINE Connect, versão {$versao}, com as telas do sistema. Público: novos técnicos (integração) e gestão.
 
         O PDF anexo contém:
         1. Visão geral e objetivos do portal
@@ -47,7 +50,7 @@ class PublicarManualKb extends Command
         9. Dashboards de monitoramento (Zabbix): saúde por cliente, hosts, problemas agrupados, ruído, preventivo
         10. Relatórios: filtros, abas, exportação Excel e relatório do cliente em PDF
         11. Clientes e perfil do cliente
-        12–15. Base de conhecimento, Técnicos, Auditoria e Configurações
+        12 a 15. Base de conhecimento, Técnicos, Auditoria e Configurações
         16. Procedimento padrão de atendimento e rotina da gestão
         17. Operação, monitoramento do sistema, publicação de atualizações e segurança
         18. Glossário e dúvidas frequentes
@@ -55,9 +58,12 @@ class PublicarManualKb extends Command
         Leitura obrigatória das seções 1 a 4 e 16 na integração de novos técnicos.
         TXT;
 
-        $artigo = KnowledgeArticle::firstOrNew(['titulo' => self::TITULO]);
+        $artigo = KnowledgeArticle::where('titulo', self::TITULO)->first()
+            ?? KnowledgeArticle::where('titulo', self::TITULO_ANTIGO)->first()
+            ?? new KnowledgeArticle;
         $novo = ! $artigo->exists;
         $artigo->fill([
+            'titulo' => self::TITULO,
             'cliente' => 'FOURLINE (interno)',
             'categoria' => 'Documentos / Modelos',
             'conteudo' => $conteudo,
