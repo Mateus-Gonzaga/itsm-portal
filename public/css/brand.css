@@ -228,13 +228,11 @@ a { color:var(--fl-green); } a:hover { color:var(--fl-green-dark); }
   html.sidebar-collapsed .sidebar-user .info,
   html.sidebar-collapsed .sidebar-user .more { display:none; }
   html.sidebar-collapsed .user-menu { width:240px; }
-  /* tooltip simples no modo recolhido */
-  html.sidebar-collapsed .sidebar-nav .nav-link { position:relative; }
-  html.sidebar-collapsed .sidebar-nav .nav-link:hover::after {
-    content:attr(data-label); position:absolute; left:calc(100% + 8px); top:50%; transform:translateY(-50%);
-    background:#033d22; color:#fff; padding:4px 10px; border-radius:6px; font-size:.8rem; white-space:nowrap; z-index:1050; box-shadow:0 2px 8px rgba(0,0,0,.3);
-  }
 }
+/* Nome do item no menu recolhido (posicionado pelo script do layout, fora da sidebar) */
+.nav-tip { position:fixed; z-index:1060; transform:translateY(-50%); pointer-events:none; opacity:0; transition:opacity .1s ease;
+  background:#033d22; color:#fff; padding:4px 10px; border-radius:6px; font-size:.8rem; font-weight:500; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+.nav-tip.show { opacity:1; }
 
 /* ============================================================
    Refinamentos visuais (v2) — passe de polimento global

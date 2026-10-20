@@ -61,7 +61,9 @@
                 $roleIcon = match ($u->role->value) { 'gestor' => 'bi-shield-check', 'tecnico' => 'bi-tools', default => 'bi-person' };
             @endphp
             <div class="dropdown dropup sidebar-user-wrap">
+                {{-- strategy fixed: o menu abre por cima da página; a sidebar (overflow oculto) cortava o menu quando recolhida --}}
                 <button type="button" class="sidebar-user" data-bs-toggle="dropdown" data-bs-offset="0,10"
+                        data-bs-popper-config='{"strategy":"fixed"}'
                         aria-expanded="false" aria-label="Menu do usuário {{ $displayName }}" title="{{ $rawName }}">
                     <span class="avatar">{{ $initials }}<span class="presence" aria-hidden="true"></span></span>
                     <span class="info">
@@ -262,6 +264,29 @@
 
 // Avisos flutuantes (toasts) vindos do servidor.
 document.querySelectorAll('#flToasts .toast').forEach(function (t) { bootstrap.Toast.getOrCreateInstance(t).show(); });
+
+// Menu recolhido: nome do item ao passar o mouse, flutuando fora da sidebar
+// (um ::after dentro dela era cortado pelo overflow oculto).
+(function () {
+    var tip = document.createElement('div');
+    tip.className = 'nav-tip';
+    tip.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(tip);
+    var esconder = function () { tip.classList.remove('show'); };
+    document.querySelectorAll('.sidebar-nav .nav-link').forEach(function (a) {
+        a.addEventListener('mouseenter', function () {
+            if (!document.documentElement.classList.contains('sidebar-collapsed') || window.innerWidth < 992) return;
+            var r = a.getBoundingClientRect();
+            tip.textContent = a.getAttribute('data-label') || '';
+            tip.style.left = (r.right + 10) + 'px';
+            tip.style.top = (r.top + r.height / 2) + 'px';
+            tip.classList.add('show');
+        });
+        a.addEventListener('mouseleave', esconder);
+        a.addEventListener('click', esconder);
+    });
+    document.querySelector('.sidebar-nav') && document.querySelector('.sidebar-nav').addEventListener('scroll', esconder);
+})();
 
 // Tabelas em cartões no celular: cada célula recebe o nome da coluna (usado pelo CSS).
 document.querySelectorAll('table.table-cards').forEach(function (tb) {
