@@ -3,6 +3,8 @@
 Histórico cronológico (nunca apagar).
 
 ## 2026-10-20
+- **Pop-up "Novidades do portal"** (`partials/novidades`, conteúdo em `config/novidades.php`): abre uma vez por usuário (localStorage `novidades:<id do usuário>`) quando o `id` da primeira entrada muda; itens filtráveis por perfil (`perfis`); reabre pelo menu do usuário › "Novidades do portal". Para anunciar: nova entrada no topo com `id` inédito e `bash deploy.sh`.
+- **Manual técnico v1.1**: 13 telas do sistema (dados de clientes desfocados), destaques em estilo de livro, texto sem travessões; `kb:publicar-manual` com padrão v1.1.
 - **Lista de chamados — coluna Cliente enxuta**: mostra só o último nível da entidade (ex.: "FL 08 - Guará 1"); o caminho completo fica no tooltip e no detalhe do chamado.
 - **"Atribuídos a mim"** (técnico/gestor): alternância Todos | Atribuídos a mim na lista de chamados, com contador; filtra pelo técnico do chamado (`technicianGlpiId`, com fallback pelo nome) e a escolha fica lembrada na sessão (`?meus=1/0`).
 - **Título da aba do navegador** = só o nome do módulo (sem "— FOURLINE Connect"); padrão "FOURLINE Connect".
