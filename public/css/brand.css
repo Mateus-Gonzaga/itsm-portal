@@ -382,8 +382,8 @@ h1,h2,h3,h4 { letter-spacing:.2px; }
 .login-split { display:grid; grid-template-columns:1fr 1fr; min-height:540px; border-radius:25px; overflow:hidden; background:#fff;
   box-shadow:0 30px 80px -20px rgba(4,64,30,.45); color:#1e293b; font-family:'Inter',sans-serif; }
 .login-hero { position:relative; overflow:hidden; background-color:#04401e; background-size:cover; background-position:center; min-height:540px; }
-/* Vídeo de fundo (aparece suave quando começa a tocar, por cima da imagem parada) */
-.login-hero-video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .6s ease; }
+/* Vídeo de fundo: aparece quando começa a tocar (sem transição; o fundo já é o 1º quadro do vídeo) */
+.login-hero-video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; }
 .login-hero-video.on { opacity:1; }
 .login-hero::after { content:""; position:absolute; inset:0; z-index:0;
   background:linear-gradient(to top, rgba(3,50,26,.95), rgba(4,64,30,.45), rgba(4,64,30,.05)); }
