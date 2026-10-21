@@ -5,6 +5,10 @@
 <div class="login-split">
     {{-- Painel da imagem: logo, saudação e texto sobre a foto --}}
     <div class="login-hero" style="background-image:url('{{ asset('img/login-bg.jpg') }}')">
+        {{-- Vídeo em loop (sem som). Só é baixado no computador; no celular, em "reduzir movimento"
+             ou economia de dados fica a imagem parada do fundo (primeiro quadro do vídeo). --}}
+        <video class="login-hero-video" id="loginVideo" muted loop playsinline preload="none" aria-hidden="true"
+               data-src="{{ asset('img/login-bg.mp4') }}"></video>
         <span class="login-deco-ring" aria-hidden="true"></span>
         <span class="login-deco-dots" aria-hidden="true"></span>
         <div class="login-hero-txt">
@@ -51,6 +55,17 @@
 
 @push('scripts')
 <script>
+(function () {
+    var v = document.getElementById('loginVideo');
+    var economia = navigator.connection && navigator.connection.saveData;
+    var parado = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (v && window.innerWidth >= 768 && !economia && !parado) {
+        v.src = v.dataset.src;
+        v.addEventListener('playing', function () { v.classList.add('on'); });
+        var p = v.play();
+        if (p && p.catch) p.catch(function () {});
+    }
+})();
 (function () {
     var btn = document.getElementById('toggleSenha'), campo = document.getElementById('password');
     if (!btn || !campo) return;
