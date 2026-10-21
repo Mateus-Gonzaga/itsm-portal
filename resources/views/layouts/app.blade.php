@@ -184,7 +184,7 @@
 @else
     <div class="auth-wrap">
         <div class="auth-glow" aria-hidden="true"></div>
-        <div class="w-100 position-relative" style="max-width: 420px">
+        <div class="w-100 position-relative" style="max-width: @yield('auth-width', '420px')">
             @yield('content')
         </div>
         <div class="auth-foot">© {{ date('Y') }} FOURLINE · Suporte e infraestrutura de TI</div>
