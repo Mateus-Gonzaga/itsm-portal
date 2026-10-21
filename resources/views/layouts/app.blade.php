@@ -55,8 +55,6 @@
                 $displayName = str_contains($rawName, ' ') || ! str_contains($rawName, '.')
                     ? $rawName
                     : \Illuminate\Support\Str::title(\Illuminate\Support\Str::before($rawName, '.'));
-                $parts = preg_split('/[\s._-]+/u', $rawName, -1, PREG_SPLIT_NO_EMPTY) ?: [$rawName];
-                $initials = mb_strtoupper(mb_substr($parts[0], 0, 1).(isset($parts[1]) ? mb_substr($parts[1], 0, 1) : ''));
                 $showEmail = $u->email && ! str_ends_with((string) $u->email, '@glpi.local');
                 $roleIcon = match ($u->role->value) { 'gestor' => 'bi-shield-check', 'tecnico' => 'bi-tools', default => 'bi-person' };
             @endphp
@@ -65,7 +63,7 @@
                 <button type="button" class="sidebar-user" data-bs-toggle="dropdown" data-bs-offset="0,10"
                         data-bs-popper-config='{"strategy":"fixed"}'
                         aria-expanded="false" aria-label="Menu do usuário {{ $displayName }}" title="{{ $rawName }}">
-                    <span class="avatar">{{ $initials }}<span class="presence" aria-hidden="true"></span></span>
+                    <span class="avatar"><i class="bi bi-people-fill" aria-hidden="true"></i><span class="presence" aria-hidden="true"></span></span>
                     <span class="info">
                         <span class="name">{{ $displayName }}</span>
                         <span class="role"><i class="bi {{ $roleIcon }}"></i> {{ $u->role->label() }}</span>
@@ -74,7 +72,7 @@
                 </button>
                 <div class="dropdown-menu user-menu">
                     <div class="user-menu-head">
-                        <span class="avatar lg">{{ $initials }}</span>
+                        <span class="avatar lg"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
                         <div class="min-w-0">
                             <div class="fw-semibold text-truncate">{{ $displayName }}</div>
                             <div class="small text-truncate opacity-75">{{ $showEmail ? $u->email : $rawName }}</div>

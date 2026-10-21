@@ -72,7 +72,7 @@
                     <div class="d-flex mb-3">
                         <div class="flex-shrink-0">
                             <span class="rounded-circle d-inline-flex align-items-center justify-content-center"
-                                  style="width:38px;height:38px;background:var(--fl-green-light);color:var(--fl-green-xdark);font-weight:700">{{ mb_substr($c->author, 0, 1) }}</span>
+                                  style="width:38px;height:38px;background:#111827;color:#fff;font-size:1rem" title="{{ $c->author }}"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
                         </div>
                         <div class="ms-3">
                             <div class="small mb-1">

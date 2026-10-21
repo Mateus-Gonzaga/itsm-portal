@@ -8,7 +8,7 @@
     .stat-card .ic { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.25rem; color:#fff; background:linear-gradient(135deg,#0a9d5a,#067a45); flex:0 0 auto; }
     .stat-card .v { font-size:1.5rem; font-weight:700; font-family:'Rajdhani',sans-serif; line-height:1; }
     .stat-card .l { font-size:.8rem; color:var(--bs-secondary-color); }
-    .tech-avatar { width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#033d22; background:#A8CF45; flex:0 0 auto; }
+    .tech-avatar { width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:1rem; color:#fff; background:#111827; flex:0 0 auto; }
 </style>
 @endpush
 
@@ -46,7 +46,7 @@
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
-                                    <span class="tech-avatar">{{ mb_strtoupper(mb_substr($r['name'], 0, 1)) }}</span>
+                                    <span class="tech-avatar"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
                                     <span class="fw-semibold">{{ $r['name'] }}</span>
                                 </div>
                             </td>
@@ -98,7 +98,7 @@
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
-                                    <span class="tech-avatar" style="background:#068A4F; color:#fff">{{ mb_strtoupper(mb_substr($r['name'], 0, 1)) }}</span>
+                                    <span class="tech-avatar"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
                                     <div>
                                         <span class="fw-semibold">{{ $r['name'] }}</span>
                                         @if (! empty($r['profile']) && $r['profile'] !== 'Gestor')
