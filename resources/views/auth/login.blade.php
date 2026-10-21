@@ -9,7 +9,6 @@
         </div>
 
         <h1 class="auth-title">Bem-vindo de volta</h1>
-        <p class="auth-sub">Entre com seu usuário e senha FOURLINE.</p>
 
         @if ($errors->any())
             <div class="alert alert-danger py-2 small d-flex align-items-center gap-2"><i class="bi bi-exclamation-circle"></i>{{ $errors->first() }}</div>
@@ -45,7 +44,6 @@
         </form>
     </div>
 </div>
-<p class="auth-help">Esqueceu a senha ou não tem acesso? Fale com a equipe FOURLINE.</p>
 
 @push('scripts')
 <script>

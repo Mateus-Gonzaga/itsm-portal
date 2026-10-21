@@ -383,7 +383,7 @@ h1,h2,h3,h4 { letter-spacing:.2px; }
 .auth-card { border-radius:20px; box-shadow:0 24px 60px rgba(0,0,0,.35); }
 .auth-card .form-label { color:#334155; font-weight:600; font-size:.85rem; }
 .auth-kicker { color:#64748b; font-size:.72rem; letter-spacing:3px; text-transform:uppercase; }
-.auth-title { font-size:1.45rem; font-weight:700; color:#033d22; margin:0; text-align:center; }
+.auth-title { font-size:1.45rem; font-weight:700; color:#033d22; margin:0 0 var(--sp-6); text-align:center; }
 .auth-sub { text-align:center; color:#64748b; font-size:.9rem; margin:2px 0 var(--sp-6); }
 .auth-input .input-group-text { background:#f8fafc; color:#64748b; border-color:#dbe3ea; }
 .auth-input .form-control { background:#fff; color:#1e293b; border-color:#dbe3ea; }
