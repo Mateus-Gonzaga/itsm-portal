@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Entrar')
-@section('auth-width', '960px')
+@section('auth-width', '952px')
 @section('content')
 <div class="login-split">
     {{-- Painel da imagem: logo, saudação e texto sobre a foto --}}
