@@ -43,8 +43,6 @@
                     <input type="checkbox" name="remember" id="remember" class="form-check-input">
                     <label for="remember" class="form-check-label">Lembrar de mim</label>
                 </div>
-                {{-- A senha é a do GLPI: a troca é feita pela equipe FOURLINE --}}
-                <a href="mailto:contato@fourline.com.br?subject=Acesso%20ao%20portal%20FOURLINE" class="login-link">Esqueci minha senha</a>
             </div>
             <button class="btn btn-primary login-btn w-100">Entrar</button>
         </form>
