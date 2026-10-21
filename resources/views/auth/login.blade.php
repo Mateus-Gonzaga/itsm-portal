@@ -10,12 +10,11 @@
         <video class="login-hero-video" id="loginVideo" muted loop playsinline preload="none" aria-hidden="true"
                data-src="{{ asset('img/login-bg.mp4') }}"></video>
         <span class="login-deco-ring" aria-hidden="true"></span>
-        <span class="login-deco-dots" aria-hidden="true"></span>
         <div class="login-hero-txt">
             {{-- Cópia do logo só com "FOURLINE" colorido (o "CONNECT" preto some no fundo escuro) --}}
             <img src="{{ asset('logo-fourline-cortada.png') }}" alt="FOURLINE" class="login-hero-logo">
             <h2>Bem-vindo de volta!</h2>
-            <p>Central de chamados, inventário e monitoramento dos seus clientes, num só lugar.</p>
+            <p>Central de chamados</p>
         </div>
     </div>
 
