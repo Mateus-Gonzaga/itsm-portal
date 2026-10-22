@@ -38,8 +38,10 @@
 }
 
 body { background:var(--app-bg); color:var(--text-c); font-family:'Inter',sans-serif; }
-/* Tema claro: fundo liso quase branco com leve toque do verde da marca (o degradê fica só no login) */
-html[data-bs-theme="light"] body { --app-bg:#F3F7F4; background:#F3F7F4; }
+/* Tema claro: cinza-esverdeado #F3F7F4 com um degradê suave do login só no topo (fixo ao rolar) */
+html[data-bs-theme="light"] body { --app-bg:#F3F7F4;
+  background:radial-gradient(1000px 420px at 10% -5%, rgba(168,207,69,.10), transparent 65%),
+             linear-gradient(180deg, #EAF3EC 0%, #F3F7F4 45%, #F3F7F4 100%) fixed; }
 h1,h2,h3,h4,h5,h6 { font-family:'Rajdhani','Inter',sans-serif; }
 
 /* ===== App shell ===== */
