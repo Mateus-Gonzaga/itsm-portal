@@ -38,6 +38,9 @@
 }
 
 body { background:var(--app-bg); color:var(--text-c); font-family:'Inter',sans-serif; }
+/* Tema claro: o mesmo fundo verde-claro da tela de login, fixo ao rolar */
+html[data-bs-theme="light"] body { --app-bg:#eef6f0;
+  background:radial-gradient(900px 500px at 15% 10%, rgba(168,207,69,.18), transparent 60%), linear-gradient(160deg, #eef6f0 0%, #dcefe2 100%) fixed; }
 h1,h2,h3,h4,h5,h6 { font-family:'Rajdhani','Inter',sans-serif; }
 
 /* ===== App shell ===== */
