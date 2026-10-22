@@ -38,11 +38,11 @@
 }
 
 body { background:var(--app-bg); color:var(--text-c); font-family:'Inter',sans-serif; }
-/* Tema claro: degradê verde-claro no topo (inspirado no login) que termina no cinza-esverdeado #F3F7F4 (fixo ao rolar) */
+/* Tema claro: degradê verde-claro em toda a área (limão no canto superior esquerdo, verde da marca no inferior direito), fixo ao rolar */
 html[data-bs-theme="light"] body { --app-bg:#F3F7F4;
-  background:radial-gradient(1200px 560px at 10% -8%, rgba(168,207,69,.22), transparent 65%),
-             radial-gradient(900px 500px at 100% 0%, rgba(6,138,79,.08), transparent 70%),
-             linear-gradient(180deg, #DFEFE3 0%, #EAF3EC 35%, #F3F7F4 75%, #F3F7F4 100%) fixed; }
+  background:radial-gradient(150% 120% at 0% 0%, rgba(168,207,69,.30), transparent 62%),
+             radial-gradient(140% 130% at 100% 100%, rgba(6,138,79,.16), transparent 62%),
+             linear-gradient(160deg, #D8ECDC 0%, #E1EFE3 50%, #E6F1E8 100%) fixed; }
 h1,h2,h3,h4,h5,h6 { font-family:'Rajdhani','Inter',sans-serif; }
 
 /* ===== App shell ===== */
