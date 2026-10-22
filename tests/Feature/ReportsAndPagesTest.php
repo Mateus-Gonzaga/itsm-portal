@@ -77,4 +77,18 @@ class ReportsAndPagesTest extends TestCase
         $this->get('/saude?token=errado')->assertNotFound();
         $this->get('/saude?token=abc')->assertOk()->assertJsonStructure(['db', 'cache', 'glpi', 'ok', 'disco_livre_pct']);
     }
+
+    public function test_equipe_troca_categoria_do_chamado_e_cliente_nao(): void
+    {
+        $repo = app(\App\Repositories\Glpi\GlpiTicketRepositoryInterface::class);
+        $id = $repo->all()->first()->id;
+
+        $this->actingAs($this->gestor())->get('/tickets/'.$id)->assertOk()->assertSee('Categoria');
+        $this->actingAs($this->gestor())->post('/tickets/'.$id.'/categoria', ['category_id' => 1])
+            ->assertRedirect()->assertSessionHas('status');
+        $this->assertSame('Hardware', $repo->find($id)->category);
+
+        $cliente = User::factory()->create(['role' => UserRole::Cliente]);
+        $this->actingAs($cliente)->post('/tickets/'.$id.'/categoria', ['category_id' => 1])->assertForbidden();
+    }
 }

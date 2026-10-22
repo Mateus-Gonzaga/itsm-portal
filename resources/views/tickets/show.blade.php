@@ -236,7 +236,26 @@
                         @endif
                     </div>
 
-                    {{-- 3. Prazo --}}
+                    {{-- 3. Categoria --}}
+                    @if ($categories->isNotEmpty())
+                        <div class="ticket-sec">
+                            <div class="ticket-sec-t">Categoria</div>
+                            <form method="POST" action="{{ route('tickets.category', $ticket->id) }}">
+                                @csrf
+                                <div class="input-group input-group-sm">
+                                    <select name="category_id" class="form-select" required aria-label="Categoria">
+                                        <option value="">Escolher categoria…</option>
+                                        @foreach ($categories as $cat)
+                                            <option value="{{ $cat['id'] }}" @selected($ticket->category && ($ticket->category === $cat['completename'] || $ticket->category === $cat['name']))>{{ $cat['completename'] }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button class="btn btn-outline-secondary">Salvar</button>
+                                </div>
+                            </form>
+                        </div>
+                    @endif
+
+                    {{-- 4. Prazo --}}
                     <div class="ticket-sec">
                         <div class="ticket-sec-t">Prazo (SLA)</div>
                         <form method="POST" action="{{ route('tickets.sla', $ticket->id) }}">
@@ -249,7 +268,7 @@
                         </form>
                     </div>
 
-                    {{-- 4. Cliente --}}
+                    {{-- 5. Cliente --}}
                     @if ($clients->isNotEmpty())
                         <div class="ticket-sec">
                             <div class="ticket-sec-t">Cliente (solicitante)</div>

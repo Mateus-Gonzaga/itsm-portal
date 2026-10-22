@@ -79,6 +79,7 @@ class TicketController extends Controller
             // Listas para o staff: técnicos (atribuir) e clientes (trocar solicitante).
             'technicians' => $request->user()->role === UserRole::Cliente ? collect() : $this->staffTechnicians($dir),
             'clients' => $request->user()->role === UserRole::Cliente ? collect() : $this->clientUsers($dir),
+            'categories' => $request->user()->role === UserRole::Cliente ? collect() : $this->tickets->categories(),
             'attachments' => $this->tickets->attachments($id),
             // "Cliente" = entidade (loja) do solicitante; cai para a entidade do chamado se não achar.
             'clienteEntity' => $this->requesterEntityMap($dir)[$ticket->requesterGlpiId] ?? $ticket->entity,
@@ -426,6 +427,22 @@ class TicketController extends Controller
         $this->tickets->addFollowup($id, 'Prazo (SLA) definido para '.$prazo.'.');
 
         return back()->with('status', 'Prazo atualizado para '.$prazo.'.');
+    }
+
+    /** Troca a categoria do chamado (ITILCategory do GLPI) — staff. */
+    public function updateCategory(Request $request, int|string $id): RedirectResponse
+    {
+        abort_if($this->tickets->find($id) === null, 404);
+        $data = $request->validate(['category_id' => ['required', 'integer', 'min:1']]);
+
+        $cat = $this->tickets->categories()->firstWhere('id', (int) $data['category_id']);
+        abort_if($cat === null, 422, 'Categoria inválida.');
+        $nome = $cat['completename'] ?: $cat['name'];
+
+        $this->tickets->update($id, ['category_id' => (int) $data['category_id']]);
+        $this->tickets->addFollowup($id, 'Categoria alterada para "'.$nome.'" por '.$request->user()->name.'.');
+
+        return back()->with('status', 'Categoria alterada para "'.$nome.'".');
     }
 
     public function updateStatus(Request $request, int|string $id): RedirectResponse

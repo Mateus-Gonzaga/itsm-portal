@@ -122,6 +122,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/tickets/{id}', [TicketController::class, 'destroy'])->name('tickets.destroy');
         Route::post('/tickets/{id}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
         Route::post('/tickets/{id}/sla', [TicketController::class, 'updateSla'])->name('tickets.sla');
+        Route::post('/tickets/{id}/categoria', [TicketController::class, 'updateCategory'])->name('tickets.category');
 
         // Agenda interna (calendário de tarefas + prazos)
         Route::get('/agenda', [AgendaController::class, 'index'])->name('agenda.index');
