@@ -279,6 +279,13 @@ h1,h2,h3,h4 { letter-spacing:.2px; }
 
 /* Cards e topbar com profundidade sutil e cabeçalho mais respirado */
 .topbar { box-shadow:var(--shadow-sm); }
+/* Barra superior translúcida com desfoque: o fundo aparece por trás ao rolar */
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  [data-bs-theme="light"] .topbar { background:rgba(255,255,255,.72); border-bottom-color:rgba(6,138,79,.10);
+    -webkit-backdrop-filter:saturate(170%) blur(12px); backdrop-filter:saturate(170%) blur(12px); }
+  [data-bs-theme="dark"] .topbar { background:rgba(19,28,43,.72);
+    -webkit-backdrop-filter:saturate(160%) blur(12px); backdrop-filter:saturate(160%) blur(12px); }
+}
 .card-header { padding-top:var(--sp-3); padding-bottom:var(--sp-3); }
 
 /* Alertas: faixa lateral colorida + raio consistente */
