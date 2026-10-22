@@ -38,11 +38,10 @@
 }
 
 body { background:var(--app-bg); color:var(--text-c); font-family:'Inter',sans-serif; }
-/* Tema claro: degradê verde-claro em toda a área (limão no canto superior esquerdo, verde da marca no inferior direito), fixo ao rolar */
+/* Tema claro: o mesmo fundo da tela de login, em versão mais fraca (fixo ao rolar) */
 html[data-bs-theme="light"] body { --app-bg:#F3F7F4;
-  background:radial-gradient(170% 190% at 0% 0%, rgba(168,207,69,.18), transparent 70%),
-             radial-gradient(140% 130% at 100% 100%, rgba(6,138,79,.08), transparent 62%),
-             linear-gradient(175deg, #E2F0E5 0%, #E9F4EB 60%, #EEF6F0 100%) fixed; }
+  background:radial-gradient(900px 500px at 15% 10%, rgba(168,207,69,.10), transparent 60%),
+             linear-gradient(160deg, #F2F8F4 0%, #E7F3EA 100%) fixed; }
 h1,h2,h3,h4,h5,h6 { font-family:'Rajdhani','Inter',sans-serif; }
 
 /* ===== App shell ===== */
