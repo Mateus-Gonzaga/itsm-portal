@@ -9,28 +9,37 @@ use Illuminate\Console\Command;
  * Janela de manutenção no Zabbix para publicar o portal sem disparar
  * "fora do ar" à toa (os dados continuam sendo coletados; só os avisos param).
  *
- *   php artisan zabbix:manutencao 15          → silencia o grupo por 15 min
- *   php artisan zabbix:manutencao --encerrar  → encerra agora
+ *   php artisan zabbix:manutencao 15                   → silencia o grupo por 15 min (usado pelo deploy.sh)
+ *   php artisan zabbix:manutencao --encerrar           → encerra a janela do deploy
+ *   php artisan zabbix:manutencao 480 --manual         → pausa longa (até 24 h) para um período de atualizações;
+ *                                                        o deploy.sh não encerra esta janela
+ *   php artisan zabbix:manutencao --encerrar --manual  → reativa os avisos ao terminar
  */
 class ZabbixManutencao extends Command
 {
     protected $signature = 'zabbix:manutencao
-        {minutos=15 : Duração da janela (5 a 240)}
+        {minutos=15 : Duração da janela (5 a 240; com --manual, até 1440)}
         {--encerrar : Remove a janela agora}
+        {--manual : Janela própria para um período de atualizações (o deploy.sh não mexe nela)}
         {--group=Portal FOURLINE : Grupo de hosts a silenciar}';
 
     protected $description = 'Abre/encerra uma janela de manutenção no Zabbix (silencia os avisos do portal durante a publicação)';
 
     private const NOME = 'Publicação do portal';
 
+    private const NOME_MANUAL = 'Atualizações do portal (manual)';
+
     public function handle(ZabbixApi $zbx): int
     {
+        $manual = (bool) $this->option('manual');
+        $nome = $manual ? self::NOME_MANUAL : self::NOME;
+
         try {
-            $existentes = collect($zbx->call('maintenance.get', ['output' => ['maintenanceid', 'name'], 'filter' => ['name' => [self::NOME]]]));
+            $existentes = collect($zbx->call('maintenance.get', ['output' => ['maintenanceid', 'name'], 'filter' => ['name' => [$nome]]]));
 
             if ($this->option('encerrar')) {
                 if ($existentes->isEmpty()) {
-                    $this->line('Nenhuma janela de manutenção aberta.');
+                    $this->line('Nenhuma janela de manutenção aberta'.($manual ? ' (manual)' : '').'.');
 
                     return self::SUCCESS;
                 }
@@ -40,7 +49,7 @@ class ZabbixManutencao extends Command
                 return self::SUCCESS;
             }
 
-            $min = max(5, min(240, (int) $this->argument('minutos')));
+            $min = max(5, min($manual ? 1440 : 240, (int) $this->argument('minutos')));
             $group = $zbx->call('hostgroup.get', ['output' => ['groupid'], 'filter' => ['name' => [(string) $this->option('group')]]])[0] ?? null;
             if (! $group) {
                 $this->error('Grupo "'.$this->option('group').'" não encontrado no Zabbix.');
@@ -56,16 +65,16 @@ class ZabbixManutencao extends Command
             $inicio = time() - 60;
             $fim = time() + $min * 60;
             $zbx->call('maintenance.create', [
-                'name' => self::NOME,
+                'name' => $nome,
                 'maintenance_type' => 0, // com coleta de dados
                 'active_since' => $inicio,
                 'active_till' => $fim,
-                'description' => 'Aberta pelo portal (php artisan zabbix:manutencao).',
+                'description' => 'Aberta pelo portal (php artisan zabbix:manutencao'.($manual ? ' --manual' : '').').',
                 'groups' => [['groupid' => $group['groupid']]],
                 'timeperiods' => [['timeperiod_type' => 0, 'start_date' => $inicio, 'period' => $fim - $inicio]],
             ]);
-            $this->info("Avisos do portal silenciados por {$min} min (até ".date('H:i', $fim).').');
-            $this->line('Ao terminar a publicação: php artisan zabbix:manutencao --encerrar');
+            $this->info("Avisos do portal silenciados por {$min} min (até ".date('d/m H:i', $fim).').');
+            $this->line('Para reativar antes: php artisan zabbix:manutencao --encerrar'.($manual ? ' --manual' : ''));
         } catch (\Throwable $e) {
             $this->error('Falhou: '.$e->getMessage());
             $this->line('O usuário do Zabbix (ZABBIX_USER) precisa de permissão de escrita no grupo do portal.');
